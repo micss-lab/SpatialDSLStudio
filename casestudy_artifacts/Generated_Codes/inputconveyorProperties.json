@@ -1,0 +1,18 @@
+[
+    {
+        "Name": "InputConveyor",
+        "X": -30614.39712698526,
+        "Y": -15633.326119502575,
+        "Rz": 180,
+        "ProductType": "Banana",
+        "ProductionInterval": "160"
+    },
+    {
+        "Name": "InputConveyor #2",
+        "X": -30522.53791060022,
+        "Y": -4262.076693991752,
+        "Rz": 180,
+        "ProductType": "Apple",
+        "ProductionInterval": "160"
+    }
+]

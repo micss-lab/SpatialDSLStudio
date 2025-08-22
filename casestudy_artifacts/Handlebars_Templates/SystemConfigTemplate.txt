@@ -1,0 +1,139 @@
+package milo.opcua.server;
+
+import org.eclipse.milo.opcua.stack.core.Identifiers;
+import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
+
+/**
+ * Master Configuration - All system parameters in one place
+ * Easy to modify, template-friendly
+ */
+public class SystemConfig {
+    
+    // =====================================================================
+    // BASIC SYSTEM QUANTITIES
+    // =====================================================================
+    public static final int NUM_ROBOTS = {{ManufacturingModel2.SystemProperties.robotQuantity}};
+    public static final int NUM_INPUT_CONVEYORS = {{ManufacturingModel2.SystemProperties.inputconveyorQuantity}};
+    
+    // =====================================================================
+    // SERVER CONFIGURATION  
+    // =====================================================================
+    public static final int SERVER_PORT = {{ManufacturingModel2.OPCUAConfiguration.serverPort}};
+    public static final String SERVER_NAME = "{{ManufacturingModel2.OPCUAConfiguration.serverName}}";
+    public static final String NAMESPACE_URI = "{{ManufacturingModel2.OPCUAConfiguration.namespaceURI}}";
+    
+    // =====================================================================
+    // ROBOT CONFIGURATION - Define what attributes each robot has
+    // Format: new RobotConfig("attributeName", "Display Name", DataType, defaultValue)
+    // =====================================================================
+    public static final RobotConfig[] ROBOTS = {
+        {{#each ManufacturingSystem.Robot.attributes}}
+        {{#unless (eq name 'name')}}
+        {{#unless (eq name 'maxSpeed')}}
+        {{#unless (eq name 'initialPositions')}}
+        {{#unless (eq name 'simulationName')}}
+        {{#unless (eq name 'simulationFolder')}}
+        {{#if @last}}
+        new RobotConfig("{{name}}", "{{name}}", {{#if (eq type 'string')}}Identifiers.String{{else if (eq type 'number')}}Identifiers.Int32{{else}}Identifiers.Boolean{{/if}}, {{#if (eq type 'string')}}"{{defaultValue}}"{{else}}{{defaultValue}}{{/if}}) 
+        {{else}}
+        new RobotConfig("{{name}}", "{{name}}", {{#if (eq type 'string')}}Identifiers.String{{else if (eq type 'number')}}Identifiers.Int32{{else}}Identifiers.Boolean{{/if}}, {{#if (eq type 'string')}}"{{defaultValue}}"{{else}}{{defaultValue}}{{/if}}),
+        {{/if}}
+        {{/unless}}
+        {{/unless}}
+        {{/unless}}
+        {{/unless}}
+        {{/unless}}
+        {{/each}}
+    };
+    
+    // =====================================================================
+    // CONVEYOR CONFIGURATION - Define input conveyor attributes
+    // =====================================================================
+    public static final ConveyorConfig[] INPUT_CONVEYORS = {
+        {{#each ManufacturingSystem.InputConveyor.attributes}}
+        {{#unless (eq name 'name')}}
+        {{#unless (eq name 'clonetimeInterval')}}
+        {{#unless (eq name 'cloneCount')}}
+        {{#unless (eq name 'productType')}}
+        {{#if @last}}
+        new ConveyorConfig("{{name}}", "{{name}}", {{#if (eq type 'string')}}Identifiers.String{{else if (eq type 'number')}}Identifiers.Int32{{else}}Identifiers.Boolean{{/if}}, {{#if (eq type 'string')}}"{{defaultValue}}"{{else}}{{defaultValue}}{{/if}}) 
+        {{else}}
+        new ConveyorConfig("{{name}}", "{{name}}", {{#if (eq type 'string')}}Identifiers.String{{else if (eq type 'number')}}Identifiers.Int32{{else}}Identifiers.Boolean{{/if}}, {{#if (eq type 'string')}}"{{defaultValue}}"{{else}}{{defaultValue}}{{/if}}),
+        {{/if}}
+        {{/unless}}
+        {{/unless}}
+        {{/unless}}
+        {{/unless}}
+        {{/each}}
+    };
+    
+    // =====================================================================
+    // COMPONENT PROPERTIES - JSON files and component-wide properties
+    // =====================================================================
+    public static final ComponentProperty[] COMPONENT_PROPERTIES = {
+        {{#each ManufacturingSystem.SystemProperties.attributes}}
+        {{#unless (eq name 'name')}}
+        {{#unless (eq name 'robotQuantity')}}
+        {{#unless (eq name 'inputconveyorQuantity')}}
+        {{#if @last}}
+        new ComponentProperty("{{name}}", "{{name}}-unique-identifier", "{{name}}.json")
+        {{else}}
+        new ComponentProperty("{{name}}", "{{name}}-unique-identifier", "{{name}}.json"),
+        {{/if}}
+        {{/unless}}
+        {{/unless}}
+        {{/unless}}
+        {{/each}}
+    };
+    
+    // =====================================================================
+    // CONFIGURATION CLASSES - Don't modify these
+    // =====================================================================
+    public static class RobotConfig {
+        public final String name;
+        public final String displayName;
+        public final NodeId dataType;
+        public final Object defaultValue;
+        
+        public RobotConfig(String name, String displayName, NodeId dataType, Object defaultValue) {
+            this.name = name;
+            this.displayName = displayName;
+            this.dataType = dataType;
+            this.defaultValue = defaultValue;
+        }
+        
+        public String getNodeId(int robotNumber) {
+            return robotNumber + "-" + name;
+        }
+    }
+    
+    public static class ConveyorConfig {
+        public final String name;
+        public final String displayName;
+        public final NodeId dataType;
+        public final Object defaultValue;
+        
+        public ConveyorConfig(String name, String displayName, NodeId dataType, Object defaultValue) {
+            this.name = name;
+            this.displayName = displayName;
+            this.dataType = dataType;
+            this.defaultValue = defaultValue;
+        }
+        
+        public String getNodeId(String conveyorType, int conveyorNumber) {
+            return conveyorType + conveyorNumber + name.substring(0, 1).toUpperCase() + name.substring(1) + "-unique-identifier";
+        }
+    }
+    
+    public static class ComponentProperty {
+        public final String name;
+        public final String nodeId;
+        public final String jsonFile;
+        
+        public ComponentProperty(String name, String nodeId, String jsonFile) {
+            this.name = name;
+            this.nodeId = nodeId;
+            this.jsonFile = jsonFile;
+        }
+    }
+}

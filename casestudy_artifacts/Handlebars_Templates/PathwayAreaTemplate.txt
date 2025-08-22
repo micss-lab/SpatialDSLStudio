@@ -1,0 +1,24 @@
+[
+{{#range 1 30}}
+    {{#if (eq this 1)}}
+    {
+        "Name": "{{lookup (lookup ../ManufacturingModel2 "Pathway Area") "name"}}",
+        "X": {{lookup (lookup ../ManufacturingModel2 "Pathway Area") "X"}},
+        "Y": {{lookup (lookup ../ManufacturingModel2 "Pathway Area") "Y"}},
+        "Rz": {{#if (lookup (lookup ../ManufacturingModel2 "Pathway Area") "RZ")}}{{lookup (lookup ../ManufacturingModel2 "Pathway Area") "RZ"}}{{else}}0{{/if}},
+        "AreaLength": {{lookup (lookup ../ManufacturingModel2 "Pathway Area") "Length"}},
+        "AreaWidth": {{lookup (lookup ../ManufacturingModel2 "Pathway Area") "Width"}}
+    }
+    {{else}}
+    {
+        "Name": "{{lookup (lookup ../ManufacturingModel2 (concat "Pathway Area #" this)) "name"}}",
+        "X": {{lookup (lookup ../ManufacturingModel2 (concat "Pathway Area #" this)) "X"}},
+        "Y": {{lookup (lookup ../ManufacturingModel2 (concat "Pathway Area #" this)) "Y"}},
+        "Rz": {{#if (lookup (lookup ../ManufacturingModel2 (concat "Pathway Area #" this)) "RZ")}}{{lookup (lookup ../ManufacturingModel2 (concat "Pathway Area #" this)) "RZ"}}{{else}}0{{/if}},
+        "AreaLength": {{lookup (lookup ../ManufacturingModel2 (concat "Pathway Area #" this)) "Length"}},
+        "AreaWidth": {{lookup (lookup ../ManufacturingModel2 (concat "Pathway Area #" this)) "Width"}}
+    }
+    {{/if}}
+    {{#unless @data.last}},{{/unless}}
+{{/range}}
+]

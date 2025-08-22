@@ -1,0 +1,18 @@
+[
+    {
+        "Name": "InputConveyor",
+        "X": {{lookup (lookup ManufacturingModel2 "InputConveyor") "X"}},
+        "Y": {{lookup (lookup ManufacturingModel2 "InputConveyor") "Y"}},
+        "Rz": {{#if (lookup (lookup ManufacturingModel2 "InputConveyor") "RZ")}}{{lookup (lookup ManufacturingModel2 "InputConveyor") "RZ"}}{{else}}0{{/if}},
+        "ProductType": "Banana",
+        "ProductionInterval": "{{lookup (lookup ManufacturingModel2 "InputConveyor") "clonetimeInterval"}}"
+    },
+    {
+        "Name": "InputConveyor #2",
+        "X": {{lookup (lookup ManufacturingModel2 "InputConveyor #2") "X"}},
+        "Y": {{lookup (lookup ManufacturingModel2 "InputConveyor #2") "Y"}},
+        "Rz": {{#if (lookup (lookup ManufacturingModel2 "InputConveyor #2") "RZ")}}{{lookup (lookup ManufacturingModel2 "InputConveyor #2") "RZ"}}{{else}}0{{/if}},
+        "ProductType": "Apple",
+        "ProductionInterval": "{{lookup (lookup ManufacturingModel2 "InputConveyor #2") "clonetimeInterval"}}"
+    }
+]

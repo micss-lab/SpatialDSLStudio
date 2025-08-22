@@ -1,0 +1,302 @@
+<ConnectivityConfiguration xmlns:System="http://www.w3.org/2001/XMLSchema" xmlns:Array="http://schemas.microsoft.com/2003/10/Serialization/Arrays" xmlns:ADS="http://schemas.datacontract.org/2004/07/VisualComponents.Connectivity.BeckhoffAds" xmlns:OpcUA="http://schemas.datacontract.org/2004/07/VisualComponents.Connectivity.OpcUA" xmlns:UrRtde="http://schemas.datacontract.org/2004/07/VisualComponents.Connectivity.UniversalRobotsRtde" xmlns:S7="http://schemas.datacontract.org/2004/07/VisualComponents.Connectivity.SiemensS7" xmlns:WinmodNet="http://schemas.datacontract.org/2004/07/VisualComponents.Connectivity.WinmodNet" xmlns:Fanuc="http://schemas.datacontract.org/2004/07/VisualComponents.Connectivity.FanucRobots" xmlns:Abb="http://schemas.datacontract.org/2004/07/VisualComponents.Connectivity.AbbRobotController" xmlns:Doosan="http://schemas.datacontract.org/2004/07/VisualComponents.Connectivity.DoosanRobotController" xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.datacontract.org/2004/07/VisualComponents.Connectivity.Core">
+<CollectDetailedTimingInfo>false</CollectDetailedTimingInfo>
+<ConfigurationVersion>2</ConfigurationVersion>
+<ConnectionPlugins>
+<Array:anyType i:type="ConnectionPlugin">
+<ExtraSettings i:nil="true"/>
+<Name>OPC UA</Name>
+<Servers>
+<Array:anyType i:type="Server">
+<ConnectionSettings i:type="OpcUA:ServerConnectionSettings">
+<OpcUA:AuthenticationMethod>None</OpcUA:AuthenticationMethod>
+<OpcUA:AutoReplaceHostInEndpointUrl>true</OpcUA:AutoReplaceHostInEndpointUrl>
+<OpcUA:Password i:nil="true"/>
+<OpcUA:SavePassword>false</OpcUA:SavePassword>
+<OpcUA:SaveUserPrivateKeyFilePassword>false</OpcUA:SaveUserPrivateKeyFilePassword>
+<OpcUA:SaveUsername>true</OpcUA:SaveUsername>
+<OpcUA:ServerUrl>opc.tcp://localhost:{{ManufacturingModel2.OPCUAConfiguration.serverPort}}</OpcUA:ServerUrl>
+<OpcUA:UseSecureConnection>false</OpcUA:UseSecureConnection>
+<OpcUA:UserPrivateKeyFilePassword i:nil="true"/>
+<OpcUA:UserPrivateKeyFilePath>C:\Users\umuta\AppData\Local\Visual Components\Visual Components Premium 4.10\OpcUA\own\private\</OpcUA:UserPrivateKeyFilePath>
+<OpcUA:Username i:nil="true"/>
+</ConnectionSettings>
+<DisplayName>Server</DisplayName>
+<ExtraSettings i:type="OpcUA:ServerSettings">
+<OpcUA:BrowseRequestTimeout>PT10S</OpcUA:BrowseRequestTimeout>
+<OpcUA:CyclicRequestTimeout>PT1S</OpcUA:CyclicRequestTimeout>
+<OpcUA:NamespaceTable>
+<Array:string>http://opcfoundation.org/UA/</Array:string>
+<Array:string>urn:DESKTOP-BJ42D4G:{{ManufacturingModel2.OPCUAConfiguration.serverPort}}/{{ManufacturingModel2.OPCUAConfiguration.serverName}}</Array:string>
+<Array:string>{{ManufacturingModel2.OPCUAConfiguration.namespaceURI}}</Array:string>
+</OpcUA:NamespaceTable>
+<OpcUA:SubscriptionRequestTimeout>PT1S</OpcUA:SubscriptionRequestTimeout>
+</ExtraSettings>
+<ResetWithSimulation>true</ResetWithSimulation>
+<StartWithSimulation>true</StartWithSimulation>
+<StopWithSimulation>true</StopWithSimulation>
+<VariableGroups>
+<Array:anyType i:type="VariableGroup">
+<AssumeExclusiveWriteToSimVariables>true</AssumeExclusiveWriteToSimVariables>
+<CyclicUpdateRate>PT0.05S</CyclicUpdateRate>
+<DataFlowDirection>SimulationToServer</DataFlowDirection>
+<DelayErrorThreshold>PT5S</DelayErrorThreshold>
+<DelayWarningThreshold>PT0.1S</DelayWarningThreshold>
+<DisplayName>Simulation to server</DisplayName>
+<Enabled>true</Enabled>
+<ExtraSettings i:type="OpcUA:VariableGroupSettings">
+<OpcUA:ReadMaxAge>PT0.001S</OpcUA:ReadMaxAge>
+<OpcUA:ServerMonitorQueueSize>10</OpcUA:ServerMonitorQueueSize>
+<OpcUA:ServerMonitorSamplingInterval>PT0S</OpcUA:ServerMonitorSamplingInterval>
+<OpcUA:SubscriptionPublishInterval>PT0.01S</OpcUA:SubscriptionPublishInterval>
+</ExtraSettings>
+<UpdateMethod>Cyclic</UpdateMethod>
+<Items>
+{{#range 1 ManufacturingModel2.SystemProperties.robotQuantity}}
+<!--  Robot {{this}} Simulation to Server Variables  -->
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s={{this}}-location</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_Mobile_Robot_Resource</Component>
+<Behaviour i:nil="true"/>
+<Property>Location{{this}}</Property>
+</SimulationVariable>
+</Array:anyType>
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s={{this}}-nextLocation</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_Mobile_Robot_Resource</Component>
+<Behaviour i:nil="true"/>
+<Property>NextLocation{{this}}</Property>
+</SimulationVariable>
+</Array:anyType>
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s={{this}}-carriedProduct</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_Mobile_Robot_Resource</Component>
+<Behaviour i:nil="true"/>
+<Property>CarriedProduct{{this}}</Property>
+</SimulationVariable>
+</Array:anyType>
+{{/range}}
+<!--  Robot carryingProduct Variables (SimulationToServer)  -->
+{{#range 1 ManufacturingModel2.SystemProperties.robotQuantity}}
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s={{this}}-carryingProduct</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_Mobile_Robot_Resource</Component>
+<Behaviour i:nil="true"/>
+<Property>CarryingProduct{{this}}</Property>
+</SimulationVariable>
+</Array:anyType>
+{{/range}}
+<!--  Input Conveyor Produced Variables (SimulationToServer)  -->
+{{#range 1 ManufacturingModel2.SystemProperties.inputconveyorQuantity}}
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s=InputConveyor{{this}}Produced-unique-identifier</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_InputConveyor</Component>
+<Behaviour i:nil="true"/>
+<Property>Produced{{this}}</Property>
+</SimulationVariable>
+</Array:anyType>
+{{/range}}
+</Items>
+</Array:anyType>
+<Array:anyType i:type="VariableGroup">
+<AssumeExclusiveWriteToSimVariables>true</AssumeExclusiveWriteToSimVariables>
+<CyclicUpdateRate>PT0.05S</CyclicUpdateRate>
+<DataFlowDirection>ServerToSimulation</DataFlowDirection>
+<DelayErrorThreshold>PT5S</DelayErrorThreshold>
+<DelayWarningThreshold>PT0.1S</DelayWarningThreshold>
+<DisplayName>Server to simulation</DisplayName>
+<Enabled>true</Enabled>
+<ExtraSettings i:type="OpcUA:VariableGroupSettings">
+<OpcUA:ReadMaxAge>PT0.001S</OpcUA:ReadMaxAge>
+<OpcUA:ServerMonitorQueueSize>10</OpcUA:ServerMonitorQueueSize>
+<OpcUA:ServerMonitorSamplingInterval>PT0S</OpcUA:ServerMonitorSamplingInterval>
+<OpcUA:SubscriptionPublishInterval>PT0.01S</OpcUA:SubscriptionPublishInterval>
+</ExtraSettings>
+<UpdateMethod>Cyclic</UpdateMethod>
+<Items>
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s=pathwayProperties-unique-identifier</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_Pathway_Area</Component>
+<Behaviour i:nil="true"/>
+<Property>pathwayProperties</Property>
+</SimulationVariable>
+</Array:anyType>
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s=outputconveyorProperties-unique-identifier</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_OutputConveyor</Component>
+<Behaviour i:nil="true"/>
+<Property>outputconveyorProperties</Property>
+</SimulationVariable>
+</Array:anyType>
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s=inputconveyorProperties-unique-identifier</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_InputConveyor</Component>
+<Behaviour i:nil="true"/>
+<Property>inputconveyorProperties</Property>
+</SimulationVariable>
+</Array:anyType>
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s=idleProperties-unique-identifier</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_IdleLocation</Component>
+<Behaviour i:nil="true"/>
+<Property>idleProperties</Property>
+</SimulationVariable>
+</Array:anyType>
+<!--  RobotQuantity Variable  -->
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s=RobotQuantity-unique-identifier</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_Mobile_Robot_Resource</Component>
+<Behaviour i:nil="true"/>
+<Property>RobotQuantity</Property>
+</SimulationVariable>
+</Array:anyType>
+<!--  InputConveyorQuantity Variable  -->
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s=InputConveyorQuantity-unique-identifier</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_InputConveyor</Component>
+<Behaviour i:nil="true"/>
+<Property>InputConveyorQuantity</Property>
+</SimulationVariable>
+</Array:anyType>
+<!--  Input Conveyor Produced Variables (ServerToSimulation for bidirectional access)  -->
+{{#range 1 ManufacturingModel2.SystemProperties.inputconveyorQuantity}}
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s=InputConveyor{{this}}Produced-unique-identifier</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_InputConveyor</Component>
+<Behaviour i:nil="true"/>
+<Property>Produced{{this}}</Property>
+</SimulationVariable>
+</Array:anyType>
+{{/range}}
+{{#range 1 ManufacturingModel2.SystemProperties.robotQuantity}}
+<!--  Robot {{this}} Server to Simulation Variables  -->
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s={{this}}-stop</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_Mobile_Robot_Resource</Component>
+<Behaviour i:nil="true"/>
+<Property>Stop{{this}}</Property>
+</SimulationVariable>
+</Array:anyType>
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s={{this}}-target</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_Mobile_Robot_Resource</Component>
+<Behaviour i:nil="true"/>
+<Property>Target{{this}}</Property>
+</SimulationVariable>
+</Array:anyType>
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s={{this}}-batteryLevel</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_Mobile_Robot_Resource</Component>
+<Behaviour i:nil="true"/>
+<Property>BatteryLevel{{this}}</Property>
+</SimulationVariable>
+</Array:anyType>
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s={{this}}-priority</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_Mobile_Robot_Resource</Component>
+<Behaviour i:nil="true"/>
+<Property>Priority{{this}}</Property>
+</SimulationVariable>
+</Array:anyType>
+{{/range}}
+{{#range 1 ManufacturingModel2.SystemProperties.robotQuantity}}
+<Array:anyType i:type="VariableGroupItem">
+<DisplayName i:nil="true"/>
+<ServerItem i:type="OpcUA:ValueItemID">
+<OpcUA:NodeId>ns=2;s={{this}}-carryingProduct</OpcUA:NodeId>
+<OpcUA:arrayIndices i:nil="true"/>
+</ServerItem>
+<SimulationVariable>
+<Component>_Template_Mobile_Robot_Resource</Component>
+<Behaviour i:nil="true"/>
+<Property>CarryingProduct{{this}}</Property>
+</SimulationVariable>
+</Array:anyType>
+{{/range}}
+</Items>
+</Array:anyType>
+</VariableGroups>
+</Array:anyType>
+</Servers>
+</Array:anyType>
+</ConnectionPlugins>
+</ConnectivityConfiguration>

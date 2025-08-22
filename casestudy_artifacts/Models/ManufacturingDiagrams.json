@@ -1,0 +1,879 @@
+{
+  "id": "2b6d01de-bba8-4322-910c-4ffa34d84b53",
+  "name": "ManufacturingDiagram2",
+  "modelId": "16511e65-7d80-499a-8c5c-acd4f78905ea",
+  "elements": [
+    {
+      "id": "a691a990-22ec-4985-a0a9-1359680c45cd",
+      "modelElementId": "9f7646d9-9b7a-4e21-9050-2aa4f84bed64",
+      "type": "node",
+      "style": {
+        "name": "robot1",
+        "linkedModelElementId": "4ae14ad5-cff5-463d-a336-3327f8171b23",
+        "position3D": {
+          "x": -2421.948327885475,
+          "y": -48964.532066447755
+        },
+        "heightMm": 3000,
+        "widthMm": 3000,
+        "depthMm": 3000,
+        "rotationZ": 180
+      },
+      "x": 78,
+      "y": 83.5,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "918de9a8-9e3f-49f7-a029-3a768ca84df9",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area",
+        "linkedModelElementId": "5f1a3b03-116e-4e61-862c-6cdc9111772a",
+        "position3D": {
+          "x": -1564.4931077211386,
+          "y": -38542.23858366441
+        },
+        "rotationZ": 90,
+        "heightMm": 5000,
+        "widthMm": 12000
+      },
+      "x": 76,
+      "y": 306.5,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "4e5ee484-b6b8-4b11-af3f-bda6ad088214",
+      "modelElementId": "9f7646d9-9b7a-4e21-9050-2aa4f84bed64",
+      "type": "node",
+      "style": {
+        "name": "robot2",
+        "linkedModelElementId": "09bae4c3-6652-4e9c-a02c-7d10a21fd34b",
+        "position3D": {
+          "x": -12468.756336806731,
+          "y": 29898.390987571518
+        },
+        "heightMm": 3000,
+        "widthMm": 3000,
+        "depthMm": 3000
+      },
+      "x": 213,
+      "y": 85.5,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "c5c5e86f-a8c3-4a93-82c9-2ccddd1cf552",
+      "modelElementId": "9f7646d9-9b7a-4e21-9050-2aa4f84bed64",
+      "type": "node",
+      "style": {
+        "name": "robot3",
+        "linkedModelElementId": "9afa56e7-29ff-4d57-b860-27cb3293c21c",
+        "position3D": {
+          "x": -10602.523162594629,
+          "y": -48663.368662202716
+        },
+        "heightMm": 3000,
+        "widthMm": 3000,
+        "depthMm": 3000,
+        "rotationZ": 180
+      },
+      "x": 345,
+      "y": 84.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "3c80a645-c163-4efe-89ee-ef95576f5ccd",
+      "modelElementId": "9f7646d9-9b7a-4e21-9050-2aa4f84bed64",
+      "type": "node",
+      "style": {
+        "name": "robot4",
+        "linkedModelElementId": "47c7668a-3f05-405b-97e4-10924c3f2d88",
+        "position3D": {
+          "x": -3496.541247077246,
+          "y": 29886.21964018056
+        },
+        "heightMm": 3000,
+        "widthMm": 3000,
+        "depthMm": 3000
+      },
+      "x": 487,
+      "y": 87.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "2c9dd1f2-307b-47e3-90c1-dbd7435a9917",
+      "modelElementId": "3014e67e-29ee-4496-884e-94f699bce47b",
+      "type": "node",
+      "style": {
+        "name": "InputConveyor #2",
+        "linkedModelElementId": "7f95d841-8dd8-4a27-98aa-516e56662210",
+        "position3D": {
+          "x": -30522.53791060022,
+          "y": -4262.076693991752
+        },
+        "heightMm": 2000,
+        "widthMm": 4000,
+        "depthMm": 1500,
+        "rotationZ": 180
+      },
+      "x": 750,
+      "y": 91.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "525c4531-d4a9-4fe1-ab91-4e1acc301469",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #2",
+        "linkedModelElementId": "2b330a9a-59b5-4c75-b59d-244948795aa0",
+        "position3D": {
+          "x": -13902.75339522638,
+          "y": 20339.63383500155
+        },
+        "rotationZ": 90,
+        "heightMm": 5000,
+        "widthMm": 12000
+      },
+      "x": 218,
+      "y": 307.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "78c82471-665c-4bee-bc4f-20fe49ea55e6",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #4",
+        "linkedModelElementId": "1e999910-a6f9-48cd-b2af-f8d862db9aa4",
+        "position3D": {
+          "x": -1065.9317036446046,
+          "y": -23048.2250463669
+        },
+        "heightMm": 5000,
+        "widthMm": 9000,
+        "rotationZ": 90
+      },
+      "x": 497,
+      "y": 310.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "711afa02-2e53-4540-ba62-e57f6e5b875a",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #5",
+        "linkedModelElementId": "5108215b-79e1-4d8c-88e2-c48f0efbe511",
+        "position3D": {
+          "x": 4772.909620600942,
+          "y": -15894.98468808347
+        },
+        "heightMm": 5000,
+        "widthMm": 12000
+      },
+      "x": 631,
+      "y": 308.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "c1e2a118-6381-4d4f-ab7b-9f30b0b54b2d",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #6",
+        "linkedModelElementId": "47f9417b-d4cc-4c44-a38a-c20bac780551",
+        "position3D": {
+          "x": -1429.8375014863013,
+          "y": 3910.5032919905716
+        },
+        "rotationZ": 90,
+        "heightMm": 5000,
+        "widthMm": 9300
+      },
+      "x": 763,
+      "y": 311.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "dbb3524c-0653-4585-8bc9-66c7a3431cf7",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #7",
+        "linkedModelElementId": "15450f90-e66f-4937-a7f7-aba2d9e64daf",
+        "position3D": {
+          "x": -13786.801551556848,
+          "y": 4124.072681696733
+        },
+        "heightMm": 5000,
+        "widthMm": 9300,
+        "rotationZ": 90
+      },
+      "x": 78,
+      "y": 413.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "d52bb1cd-9dd8-47c4-b603-41068ec4efe3",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #8",
+        "linkedModelElementId": "54cb2011-28ba-46bb-9dbc-c501f3d4e353",
+        "position3D": {
+          "x": 7352,
+          "y": -29934
+        },
+        "heightMm": 4611,
+        "widthMm": 17053
+      },
+      "x": 219,
+      "y": 418.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "bbf8af4c-9b30-41c0-b688-2a0b009a387a",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #9",
+        "linkedModelElementId": "6f9298ad-1eac-46e9-ab44-d51adf9ae091",
+        "position3D": {
+          "x": -7406.060093006248,
+          "y": -3125.914120170779
+        },
+        "heightMm": 5000,
+        "widthMm": 12000
+      },
+      "x": 358,
+      "y": 423.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "115ee22b-64e6-4759-98b0-3e82c2d52ad4",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #10",
+        "linkedModelElementId": "6b7f0894-1697-4a7d-bf01-dff65ba4ba69",
+        "position3D": {
+          "x": -1201.7416159814602,
+          "y": -9550.47509402
+        },
+        "heightMm": 5000,
+        "widthMm": 7500,
+        "rotationZ": 90
+      },
+      "x": 495,
+      "y": 422.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "ee2c9306-3db0-45c8-a615-b2a0873e211b",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #11",
+        "linkedModelElementId": "0db4872d-31c0-4337-8dc6-70099f2714af",
+        "position3D": {
+          "x": 13318.36449140585,
+          "y": -9560.616216796765
+        },
+        "heightMm": 5000,
+        "widthMm": 12000,
+        "rotationZ": 90
+      },
+      "x": 630,
+      "y": 424.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "40d41e7a-f835-46e2-966f-54132f6f0351",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #12",
+        "linkedModelElementId": "2ee5b814-213a-4524-bea4-bb6e0a2dfe09",
+        "position3D": {
+          "x": -22123,
+          "y": -30049
+        },
+        "heightMm": 5000,
+        "widthMm": 16786
+      },
+      "x": 762,
+      "y": 423.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "60522f97-ddaa-48e5-a444-ed51db8b4d4c",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #13",
+        "linkedModelElementId": "07cae8d4-06ec-4148-86dc-ddc5bf2238ea",
+        "position3D": {
+          "x": -13783.111517538717,
+          "y": -22958.860641662846
+        },
+        "rotationZ": 90,
+        "heightMm": 5000,
+        "widthMm": 9000
+      },
+      "x": 81,
+      "y": 526.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "ca078edf-b87d-4c29-a3c3-9faf3600daba",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #14",
+        "linkedModelElementId": "fc759bfc-4319-45ec-8125-fbff0735f55b",
+        "position3D": {
+          "x": 13471.393641396924,
+          "y": 2688.9525633720186
+        },
+        "heightMm": 5000,
+        "widthMm": 12000,
+        "rotationZ": 90
+      },
+      "x": 220,
+      "y": 528.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "267dbaa8-2d57-4d0e-885d-a9dfc6524307",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #15",
+        "linkedModelElementId": "bf47cff4-f6b9-4a10-8b75-535f5d866eec",
+        "position3D": {
+          "x": -19439.05805847025,
+          "y": -15757.714770777478
+        },
+        "heightMm": 5000,
+        "widthMm": 12000
+      },
+      "x": 362,
+      "y": 531.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "0a57d55e-a31b-48d6-9d9a-989d48c72333",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #16",
+        "linkedModelElementId": "970db50e-f1e9-4992-9324-5ccd188611a7",
+        "position3D": {
+          "x": -7415.7998616462155,
+          "y": -29922.119962856425
+        },
+        "heightMm": 5000,
+        "widthMm": 12000
+      },
+      "x": 495,
+      "y": 536.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "7fc57746-2796-4e59-9296-97f2ccb7c594",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #17",
+        "linkedModelElementId": "27a611ea-eb21-48f5-8195-9f6037b26e78",
+        "position3D": {
+          "x": 4809.980193974197,
+          "y": -3198.6845208290724
+        },
+        "heightMm": 5000,
+        "widthMm": 12000
+      },
+      "x": 635,
+      "y": 539.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "6ad88dd4-69aa-4aa4-ad08-3866b1ae4b00",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #18",
+        "linkedModelElementId": "65a93dc1-9c3e-451a-82db-7d9d2d4755ce",
+        "position3D": {
+          "x": 13362.0656038552,
+          "y": -21955.343418988603
+        },
+        "heightMm": 5000,
+        "widthMm": 12000,
+        "rotationZ": 90
+      },
+      "x": 768,
+      "y": 540.9000015258789,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "4a04adcd-e07d-4173-86af-f6ab321b4ae0",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #19",
+        "linkedModelElementId": "eee2bec9-6560-4838-9981-a5f0819467eb",
+        "position3D": {
+          "x": -19591.262965739876,
+          "y": -3181.3665736754174
+        },
+        "heightMm": 5000,
+        "widthMm": 12000
+      },
+      "x": 81.3534609720177,
+      "y": 649,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "c0fc400e-3bb1-4a6e-9eee-ecb71c67d674",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #20",
+        "linkedModelElementId": "6e5d5de8-aef4-43bd-a746-b5eb806dac3e",
+        "position3D": {
+          "x": -6919.413779572279,
+          "y": -47660.4707671453
+        },
+        "heightMm": 6000,
+        "widthMm": 15000
+      },
+      "x": 215,
+      "y": 652.2999992370605,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "a231b69b-3d16-4cd3-ba7e-7fc9c8e0fc09",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #21",
+        "linkedModelElementId": "822a5607-3ca4-495f-b7a2-3f28ca3a5b0c",
+        "position3D": {
+          "x": 7192,
+          "y": 11576.993137733189
+        },
+        "heightMm": 5000,
+        "widthMm": 17225
+      },
+      "x": 358,
+      "y": 653.2999992370605,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "0fc14dc6-249c-44b5-bf10-2c4f3d56f308",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #22",
+        "linkedModelElementId": "2681bcad-455f-420b-b491-6bf3e292b6af",
+        "position3D": {
+          "x": -7458.147634493234,
+          "y": 29257.06491643985
+        },
+        "heightMm": 6000,
+        "widthMm": 15000
+      },
+      "x": 488,
+      "y": 654.2999992370605,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "10facb4f-e9f7-49ce-b113-689762da5b71",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #23",
+        "linkedModelElementId": "8d94f034-616d-4dd4-8034-8f9cacde9dbf",
+        "position3D": {
+          "x": -7240.892735709354,
+          "y": -15811.743277375572
+        },
+        "heightMm": 5000,
+        "widthMm": 12000
+      },
+      "x": 622,
+      "y": 658.2999992370605,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "e1b32710-76fd-4bbb-a613-37ace662f75f",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #24",
+        "linkedModelElementId": "e6d38741-6ed7-461f-aa43-5f4f8c5e530b",
+        "position3D": {
+          "x": -7735,
+          "y": 11759
+        },
+        "heightMm": 5000,
+        "widthMm": 12000
+      },
+      "x": 756,
+      "y": 659.2999992370605,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "62ab7248-0a3d-453b-8dda-071f78ff6efe",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #25",
+        "linkedModelElementId": "5c027db6-04dc-4946-9d68-b53144835275",
+        "position3D": {
+          "x": -28191.40262405541,
+          "y": -21403.30492060269
+        },
+        "heightMm": 5000,
+        "widthMm": 12000,
+        "rotationZ": 90
+      },
+      "x": 81,
+      "y": 762.2999992370605,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "309afa49-47d4-495c-b324-626112279558",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #26",
+        "linkedModelElementId": "abc37814-4d6b-4286-8af8-63995128fdc9",
+        "position3D": {
+          "x": -22267,
+          "y": 11839
+        },
+        "heightMm": 5000,
+        "widthMm": 16806
+      },
+      "x": 220,
+      "y": 767.2999992370605,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "1aea3d55-45a3-49f3-86fa-6091ddc6f108",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #27",
+        "linkedModelElementId": "b3a7a2a6-188c-42de-9c94-dcaaaff21a8d",
+        "position3D": {
+          "x": -13586.44729560909,
+          "y": -38592.52090886344
+        },
+        "heightMm": 5000,
+        "widthMm": 12000,
+        "rotationZ": 90
+      },
+      "x": 356,
+      "y": 765.2999992370605,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "90d3ac85-0c82-48e2-992c-cefa51530d14",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #28",
+        "linkedModelElementId": "998ffda2-2b31-4df6-b05a-908794d7c67e",
+        "position3D": {
+          "x": -28215.770292050925,
+          "y": -9187.938421357107
+        },
+        "heightMm": 5000,
+        "widthMm": 12000,
+        "rotationZ": 90
+      },
+      "x": 490,
+      "y": 769.2999992370605,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "8f53bf06-a040-418f-b770-5e9d0fb39bdd",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #29",
+        "linkedModelElementId": "c4d795f6-f28d-4828-bb05-959cfb4c0be7",
+        "position3D": {
+          "x": -1471.5405660063552,
+          "y": 20436.56266759857
+        },
+        "heightMm": 5000,
+        "widthMm": 12000,
+        "rotationZ": 90
+      },
+      "x": 621,
+      "y": 770.2999992370605,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "7aaf3533-3108-46ad-bc56-3e8f48ea7a21",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #30",
+        "linkedModelElementId": "e6452197-1599-4f87-b0e4-4f35060a0ce5",
+        "position3D": {
+          "x": -28202.55422623598,
+          "y": 3125.3840969745906
+        },
+        "rotationZ": 90,
+        "heightMm": 5000,
+        "widthMm": 12000
+      },
+      "x": 752,
+      "y": 770.2999992370605,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "8254ef56-0885-49f5-bfa1-08a5e0c7e03c",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "type": "node",
+      "style": {
+        "name": "Pathway Area #3",
+        "linkedModelElementId": "df61b7c0-da51-4d2c-a7b4-b4dea43a3555",
+        "position3D": {
+          "x": -13568.726917791853,
+          "y": -9564.822160184005
+        },
+        "rotationZ": 90,
+        "heightMm": 5000,
+        "widthMm": 7500
+      },
+      "x": 360,
+      "y": 307.29999923706055,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "a721799b-6aba-4e25-ac28-26e924bfedfb",
+      "modelElementId": "3014e67e-29ee-4496-884e-94f699bce47b",
+      "type": "node",
+      "style": {
+        "name": "InputConveyor",
+        "linkedModelElementId": "6238d614-892b-4447-a7a5-7e939d161e16",
+        "position3D": {
+          "x": -30614.39712698526,
+          "y": -15633.326119502575
+        },
+        "heightMm": 2000,
+        "widthMm": 4000,
+        "depthMm": 1500,
+        "rotationZ": 180
+      },
+      "x": 621,
+      "y": 91.5,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "bf755da2-28b4-4696-b466-237f08d3fc40",
+      "modelElementId": "94fddbe7-9a8d-4b12-996f-1ba7ae4c5e38",
+      "type": "node",
+      "style": {
+        "name": "Idle Location #2",
+        "linkedModelElementId": "f4436428-0d81-4dc8-9019-f24345d488d8",
+        "position3D": {
+          "x": -3116,
+          "y": -48731
+        },
+        "heightMm": 1000,
+        "widthMm": 1000
+      },
+      "x": 499,
+      "y": 199.29999923706055,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "7ab8c05a-802d-41dd-93c7-b990ebd471b2",
+      "modelElementId": "94fddbe7-9a8d-4b12-996f-1ba7ae4c5e38",
+      "type": "node",
+      "style": {
+        "name": "Idle Location",
+        "linkedModelElementId": "0001ebcd-800f-4b6d-947b-4e839d3e3862",
+        "position3D": {
+          "x": -10365,
+          "y": -48778
+        },
+        "heightMm": 1000,
+        "widthMm": 1000
+      },
+      "x": 358,
+      "y": 195.29999923706055,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "9c2df26c-77d6-491b-981f-929bcd22faf3",
+      "modelElementId": "94fddbe7-9a8d-4b12-996f-1ba7ae4c5e38",
+      "type": "node",
+      "style": {
+        "name": "Idle Location #3",
+        "linkedModelElementId": "3ea61f79-6dd0-4b58-bc5f-6e441c578cd3",
+        "position3D": {
+          "x": -11024,
+          "y": 29646
+        },
+        "rotationZ": 180
+      },
+      "x": 629,
+      "y": 202.29999923706055,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "dd598cd3-9730-4c85-a7d1-f4a3fd8dad58",
+      "modelElementId": "94fddbe7-9a8d-4b12-996f-1ba7ae4c5e38",
+      "type": "node",
+      "style": {
+        "name": "Idle Location #4",
+        "linkedModelElementId": "ef471ab7-3840-41f9-a379-7ede165f8058",
+        "position3D": {
+          "x": -3455,
+          "y": 30037
+        },
+        "rotationZ": 180,
+        "heightMm": 1000,
+        "widthMm": 1000
+      },
+      "x": 756,
+      "y": 205.29999923706055,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "73faa515-ac8b-4d56-8bc2-67f775851206",
+      "modelElementId": "e4d16f34-6d0d-42f7-aabf-0132538ac128",
+      "type": "node",
+      "style": {
+        "name": "OutputConveyor #1",
+        "linkedModelElementId": "065a2f0a-2aea-4e11-b060-9a4e281d6398",
+        "position3D": {
+          "x": 16089,
+          "y": -3900
+        },
+        "heightMm": 2500,
+        "widthMm": 6000,
+        "depthMm": 2000
+      },
+      "x": 79,
+      "y": 200.29999923706055,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    },
+    {
+      "id": "7942f8ff-b476-438d-82b6-67b5745c1ba4",
+      "modelElementId": "e4d16f34-6d0d-42f7-aabf-0132538ac128",
+      "type": "node",
+      "style": {
+        "name": "OutputConveyor #2",
+        "linkedModelElementId": "ec171d91-dd91-4db1-8204-18d2ca0bfb65",
+        "position3D": {
+          "x": 15799,
+          "y": -16095
+        },
+        "heightMm": 2500,
+        "widthMm": 6000,
+        "depthMm": 2000
+      },
+      "x": 217,
+      "y": 202.29999923706055,
+      "width": 120,
+      "height": 80,
+      "referenceAttributes": {}
+    }
+  ],
+  "gridSettings": {
+    "sizeX": 55000,
+    "sizeY": 55000
+  }
+}

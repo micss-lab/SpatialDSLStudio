@@ -1,0 +1,12 @@
+[
+{{#range 1 2}}
+  {
+    "Name": "OutputConveyor #{{this}}",
+    "X": {{lookup (lookup ../ManufacturingModel2 (concat "OutputConveyor #" this)) "X"}},
+    "Y": {{lookup (lookup ../ManufacturingModel2 (concat "OutputConveyor #" this)) "Y"}},
+    "Rz": {{#if (lookup (lookup ../ManufacturingModel2 (concat "OutputConveyor #" this)) "RZ")}}
+             {{lookup (lookup ../ManufacturingModel2 (concat "OutputConveyor #" this)) "RZ"}}
+           {{else}}0{{/if}}
+  }{{#unless @last}},{{/unless}}
+{{/range}}
+]

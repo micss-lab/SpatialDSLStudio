@@ -1,0 +1,30 @@
+[
+    {
+      "Name": "Idle Location",
+      "X": -10365,
+      "Y": -48778,
+      "Rz": 0
+    }
+  ,
+    {
+      "Name": "Idle Location #2",
+      "X": -3116,
+      "Y": -48731,
+      "Rz": 0
+    }
+  ,
+    {
+      "Name": "Idle Location #3",
+      "X": -11024,
+      "Y": 29646,
+      "Rz": 180
+    }
+  ,
+    {
+      "Name": "Idle Location #4",
+      "X": -3455,
+      "Y": 30037,
+      "Rz": 180
+    }
+  
+]

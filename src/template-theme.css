@@ -1,0 +1,233 @@
+/* Import template fonts */
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap");
+
+/* Theme variables */
+:root {
+  --font-outfit: Outfit, sans-serif;
+
+  --color-brand-25: #f2f7ff;
+  --color-brand-50: #ecf3ff;
+  --color-brand-100: #dde9ff;
+  --color-brand-200: #c2d6ff;
+  --color-brand-300: #9cb9ff;
+  --color-brand-400: #7592ff;
+  --color-brand-500: #465fff;
+  --color-brand-600: #3641f5;
+  --color-brand-700: #2a31d8;
+  --color-brand-800: #252dae;
+  --color-brand-900: #262e89;
+  --color-brand-950: #161950;
+
+  --color-gray-25: #fcfcfd;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f2f4f7;
+  --color-gray-200: #e4e7ec;
+  --color-gray-300: #d0d5dd;
+  --color-gray-400: #98a2b3;
+  --color-gray-500: #667085;
+  --color-gray-600: #475467;
+  --color-gray-700: #344054;
+  --color-gray-800: #1d2939;
+  --color-gray-900: #101828;
+  --color-gray-950: #0c111d;
+  --color-gray-dark: #1a2231;
+
+  --color-success-25: #f6fef9;
+  --color-success-50: #ecfdf3;
+  --color-success-100: #d1fadf;
+  --color-success-200: #a6f4c5;
+  --color-success-300: #6ce9a6;
+  --color-success-400: #32d583;
+  --color-success-500: #12b76a;
+  --color-success-600: #039855;
+  --color-success-700: #027a48;
+  --color-success-800: #05603a;
+  --color-success-900: #054f31;
+  --color-success-950: #053321;
+
+  --color-error-25: #fffbfa;
+  --color-error-50: #fef3f2;
+  --color-error-100: #fee4e2;
+  --color-error-200: #fecdca;
+  --color-error-300: #fda29b;
+  --color-error-400: #f97066;
+  --color-error-500: #f04438;
+  --color-error-600: #d92d20;
+  --color-error-700: #b42318;
+  --color-error-800: #912018;
+  --color-error-900: #7a271a;
+  --color-error-950: #55160c;
+
+  --color-warning-25: #fffcf5;
+  --color-warning-50: #fffaeb;
+  --color-warning-100: #fef0c7;
+  --color-warning-200: #fedf89;
+  --color-warning-300: #fec84b;
+  --color-warning-400: #fdb022;
+  --color-warning-500: #f79009;
+  --color-warning-600: #dc6803;
+  --color-warning-700: #b54708;
+  --color-warning-800: #93370d;
+  --color-warning-900: #7a2e0e;
+  --color-warning-950: #4e1d09;
+
+  --shadow-theme-md: 0px 4px 8px -2px rgba(16, 24, 40, 0.1),
+    0px 2px 4px -2px rgba(16, 24, 40, 0.06);
+  --shadow-theme-lg: 0px 12px 16px -4px rgba(16, 24, 40, 0.08),
+    0px 4px 6px -2px rgba(16, 24, 40, 0.03);
+  --shadow-theme-sm: 0px 1px 3px 0px rgba(16, 24, 40, 0.1),
+    0px 1px 2px 0px rgba(16, 24, 40, 0.06);
+  --shadow-theme-xs: 0px 1px 2px 0px rgba(16, 24, 40, 0.05);
+  --shadow-theme-xl: 0px 20px 24px -4px rgba(16, 24, 40, 0.08),
+    0px 8px 8px -4px rgba(16, 24, 40, 0.03);
+  --shadow-focus-ring: 0px 0px 0px 4px rgba(70, 95, 255, 0.12);
+}
+
+/* Base styles */
+body {
+  font-family: var(--font-outfit);
+  background-color: var(--color-gray-50);
+  color: var(--color-gray-900);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-gray-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-gray-400);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-500);
+}
+
+/* MUI component overrides - exclude canvas elements */
+/* These selectors avoid applying styles to elements inside the Canvas component */
+.MuiAppBar-root:not(canvas *) {
+  background-color: #ffffff !important;
+  color: var(--color-gray-900) !important;
+  box-shadow: var(--shadow-theme-sm) !important;
+}
+
+.MuiDrawer-paper:not(canvas *) {
+  background-color: #ffffff !important;
+  color: var(--color-gray-900) !important;
+  border-right: 1px solid var(--color-gray-200) !important;
+}
+
+.MuiListItemButton-root:not(canvas *) {
+  border-radius: 8px !important;
+  margin: 4px 0 !important;
+}
+
+.MuiListItemButton-root:hover:not(canvas *) {
+  background-color: var(--color-gray-100) !important;
+}
+
+.MuiListItemButton-root.Mui-selected:not(canvas *) {
+  background-color: var(--color-brand-50) !important;
+  color: var(--color-brand-600) !important;
+}
+
+.MuiListItemButton-root.Mui-selected:not(canvas *) .MuiListItemIcon-root {
+  color: var(--color-brand-600) !important;
+}
+
+.MuiButton-containedPrimary:not(canvas *) {
+  background-color: var(--color-brand-600) !important;
+}
+
+.MuiButton-containedPrimary:hover:not(canvas *) {
+  background-color: var(--color-brand-700) !important;
+}
+
+.MuiButton-outlinedPrimary:not(canvas *) {
+  color: var(--color-brand-600) !important;
+  border-color: var(--color-brand-600) !important;
+}
+
+.MuiButton-outlinedPrimary:hover:not(canvas *) {
+  background-color: var(--color-brand-50) !important;
+}
+
+.MuiPaper-root:not(canvas *) {
+  box-shadow: var(--shadow-theme-sm) !important;
+  border-radius: 12px !important;
+}
+
+.MuiTypography-h1:not(canvas *), 
+.MuiTypography-h2:not(canvas *), 
+.MuiTypography-h3:not(canvas *), 
+.MuiTypography-h4:not(canvas *), 
+.MuiTypography-h5:not(canvas *), 
+.MuiTypography-h6:not(canvas *) {
+  font-family: var(--font-outfit) !important;
+  font-weight: 600 !important;
+}
+
+.MuiTextField-root:not(canvas *) .MuiOutlinedInput-root {
+  border-radius: 8px !important;
+}
+
+.MuiTextField-root:not(canvas *) .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: var(--color-brand-600) !important;
+}
+
+/* Custom classes */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.content-container {
+  flex: 1;
+  padding: 24px;
+  transition: margin-left 0.3s ease;
+}
+
+.section-title {
+  font-family: var(--font-outfit);
+  font-weight: 600;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: var(--color-gray-900);
+}
+
+.card-container {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: var(--shadow-theme-sm);
+  padding: 1.5rem;
+}
+
+/* React Three Fiber specific styles */
+/* Ensure 3D canvas takes full space and doesn't inherit unwanted styles */
+canvas {
+  display: block;
+  outline: none;
+}
+
+/* Prevent theme styles from affecting Three.js elements */
+canvas * {
+  all: revert;
+}
+
+/* Container for 3D diagram editor */
+.diagram3d-container {
+  isolation: isolate; /* Create a new stacking context */
+  z-index: 0;
+}
+
+/* Ensure the canvas in 3D editor gets proper dimensions */
+.diagram3d-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+} 

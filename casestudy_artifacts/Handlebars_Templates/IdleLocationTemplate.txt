@@ -1,0 +1,20 @@
+[
+{{#range 1 4}}
+  {{#if (eq this 1)}}
+    {
+      "Name": "{{lookup (lookup ../ManufacturingModel2 "Idle Location") "name"}}",
+      "X": {{lookup (lookup ../ManufacturingModel2 "Idle Location") "X"}},
+      "Y": {{lookup (lookup ../ManufacturingModel2 "Idle Location") "Y"}},
+      "Rz": {{#if (lookup (lookup ../ManufacturingModel2 "Idle Location") "RZ")}}{{lookup (lookup ../ManufacturingModel2 "Idle Location") "RZ"}}{{else}}0{{/if}}
+    }
+  {{else}}
+    {
+      "Name": "{{lookup (lookup ../ManufacturingModel2 (concat "Idle Location #" this)) "name"}}",
+      "X": {{lookup (lookup ../ManufacturingModel2 (concat "Idle Location #" this)) "X"}},
+      "Y": {{lookup (lookup ../ManufacturingModel2 (concat "Idle Location #" this)) "Y"}},
+      "Rz": {{#if (lookup (lookup ../ManufacturingModel2 (concat "Idle Location #" this)) "RZ")}}{{lookup (lookup ../ManufacturingModel2 (concat "Idle Location #" this)) "RZ"}}{{else}}0{{/if}}
+    }
+  {{/if}}
+  {{#unless @last}},{{/unless}}
+{{/range}}
+]

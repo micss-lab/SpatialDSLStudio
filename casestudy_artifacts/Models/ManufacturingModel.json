@@ -1,0 +1,749 @@
+{
+  "id": "16511e65-7d80-499a-8c5c-acd4f78905ea",
+  "name": "ManufacturingModel2",
+  "metamodelId": "078f3a55-e34d-4cc3-a71d-eef13a60e123",
+  "elements": [
+    {
+      "id": "4ae14ad5-cff5-463d-a336-3327f8171b23",
+      "modelElementId": "9f7646d9-9b7a-4e21-9050-2aa4f84bed64",
+      "style": {
+        "name": "robot1",
+        "location": "",
+        "nextLocation": "",
+        "batteryLevel": 100,
+        "target": "",
+        "stop": false,
+        "priority": 0,
+        "carryingProduct": false,
+        "carriedProduct": "",
+        "position": {
+          "x": -119.5601103004969,
+          "y": 71.35038840513525
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825391799_bnyy0ed9v\"}",
+        "maxSpeed": 800,
+        "simulationName": "Mobile Robot Resource",
+        "simulationFolder": "Mobile Robots",
+        "initialPositions": ""
+      },
+      "references": {}
+    },
+    {
+      "id": "09bae4c3-6652-4e9c-a02c-7d10a21fd34b",
+      "modelElementId": "9f7646d9-9b7a-4e21-9050-2aa4f84bed64",
+      "style": {
+        "name": "robot2",
+        "location": "",
+        "nextLocation": "",
+        "batteryLevel": 100,
+        "target": "",
+        "stop": false,
+        "priority": 0,
+        "carryingProduct": false,
+        "carriedProduct": "",
+        "position": {
+          "x": 100.27622154235223,
+          "y": 69.42199952932079
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825231250_c2caxupmo\"}",
+        "maxSpeed": 800,
+        "simulationName": "Mobile Robot Resource",
+        "simulationFolder": "Mobile Robots",
+        "initialPositions": ""
+      },
+      "references": {}
+    },
+    {
+      "id": "9afa56e7-29ff-4d57-b860-27cb3293c21c",
+      "modelElementId": "9f7646d9-9b7a-4e21-9050-2aa4f84bed64",
+      "style": {
+        "name": "robot3",
+        "location": "",
+        "nextLocation": "",
+        "batteryLevel": 100,
+        "target": "",
+        "stop": false,
+        "priority": 0,
+        "carryingProduct": false,
+        "carriedProduct": "",
+        "position": {
+          "x": -115.29416215599079,
+          "y": 352.75705350287114
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825244790_11je7wox8\"}",
+        "maxSpeed": 800,
+        "simulationName": "Mobile Robot Resource",
+        "simulationFolder": "Mobile Robots",
+        "initialPositions": ""
+      },
+      "references": {}
+    },
+    {
+      "id": "47c7668a-3f05-405b-97e4-10924c3f2d88",
+      "modelElementId": "9f7646d9-9b7a-4e21-9050-2aa4f84bed64",
+      "style": {
+        "name": "robot4",
+        "location": "",
+        "nextLocation": "",
+        "batteryLevel": 100,
+        "target": "",
+        "stop": false,
+        "priority": 0,
+        "carryingProduct": false,
+        "carriedProduct": "",
+        "position": {
+          "x": 106.06138816979566,
+          "y": 362.5371086531196
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825256770_hvftki1ru\"}",
+        "maxSpeed": 800,
+        "simulationName": "Mobile Robot Resource",
+        "simulationFolder": "Mobile Robots",
+        "initialPositions": ""
+      },
+      "references": {}
+    },
+    {
+      "id": "6238d614-892b-4447-a7a5-7e939d161e16",
+      "modelElementId": "3014e67e-29ee-4496-884e-94f699bce47b",
+      "style": {
+        "name": "InputConveyor",
+        "produced": false,
+        "position": {
+          "x": 314.32738675775806,
+          "y": 71.35038840513533
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#dda1a1\",\"fillColor\":\"#dda1a1\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825409089_o2mi849xi\"}",
+        "productType": "Component",
+        "clonetimeInterval": "160",
+        "cloneCount": "0",
+        "simulationName": "Conveyor",
+        "simulationFolder": "Conveyors"
+      },
+      "references": {}
+    },
+    {
+      "id": "7f95d841-8dd8-4a27-98aa-516e56662210",
+      "modelElementId": "3014e67e-29ee-4496-884e-94f699bce47b",
+      "style": {
+        "name": "InputConveyor #2",
+        "produced": false,
+        "position": {
+          "x": 520.6649964699059,
+          "y": 69.42199952932071
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825423821_5pfpnlyh6\"}",
+        "productType": "Component",
+        "clonetimeInterval": "160",
+        "cloneCount": "0",
+        "simulationName": "Conveyor",
+        "simulationFolder": "Conveyors"
+      },
+      "references": {}
+    },
+    {
+      "id": "065a2f0a-2aea-4e11-b060-9a4e281d6398",
+      "modelElementId": "e4d16f34-6d0d-42f7-aabf-0132538ac128",
+      "style": {
+        "name": "OutputConveyor #1",
+        "position": {
+          "x": 318.184164509387,
+          "y": 165.8414433200441
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825477033_fcm5cya6j\"}",
+        "simulationName": "Conveyor",
+        "simulationFolder": "Conveyors"
+      },
+      "references": {}
+    },
+    {
+      "id": "ec171d91-dd91-4db1-8204-18d2ca0bfb65",
+      "modelElementId": "e4d16f34-6d0d-42f7-aabf-0132538ac128",
+      "style": {
+        "name": "OutputConveyor #2",
+        "position": {
+          "x": 531.4066650977359,
+          "y": 166.5268352552734
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825490933_y5sxkyika\"}",
+        "simulationName": "Conveyor",
+        "simulationFolder": "Conveyors"
+      },
+      "references": {}
+    },
+    {
+      "id": "0001ebcd-800f-4b6d-947b-4e839d3e3862",
+      "modelElementId": "94fddbe7-9a8d-4b12-996f-1ba7ae4c5e38",
+      "style": {
+        "name": "Idle Location",
+        "position": {
+          "x": 316.2557756335725,
+          "y": 250.69055385588064
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825268625_fhkb0vyhh\"}",
+        "simulationName": "Idle Location",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "f4436428-0d81-4dc8-9019-f24345d488d8",
+      "modelElementId": "94fddbe7-9a8d-4b12-996f-1ba7ae4c5e38",
+      "style": {
+        "name": "Idle Location #2",
+        "position": {
+          "x": 528.3785519731638,
+          "y": 250.69055385588058
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825281166_7nkrndheo\"}",
+        "simulationName": "Idle Location",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "3ea61f79-6dd0-4b58-bc5f-6e441c578cd3",
+      "modelElementId": "94fddbe7-9a8d-4b12-996f-1ba7ae4c5e38",
+      "style": {
+        "name": "Idle Location #3",
+        "position": {
+          "x": 312.39899788194367,
+          "y": 339.39644214334606
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825299386_3o92yvhlw\"}",
+        "simulationName": "Idle Location",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "ef471ab7-3840-41f9-a379-7ede165f8058",
+      "modelElementId": "94fddbe7-9a8d-4b12-996f-1ba7ae4c5e38",
+      "style": {
+        "name": "Idle Location #4",
+        "position": {
+          "x": 534.163718600607,
+          "y": 341.32483101916046
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825311342_h0smen4hf\"}",
+        "simulationName": "Idle Location",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "fc35ceb0-51dd-4b89-a6d4-a8dfd6abd913",
+      "modelElementId": "1ddf6d6e-57cf-48f5-a520-a075c9cef2d0",
+      "style": {
+        "name": "SystemProperties",
+        "robotQuantity": 4,
+        "position": {
+          "x": 757.8568281950851,
+          "y": 65.56522177769187
+        },
+        "inputconveyorQuantity": 2,
+        "pathwayProperties": "",
+        "idleProperties": "",
+        "outputconveyorProperties": "",
+        "inputconveyorProperties": ""
+      },
+      "references": {}
+    },
+    {
+      "id": "5f1a3b03-116e-4e61-862c-6cdc9111772a",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area",
+        "position": {
+          "x": 323.1406665097737,
+          "y": 421.8976695691884
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755823748050_wfd0s7bei\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "2b330a9a-59b5-4c75-b59d-244948795aa0",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #2",
+        "position": {
+          "x": 541.877274103865,
+          "y": 431.95910818244045
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824524311_np0phq52e\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "df61b7c0-da51-4d2c-a7b4-b4dea43a3555",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #3",
+        "position": {
+          "x": 768.9563436922657,
+          "y": 427.13039311192745
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824534142_nafg77auy\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "1e999910-a6f9-48cd-b2af-f8d862db9aa4",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #4",
+        "position": {
+          "x": 337.4680532675316,
+          "y": 528.3785519731638
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824546778_likoxmu4u\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "5108215b-79e1-4d8c-88e2-c48f0efbe511",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #5",
+        "position": {
+          "x": 549.5908296071228,
+          "y": 532.2353297247927
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824561346_0acm6f97e\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "47f9417b-d4cc-4c44-a38a-c20bac780551",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #6",
+        "position": {
+          "x": 763.6419948225287,
+          "y": 534.1637186006071
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824575363_t3ymau1ml\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "15450f90-e66f-4937-a7f7-aba2d9e64daf",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #7",
+        "position": {
+          "x": -113.77494367305351,
+          "y": 628.654773515516
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824624105_6ng3g146o\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "54cb2011-28ba-46bb-9dbc-c501f3d4e353",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #8",
+        "position": {
+          "x": 109.91816592142453,
+          "y": 634.4399401429594
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824633983_nxatlye8l\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "6f9298ad-1eac-46e9-ab44-d51adf9ae091",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #9",
+        "position": {
+          "x": 325.89772001264487,
+          "y": 636.3683290187739
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824646366_353fwdb6c\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "6b7f0894-1697-4a7d-bf01-dff65ba4ba69",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #10",
+        "position": {
+          "x": 551.5192184829373,
+          "y": 634.4399401429594
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824657944_3hfp2lhxa\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "0db4872d-31c0-4337-8dc6-70099f2714af",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #11",
+        "position": {
+          "x": 765.9795540912204,
+          "y": 636.2198944062953
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824668575_4g073ity1\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "2ee5b814-213a-4524-bea4-bb6e0a2dfe09",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #12",
+        "position": {
+          "x": -115.70333254886799,
+          "y": 719.289050678796
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824682426_mhtz2ooy0\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "07cae8d4-06ec-4148-86dc-ddc5bf2238ea",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #13",
+        "position": {
+          "x": 96.41944379072328,
+          "y": 730.8593839336828
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824693989_sn8rggbzi\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "fc759bfc-4319-45ec-8125-fbff0735f55b",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #14",
+        "position": {
+          "x": 304.6854423786856,
+          "y": 738.5729394369406
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824704446_b08ft2eu3\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "bf47cff4-f6b9-4a10-8b75-535f5d866eec",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #15",
+        "position": {
+          "x": 538.0204963522361,
+          "y": 734.7161616853116
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824715551_8z3uu90sf\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "970db50e-f1e9-4992-9324-5ccd188611a7",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #16",
+        "position": {
+          "x": 755.9284393192708,
+          "y": 734.7161616853116
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824726059_wocn854vi\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "27a611ea-eb21-48f5-8195-9f6037b26e78",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #17",
+        "position": {
+          "x": -113.77494367305349,
+          "y": 813.7801055937048
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824738290_c5r4dlznu\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "65a93dc1-9c3e-451a-82db-7d9d2d4755ce",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #18",
+        "position": {
+          "x": 106.06138816979569,
+          "y": 827.278827724406
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824749189_l4svimtqq\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "eee2bec9-6560-4838-9981-a5f0819467eb",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #19",
+        "position": {
+          "x": 320.1125533852014,
+          "y": 833.0639943518495
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824761069_wt34nsabh\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "6e5d5de8-aef4-43bd-a746-b5eb806dac3e",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #20",
+        "position": {
+          "x": 544.2148333725568,
+          "y": 840.9001748643298
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824772891_pgb25gio6\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "822a5607-3ca4-495f-b7a2-3f28ca3a5b0c",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #21",
+        "position": {
+          "x": 761.5754951755378,
+          "y": 844.2045095312543
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755824783519_usn1fpesj\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "2681bcad-455f-420b-b491-6bf3e292b6af",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #22",
+        "position": {
+          "x": -113.77494367305354,
+          "y": 917.9131048876857
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825129054_ae9lsev5l\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "8d94f034-616d-4dd4-8034-8f9cacde9dbf",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #23",
+        "position": {
+          "x": 106.06138816979569,
+          "y": 925.6266603909439
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825139418_t0qb0y34s\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "e6d38741-6ed7-461f-aa43-5f4f8c5e530b",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #24",
+        "position": {
+          "x": 325.89772001264475,
+          "y": 931.4118270183869
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825151994_8yg4h3lrg\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "5c027db6-04dc-4946-9d68-b53144835275",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #25",
+        "position": {
+          "x": 541.0486094768082,
+          "y": 938.1431213614585
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825163374_qj6ohcxwa\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "abc37814-4d6b-4286-8af8-63995128fdc9",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #26",
+        "position": {
+          "x": 755.9284393192709,
+          "y": 942.9821602732741
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825174296_5ud5twih7\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "b3a7a2a6-188c-42de-9c94-dcaaaff21a8d",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #27",
+        "position": {
+          "x": -111.84655479723904,
+          "y": 1016.2609375542238
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825185533_vpgx0ct9e\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "998ffda2-2b31-4df6-b05a-908794d7c67e",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #28",
+        "position": {
+          "x": 109.089501294368,
+          "y": 1028.2249554400337
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825197069_ccjdbgif7\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "c4d795f6-f28d-4828-bb05-959cfb4c0be7",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #29",
+        "position": {
+          "x": 335.539664391717,
+          "y": 1025.9028819332964
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825207605_z5uolbiij\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "e6452197-1599-4f87-b0e4-4f35060a0ce5",
+      "modelElementId": "52f966de-4ac3-4b73-abdb-5fe63a7e715e",
+      "style": {
+        "name": "Pathway Area #30",
+        "position": {
+          "x": 555.3759962345661,
+          "y": 1029.7596596849248
+        },
+        "appearance": "{\"type\":\"custom-3d-model\",\"shape\":\"custom-3d-model\",\"color\":\"#ffffff\",\"fillColor\":\"#ffffff\",\"strokeColor\":\"black\",\"strokeWidth\":1,\"modelFileId\":\"model_1755825219454_xmegxipwk\"}",
+        "simulationName": "Pathway Area",
+        "simulationFolder": "Navigation"
+      },
+      "references": {}
+    },
+    {
+      "id": "969fe825-fb21-498c-bc20-c173f5dcac92",
+      "modelElementId": "a513aafe-57d3-4e2b-a28e-51459a1a9c8f",
+      "style": {
+        "name": "OPCUAConfiguration",
+        "serverPort": 4840,
+        "serverName": "Manufacturing OPC UA Server",
+        "position": {
+          "x": 758.0781710134613,
+          "y": 270.30070872179795
+        },
+        "namespaceURI": "urn:manufacturing:opcua:namespace"
+      },
+      "references": {}
+    },
+    {
+      "id": "f292cf34-20bd-4a9d-bb7a-920ee371c2e1",
+      "modelElementId": "54b3f0ac-5e0d-4337-b02b-090ed9f30a54",
+      "style": {
+        "name": "SimulationConfiguration",
+        "visualcomponentsVersion": 10,
+        "visualcomponentsPath": "C:\\\\Users\\\\Public\\\\Documents\\\\Visual Components\\\\",
+        "position": {
+          "x": 994.9524577848993,
+          "y": 286.1928884361969
+        }
+      },
+      "references": {}
+    },
+    {
+      "id": "0387f729-6c8c-47b0-95f8-9a2e870d661a",
+      "modelElementId": "ab636499-3ae4-4dcf-b51d-77dba4215b1c",
+      "style": {
+        "name": "Component1",
+        "simulationName": "Block Geo",
+        "simulationFolder": "Basic Shapes",
+        "position": {
+          "x": 1016.0807918305245,
+          "y": 405.27986214790303
+        }
+      },
+      "references": {
+        "simulationConfiguration": null
+      }
+    }
+  ],
+  "conformsTo": "078f3a55-e34d-4cc3-a71d-eef13a60e123"
+}

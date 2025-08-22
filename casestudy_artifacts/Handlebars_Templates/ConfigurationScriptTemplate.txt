@@ -1,0 +1,200 @@
+# Import scripts from the template file
+import sys, os
+sys.path.append(os.path.dirname(__file__))
+
+# Import all scripts and functions from the source file - GIVE YOUR OWN COMPUTER PATH FOR THE SOURCE, OTHERWISE WON'T WORK
+exec(open(r'c:\Users\...\Simulation_Source_Script.py').read())
+
+# SYSTEM CONFIGURATION
+VISUAL_COMPONENTS_VERSIONS = ["4.{{ManufacturingModel2.SimulationConfiguration.visualcomponentsVersion}}"]
+
+VISUAL_COMPONENTS_PATH = "{{ManufacturingModel2.SimulationConfiguration.visualcomponentsPath}}"
+
+# COMPONENT CREATION CONFIGURATION
+raw_components = r'''
+[
+    {
+        "name": "Pathway Area",
+        "folder": "Navigation",
+        "properties": [
+          {{#each ManufacturingSystem.SystemProperties.attributes~}}
+            {{#if (eq name "pathwayProperties")~}}
+              {
+                "name": "{{name}}",
+                "type": "{{type}}",
+                "default": {{#if defaultValue~}}
+                             {{#if (eq type "string")}}"{{defaultValue}}"{{else}}{{defaultValue}}{{/if~}}
+                           {{else~}}
+                             {{#if (eq type "boolean")}}false{{else if (eq type "number")}}0{{else}}""{{/if~}}
+                           {{/if~}}
+              }
+            {{/if~}}
+          {{/each~}}
+        ],
+        "script": PathwayArea
+    },
+    {
+        "name": "Conveyor",
+        "folder": "Conveyors",
+        "layout_name": "_Template_OutputConveyor",
+        "properties": [
+            {{#each ManufacturingSystem.SystemProperties.attributes~}}
+            {{#if (eq name "outputconveyorProperties")~}}
+              {
+                "name": "{{name}}",
+                "type": "{{type}}",
+                "default": {{#if defaultValue~}}
+                             {{#if (eq type "string")}}"{{defaultValue}}"{{else}}{{defaultValue}}{{/if~}}
+                           {{else~}}
+                             {{#if (eq type "boolean")}}false{{else if (eq type "number")}}0{{else}}""{{/if~}}
+                           {{/if~}}
+              }
+            {{/if~}}
+          {{/each~}}
+        ],
+        "script": OutputConveyor
+    },
+    {
+        "name": "Block Geo",
+        "folder": "Basic Shapes",
+        "layout_name": "Component1"
+    },
+    {
+        "name": "Conveyor",
+        "folder": "Conveyors",
+        "layout_name": "_Template_InputConveyor",
+        "properties": [
+              {{#each ManufacturingSystem.SystemProperties.attributes~}}
+    {{#if (eq name "inputconveyorProperties")~}}
+      {
+        "name": "{{name}}",
+        "type": "{{type}}",
+        "default": {{#if defaultValue~}}
+                     {{#if (eq type "string")}}"{{defaultValue}}"{{else}}{{defaultValue}}{{/if~}}
+                   {{else~}}
+                     {{#if (eq type "boolean")}}false{{else if (eq type "number")}}0{{else}}""{{/if~}}
+                   {{/if~}}
+      }{{#unless @last}},{{/unless~}}
+    {{else~}}
+      {{#if (eq name "inputconveyorQuantity")~}}
+        {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "default": {{#if defaultValue~}}
+                       {{#if (eq type "string")}}"{{defaultValue}}"{{else}}{{defaultValue}}{{/if~}}
+                     {{else~}}
+                       {{#if (eq type "boolean")}}false{{else if (eq type "number")}}0{{else}}""{{/if~}}
+                     {{/if~}}
+        }{{#unless @last}},{{/unless~}}
+      {{/if~}}
+    {{/if~}}
+  {{/each~}}
+        ],
+        "numbered_properties": [
+              {{#each ManufacturingSystem.InputConveyor.attributes~}}
+              {{#if (eq name "name")~}}{{!-- skip --}}{{else~}}
+              {{#if (eq name "simulationName")~}}{{!-- skip --}}{{else~}}
+              {{#if (eq name "simulationFolder")~}}{{!-- skip --}}{{else~}}
+              {
+                "name_template": "{{name}}",
+                "type": "{{type}}",
+                "default": {{#if defaultValue~}}
+                             {{#if (eq type "string")}}"{{defaultValue}}"{{else}}{{defaultValue}}{{/if~}}
+                           {{else~}}
+                             {{#if (eq type "boolean")}}false{{else if (eq type "number")}}0{{else}}""{{/if~}}
+                           {{/if~}}
+              }{{#unless @last}},{{/unless~}}
+              {{/if~}}{{/if~}}{{/if~}}
+            {{/each~}}
+        ],
+        "property_sets": {{ManufacturingModel2.SystemProperties.inputconveyorQuantity}},
+        "script": InputConveyor
+    },
+    {
+        "name": "Idle Location",
+        "folder": "Navigation",
+        "layout_name": "_Template_IdleLocation",
+        "properties": [
+            {{#each ManufacturingSystem.SystemProperties.attributes~}}
+            {{#if (eq name "idleProperties")~}}
+              {
+                "name": "{{name}}",
+                "type": "{{type}}",
+                "default": {{#if defaultValue~}}
+                             {{#if (eq type "string")}}"{{defaultValue}}"{{else}}{{defaultValue}}{{/if~}}
+                           {{else~}}
+                             {{#if (eq type "boolean")}}false{{else if (eq type "number")}}0{{else}}""{{/if~}}
+                           {{/if~}}
+              }
+            {{/if~}}
+          {{/each~}}
+        ],
+        "script": IdleLocation
+    },
+    {
+        "name": "Mobile Robot Resource",
+        "folder": "Mobile Robots",
+        "layout_name": "_Template_Mobile_Robot_Resource",
+        "properties": [
+            {{#each ManufacturingSystem.SystemProperties.attributes~}}
+            {{#if (eq name "robotQuantity")~}}
+              {
+                "name": "{{name}}",
+                "type": "{{type}}",
+                "default": {{#if defaultValue~}}
+                             {{#if (eq type "string")}}"{{defaultValue}}"{{else}}{{defaultValue}}{{/if~}}
+                           {{else~}}
+                             {{#if (eq type "boolean")}}false{{else if (eq type "number")}}0{{else}}""{{/if~}}
+                           {{/if~}}
+              }
+            {{/if~}}
+          {{/each~}},
+            {{#each ManufacturingSystem.Robot.attributes~}}
+            {{#if (eq name "initialPositions")~}}
+              {
+                "name": "{{name}}",
+                "type": "{{type}}",
+                "default": {{#if defaultValue~}}
+                             {{#if (eq type "string")}}"{{defaultValue}}"{{else}}{{defaultValue}}{{/if~}}
+                           {{else~}}
+                             {{#if (eq type "boolean")}}false{{else if (eq type "number")}}0{{else}}""{{/if~}}
+                           {{/if~}}
+              }
+            {{/if~}}
+          {{/each~}}
+        ],
+        "numbered_properties": [
+            {{#each ManufacturingSystem.Robot.attributes~}}
+              {{!-- Exclude unwanted attributes --}}
+              {{#if (eq name "initialPositions")~}}{{!-- skip --}}{{else~}}
+              {{#if (eq name "name")~}}{{!-- skip --}}{{else~}}
+              {{#if (eq name "simulationName")~}}{{!-- skip --}}{{else~}}
+              {{#if (eq name "simulationFolder")~}}{{!-- skip --}}{{else~}}
+              {
+                "name_template": "{{name}}",
+                "type": "{{type}}",
+                "default": {{#if defaultValue~}}
+                             {{#if (eq type "string")}}"{{defaultValue}}"{{else}}{{defaultValue}}{{/if~}}
+                           {{else~}}
+                             {{#if (eq type "boolean")}}false{{else if (eq type "number")}}0{{else}}""{{/if~}}
+                           {{/if~}}
+              }{{#unless @last}},{{/unless~}}
+              {{/if~}}{{/if~}}{{/if~}}{{/if~}}
+            {{/each~}}
+            ],
+        "property_sets": {{ManufacturingModel2.SystemProperties.robotQuantity}},
+        "script": Robot
+    }
+]
+'''
+
+
+COMPONENTS_TO_CREATE = eval(
+    raw_components.replace("false", "False").replace("true", "True")
+)
+
+# Create components
+app = getApplication()
+for config in COMPONENTS_TO_CREATE:
+    create_component(app, config)
+print("Done!")
