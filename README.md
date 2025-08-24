@@ -9,7 +9,7 @@
 </p>
 
 ## Overview
-SpatialDSLStudio is a web-based application for creating domain-specific languages (DSLs) and visual modeling environments with 2D and 3D visualization capabilities.
+SpatialDSLStudio is a web-based application for creating domain-specific languages (DSLs) and visual modeling environments with 2D and 3D visualization capabilities. The tool also defines models and generates code for layouts and components that can be used directly in simulation tools such as [Visual Components](https://www.visualcomponents.com/).
 
 Spatial DSL Studio implements a multi-level modeling architecture based on Model-Driven Engineering principles. The application provides tools for defining metamodels, creating conforming models, visualizing them in both 2D and 3D spaces, applying model transformations, and generating code from models.
 
