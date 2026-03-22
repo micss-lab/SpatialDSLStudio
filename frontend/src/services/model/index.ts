@@ -1,0 +1,9 @@
+// Barrel export for model services
+export { modelService } from './model.service';
+export { modelCrudService } from './model-crud.service';
+export { modelElementCrudService } from './model-element-crud.service';
+export { modelReferenceService } from './model-reference.service';
+export { modelValidationService } from './model-validation.service';
+export { modelMigrationService } from './model-migration.service';
+export { modelApiSyncService } from './model-api-sync.service';
+export { modelInheritanceUtilsService } from './model-inheritance-utils.service';

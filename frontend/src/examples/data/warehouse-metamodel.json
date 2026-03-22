@@ -1,0 +1,395 @@
+{
+  "id": "225d08e9-881b-46d3-9dfc-293c0c7800df",
+  "name": "WarehouseMM",
+  "eClass": "e7d0d970-9abd-4218-9ef9-9789e7b8862c",
+  "uri": "http://www.modeling-tool.com/warehousemm",
+  "prefix": "warehousemm",
+  "classes": [
+    {
+      "id": "2787d4e2-1f8f-4afd-8f9d-0337102a6400",
+      "name": "WarehouseSystem",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "5829c0cc-30c4-4f26-9c69-281eed255aa0",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "defaultValue": "",
+          "required": true,
+          "many": false
+        },
+        {
+          "id": "attr-1764620976689",
+          "name": "OpcuaServerPort",
+          "type": "number",
+          "required": true,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        },
+        {
+          "id": "attr-1764621006626",
+          "name": "NamespaceURI",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        },
+        {
+          "id": "attr-1764621032130",
+          "name": "UpdateInterval",
+          "type": "number",
+          "required": true,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        }
+      ],
+      "references": [
+        {
+          "id": "f7530f99-1b89-4570-8ca6-6894f56521d6",
+          "name": "contains",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "145adc45-dd1b-4fb8-8416-e1cfc70afef0",
+          "containment": true,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": true,
+          "attributes": []
+        },
+        {
+          "id": "d5ee2c04-1ba2-4273-a339-39ba11b203fe",
+          "name": "contains",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "af48adbd-f9b6-4704-9039-673f1f9e11ff",
+          "containment": true,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": true,
+          "attributes": []
+        },
+        {
+          "id": "9c2b6a3a-7a36-4da1-8720-3e4948cfd021",
+          "name": "contains",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "5570868f-e935-4a1e-acc5-dcdac65ca6f9",
+          "containment": true,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": true,
+          "attributes": []
+        },
+        {
+          "id": "865fa445-a8a6-4ae6-b171-44d19f36bf62",
+          "name": "contains",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "7065b3fd-5399-48db-9494-7a9101e5d2da",
+          "containment": true,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": true,
+          "attributes": []
+        },
+        {
+          "id": "84680dfa-f3c8-4641-948f-7a47131cc35a",
+          "name": "contains",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "e6484299-0c36-40f3-b5c9-0558eede369d",
+          "containment": true,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": true,
+          "attributes": []
+        }
+      ],
+      "constraints": [],
+      "position": {
+        "x": 83.60167276137247,
+        "y": 97.46839553168394
+      }
+    },
+    {
+      "id": "af48adbd-f9b6-4704-9039-673f1f9e11ff",
+      "name": "MobileRobot",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "086cbb50-d678-4290-b77f-b5ce3b8c0c1a",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "defaultValue": "",
+          "required": true,
+          "many": false
+        },
+        {
+          "id": "attr-1764621168791",
+          "name": "InitialPositions",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        },
+        {
+          "id": "attr-1764621184883",
+          "name": "Priority",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        },
+        {
+          "id": "attr-1764621225059",
+          "name": "LowBatteryThreshold",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        },
+        {
+          "id": "attr-1764621243668",
+          "name": "ChargeRate",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        },
+        {
+          "id": "attr-1764621265646",
+          "name": "MaxSpeed",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        },
+        {
+          "id": "attr-1764621337640",
+          "name": "CollisionThreshold",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        },
+        {
+          "id": "attr-1764621354504",
+          "name": "AvoidanceOffset",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        },
+        {
+          "id": "attr-1764621401428",
+          "name": "SafeDistance",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        },
+        {
+          "id": "attr-1764625510147",
+          "name": "Location",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        },
+        {
+          "id": "attr-1764625520328",
+          "name": "Target",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        },
+        {
+          "id": "attr-1764625540251",
+          "name": "BatteryLevel",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        },
+        {
+          "id": "attr-1764625552910",
+          "name": "HasProduct",
+          "type": "boolean",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        }
+      ],
+      "references": [
+        {
+          "id": "5a13acab-c46a-45cd-b2b5-e2ee8d9ba029",
+          "name": "assignedStation",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "e6484299-0c36-40f3-b5c9-0558eede369d",
+          "containment": false,
+          "cardinality": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "allowSelfReference": true,
+          "attributes": []
+        }
+      ],
+      "constraints": [],
+      "position": {
+        "x": 194.365955605032,
+        "y": 396.34492843957565
+      }
+    },
+    {
+      "id": "7065b3fd-5399-48db-9494-7a9101e5d2da",
+      "name": "Conveyor",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "9c10c38d-dc96-471d-9697-3cb2a64e07ad",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "defaultValue": "",
+          "required": true,
+          "many": false
+        },
+        {
+          "id": "attr-1764621561574",
+          "name": "InitialPositions",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        },
+        {
+          "id": "attr-1764621682059",
+          "name": "Produced",
+          "type": "boolean",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        }
+      ],
+      "references": [],
+      "constraints": [],
+      "position": {
+        "x": 673.158629709902,
+        "y": 263.67254429572165
+      }
+    },
+    {
+      "id": "5570868f-e935-4a1e-acc5-dcdac65ca6f9",
+      "name": "OutputLocation",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "48eee7f4-4edd-4dbd-8480-c5fecb70855e",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "defaultValue": "",
+          "required": true,
+          "many": false
+        },
+        {
+          "id": "attr-1764621725792",
+          "name": "InitialPositions",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        }
+      ],
+      "references": [],
+      "constraints": [],
+      "position": {
+        "x": 639.973012501772,
+        "y": 100.9109853021846
+      }
+    },
+    {
+      "id": "e6484299-0c36-40f3-b5c9-0558eede369d",
+      "name": "ChargingStation",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "4ba9d4f0-ac22-4663-8957-23427c62547a",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "defaultValue": "",
+          "required": true,
+          "many": false
+        },
+        {
+          "id": "attr-1764621744033",
+          "name": "InitialPositions",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        }
+      ],
+      "references": [],
+      "constraints": [],
+      "position": {
+        "x": 608.3638543936379,
+        "y": 543.690704518852
+      }
+    },
+    {
+      "id": "145adc45-dd1b-4fb8-8416-e1cfc70afef0",
+      "name": "PathwayArea",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "e109b43c-0ab3-46cd-9ee2-38ccdbe671ab",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "defaultValue": "",
+          "required": true,
+          "many": false
+        },
+        {
+          "id": "attr-1764622538149",
+          "name": "InitialPositions",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        }
+      ],
+      "references": [],
+      "constraints": [],
+      "position": {
+        "x": -90.39293524628356,
+        "y": 422.8593129936458
+      }
+    }
+  ],
+  "conformsTo": "8b8a9170-bd78-4e15-80dd-e018f295e8cc",
+  "constraints": []
+}

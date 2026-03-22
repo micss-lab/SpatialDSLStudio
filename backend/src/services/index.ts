@@ -1,0 +1,10 @@
+export { metametamodelService } from './metametamodel.service';
+export { metamodelService } from './metamodel.service';
+export { modelService } from './model.service';
+export { diagramService } from './diagram.service';
+export { transformationService } from './transformation.service';
+export { codeGenerationService } from './codegeneration.service';
+export { testService } from './test.service';
+export { fileStorageService } from './fileStorage.service';
+export { sharingService } from './sharing.service';
+export { authService } from './auth.service';
