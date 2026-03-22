@@ -1,0 +1,171 @@
+# Code Generation Guide
+
+This guide explains how to create code generation projects, manage templates, and produce downloadable outputs.
+
+<br><br>
+
+
+<p align="center">
+  <img src="../../images/code_gen_interface.PNG" alt="Metamodel Design" width="800"/>
+</p>
+
+## Code generation fundamentals
+
+Code generation is project-based.
+
+A project contains:
+
+- project metadata (name, description)
+- target metamodel
+- one or more templates
+
+Each template contains:
+
+- language (`java` or `python`)
+- template content (Handlebars-style)
+- output filename pattern
+
+## Open the code generation workspace
+
+You can open code generation in two ways:
+
+- from navigation (standalone page)
+- from a diagram card (`Generate Code`)
+
+When opened from a diagram context, generation prioritizes that diagram/model context where applicable.
+
+## Select or create a project
+
+At the top of the page:
+
+1. Select existing project from project selector.
+2. Or create a new project.
+
+For new projects provide:
+
+- project name
+- target metamodel
+- optional description
+
+## Manage templates in a project
+
+Projects support multiple templates (tabbed editor inside project dialog).
+
+Template fields:
+
+- template name
+- language (Java/Python)
+- output filename pattern (example: `{{name}}.java`)
+- template content
+
+Multiple template tabs let you generate multi-file outputs from one run.
+
+## Use example templates and projects
+
+The workspace provides:
+
+- Example Templates tab
+- preloaded example projects/templates
+
+You can start from an example and adapt it to your metamodel.
+
+## Generate code
+
+Generation flow:
+
+1. Select project.
+2. Click Generate.
+3. Review generated files in Generated Files tab.
+4. Download one file or download all as ZIP.
+
+Model selection behavior:
+
+- service resolves models conforming to project target metamodel
+- when diagram context exists, it prioritizes that diagram model
+- generation can run diagram-based or model-based paths
+
+## Template syntax and helpers
+
+Templates support Handlebars-style expressions and helpers.
+
+Common helper examples in UI:
+
+- `capitalize`
+- `lowercase`
+- `camelCase`
+- `snakeCase`
+
+The editor also includes autocompletion support for template authoring.
+
+## Generated outputs
+
+Generated Files tab provides:
+
+- file list
+- file content preview
+- single-file download
+- bulk ZIP download
+
+## Edit, delete, and share projects
+
+Project-level operations include:
+
+- edit project and templates
+- delete project
+- share project with other users (if permitted)
+
+Sharing follows role/permission behavior defined for resource sharing.
+
+## Common issues and fixes
+
+### No output generated
+
+Cause: project has no valid templates or no compatible models.
+
+Fix: verify target metamodel and template list.
+
+### Generation fails with model error
+
+Cause: no model found for selected target metamodel.
+
+Fix: create or select a model conforming to the target metamodel.
+
+### Filename pattern problems
+
+Cause: invalid or empty output pattern.
+
+Fix: use a valid Handlebars pattern and include extension.
+
+### Template variable not resolving
+
+Cause: variable path does not exist in generation context.
+
+Fix: inspect available context and adjust variable names.
+
+### Unintended project overwrite behavior
+
+Cause: editing existing project while expecting new copy.
+
+Fix: create a new project when branching template sets.
+
+## Recommended workflow
+
+1. Finalize metamodel and model first.
+2. Create small project with one template.
+3. Generate and inspect output.
+4. Add additional templates for multi-file generation.
+5. Share project once stable.
+
+## Relevant files
+
+- `frontend/src/components/codegeneration/CodeGenerator.tsx`: Main code generation workspace UI.
+- `frontend/src/services/codegeneration/codegeneration.service.ts`: Frontend code generation orchestration service.
+- `frontend/src/services/codegeneration/codegen-generation-engine.service.ts`: Template execution and output assembly logic.
+- `frontend/src/services/codegeneration/templateAutocomplete.service.ts`: Template editor completion helpers.
+- `backend/src/routes/codegen.routes.ts`: Backend API endpoints for projects, templates, and generation operations.
+
+## Related docs
+
+- [Metamodels](metamodels.md)
+- [Models](models.md)
+- [API Reference](../reference/api.md)

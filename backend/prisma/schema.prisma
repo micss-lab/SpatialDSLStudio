@@ -1,0 +1,375 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================
+// Enums for Role-Based Access Control
+// ===========================================
+
+enum UserRole {
+  ADMIN
+  DSL_DESIGNER
+  MODELER
+  VIEWER
+}
+
+enum ResourceType {
+  METAMODEL
+  MODEL
+  DIAGRAM
+  TRANSFORMATION_RULE
+  CODEGEN_PROJECT
+  TEST_CASE
+}
+
+enum SharePermission {
+  VIEWER
+  EDITOR
+}
+
+// ===========================================
+// User Authentication
+// ===========================================
+
+model User {
+  id          String    @id @default(uuid())
+  email       String    @unique
+  password    String    // Hashed with bcrypt
+  role        UserRole  @default(DSL_DESIGNER)
+  isSuspended Boolean   @default(false)
+  lastLogin   DateTime?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations - user owns all their data
+  ePackages      EPackage[]
+  metamodels     Metamodel[]
+  models         Model[]
+  diagrams       Diagram[]
+  transformationRules TransformationRule[]
+  codegenProjects     CodeGenerationProject[]
+  testCases      TestCase[]
+  storedFiles    StoredFile[]
+  
+  // Sharing relations
+  ownedShares    SharedResource[] @relation("ShareOwner")
+  receivedShares SharedResource[] @relation("ShareRecipient")
+  
+  @@map("users")
+}
+
+// ===========================================
+// Resource Sharing
+// ===========================================
+
+model SharedResource {
+  id           String          @id @default(uuid())
+  resourceType ResourceType
+  resourceId   String
+  permission   SharePermission
+  
+  // Owner of the resource
+  ownerId      String
+  owner        User            @relation("ShareOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  // User the resource is shared with
+  sharedWithId String
+  sharedWith   User            @relation("ShareRecipient", fields: [sharedWithId], references: [id], onDelete: Cascade)
+  
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  
+  // Same resource can't be shared twice with the same user
+  @@unique([resourceType, resourceId, sharedWithId])
+  @@map("shared_resources")
+}
+
+// ===========================================
+// Meta-Metamodel (Ecore-like foundation)
+// ===========================================
+
+model EPackage {
+  id        String   @id @default(uuid())
+  name      String
+  nsURI     String
+  nsPrefix  String
+  
+  // Store the entire classes array as JSONB for flexibility
+  // This includes EClass, EAttribute, EReference definitions
+  classes   Json     @default("[]")
+  
+  // Owner
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Metamodels that conform to this meta-metamodel
+  metamodels Metamodel[]
+  
+  @@unique([nsURI, userId])
+  @@map("e_packages")
+}
+
+// ===========================================
+// Metamodel (User-defined schemas)
+// ===========================================
+
+model Metamodel {
+  id         String   @id @default(uuid())
+  name       String
+  uri        String
+  prefix     String
+  eClass     String?  // ID of corresponding EClass in meta-metamodel
+  
+  // Store complex nested data as JSONB
+  // classes: MetaClass[] with attributes, references, constraints
+  classes    Json     @default("[]")
+  
+  // Global constraints (OCL and JavaScript)
+  constraints Json    @default("[]")
+  
+  // Foreign key to meta-metamodel package
+  conformsToId String
+  conformsTo   EPackage @relation(fields: [conformsToId], references: [id])
+  
+  // Owner
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relations
+  models     Model[]
+  
+  @@map("metamodels")
+}
+
+// ===========================================
+// Model (Instances of metamodel)
+// ===========================================
+
+model Model {
+  id           String   @id @default(uuid())
+  name         String
+  metamodelId  String   // Duplicate for easy access
+  
+  // Store model elements as JSONB
+  // elements: ModelElement[] with attributes, style, references
+  elements     Json     @default("[]")
+  
+  // Optional connections for visualization
+  connections  Json     @default("[]")
+  
+  // Foreign key to metamodel
+  conformsToId String
+  conformsTo   Metamodel @relation(fields: [conformsToId], references: [id], onDelete: Cascade)
+  
+  // Owner
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  diagrams     Diagram[]
+  
+  @@map("models")
+}
+
+// ===========================================
+// Diagram (Visual representation)
+// ===========================================
+
+model Diagram {
+  id        String   @id @default(uuid())
+  name      String
+  
+  // Foreign key to model
+  modelId   String
+  model     Model    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  
+  // Store diagram elements as JSONB
+  // elements: DiagramElement[] with positions, styles, etc.
+  elements  Json     @default("[]")
+  
+  // 3D grid settings
+  gridSettings Json  @default("{\"sizeX\": 20000, \"sizeY\": 20000}")
+  
+  // Owner
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("diagrams")
+}
+
+// ===========================================
+// Transformation System (Simplified)
+// ===========================================
+
+// Single table for transformation rules with embedded patterns
+model TransformationRule {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  priority    Int      @default(0)
+  enabled     Boolean  @default(true)
+  
+  // LHS Pattern (embedded as JSON)
+  lhs         Json     @default("{}")
+  
+  // RHS Pattern (embedded as JSON)
+  rhs         Json     @default("{}")
+  
+  // NAC Patterns (embedded as JSON array)
+  nacs        Json     @default("[]")
+  
+  // Additional application conditions
+  conditions  Json     @default("[]")
+  
+  // Optional reference to diagram visualization
+  diagramId   String?
+  
+  // Owner
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("transformation_rules")
+}
+
+// ===========================================
+// Code Generation
+// ===========================================
+
+model CodeGenerationProject {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isExample   Boolean  @default(false)
+  
+  // Target metamodel ID (stored as string without foreign key for example projects)
+  targetMetamodelId String?
+  
+  // Store templates as JSONB
+  // templates: CodeGenerationTemplate[]
+  templates   Json     @default("[]")
+  
+  // Owner
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("code_generation_projects")
+}
+
+// ===========================================
+// Test Cases
+// ===========================================
+
+model TestCase {
+  id                  String   @id @default(uuid())
+  name                String
+  description         String?
+  type                TestCaseType
+  targetMetaClassId   String
+  targetMetaClassName String
+  targetProperty      String?
+  status              TestCaseStatus @default(pending)
+  errorMessage        String?
+  
+  // For constraint tests
+  constraintId        String?
+  constraintType      ConstraintType?
+  
+  // Test inputs/outputs
+  originalInput       Json?
+  expectedOutput      Json?
+  actualOutput        Json?
+  
+  // Test values as JSONB
+  testValues          Json     @default("[]")
+  
+  // Target ID - can be model or metamodel ID (no foreign key constraint for flexibility)
+  modelId             String?
+  
+  // Owner
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  @@map("test_cases")
+}
+
+enum TestCaseType {
+  attribute
+  reference
+  constraint
+  reference_attribute
+}
+
+enum TestCaseStatus {
+  pending
+  running
+  passed
+  failed
+}
+
+enum ConstraintType {
+  ocl
+  javascript
+}
+
+// ===========================================
+// File Storage (GLB models, images)
+// ===========================================
+
+model StoredFile {
+  id        String   @id @default(uuid())
+  filename  String
+  mimetype  String
+  size      Int
+  type      FileType
+  
+  // Store the actual file data as bytes
+  data      Bytes
+  
+  // Metadata
+  metadata  Json     @default("{}")
+  
+  // Owner
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("stored_files")
+}
+
+enum FileType {
+  image
+  model
+  other
+}
