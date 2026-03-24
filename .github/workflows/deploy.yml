@@ -114,6 +114,7 @@ jobs:
           script: |
             set -e
             cd /opt/spatialdsl
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             docker compose -f docker-compose.prod.yml up -d --build
             docker image prune -f
