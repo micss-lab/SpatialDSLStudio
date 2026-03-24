@@ -21,10 +21,6 @@ jobs:
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
-            shared/package-lock.json
-
-      - name: Install shared deps
-        run: cd shared && npm ci
 
       - name: Install backend deps
         run: cd backend && npm ci
@@ -94,7 +90,7 @@ jobs:
           DATABASE_URL: postgresql://spatialdsl_user:test_password@localhost:5432/spatialdsl_test
 
       - name: Run tests
-        run: cd backend && npm test -- --passWithNoTests
+        run: cd backend && npm run test --if-present
         env:
           DATABASE_URL: postgresql://spatialdsl_user:test_password@localhost:5432/spatialdsl_test
           NODE_ENV: test
