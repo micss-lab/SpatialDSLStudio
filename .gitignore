@@ -33,3 +33,4 @@ node_modules/
 Thumbs.db
 .vscode/
 .idea/
+spatialdsl_deploy.key
