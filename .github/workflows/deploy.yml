@@ -51,7 +51,7 @@ jobs:
         run: cd frontend && npm ci
 
       - name: Run tests
-        run: cd frontend && npm test -- --watchAll=false --passWithNoTests --ci
+        run: cd frontend && npm test -- --watchAll=false --ci --coverage --coverageThreshold='{"global":{"lines":70}}'
 
   # ── 3. Backend Tests ───────────────────────────────────────────────────────
   test-backend:
@@ -90,7 +90,7 @@ jobs:
           DATABASE_URL: postgresql://spatialdsl_user:test_password@localhost:5432/spatialdsl_test
 
       - name: Run tests
-        run: cd backend && npm run test --if-present
+        run: cd backend && npm run test:coverage
         env:
           DATABASE_URL: postgresql://spatialdsl_user:test_password@localhost:5432/spatialdsl_test
           NODE_ENV: test
@@ -115,6 +115,7 @@ jobs:
             set -e
             cd /opt/spatialdsl
             git fetch origin main
+            git clean -fd
             git reset --hard origin/main
             docker compose -f docker-compose.prod.yml up -d --build
             docker image prune -f
