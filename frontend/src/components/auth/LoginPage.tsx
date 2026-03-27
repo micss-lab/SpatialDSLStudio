@@ -252,7 +252,7 @@ const LoginPage: React.FC = () => {
                   },
                 }}
               >
-                {mode === 'login' ? 'Create one' : 'Sign in'}
+                {mode === 'login' ? 'Create Account' : 'Sign in'}
               </Link>
             </Typography>
           </Box>

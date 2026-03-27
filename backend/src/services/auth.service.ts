@@ -1,12 +1,10 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
 import config from '../config';
 import { JwtPayload } from '../middleware/auth';
 import { UserRole } from '../../../shared/types';
 import { metametamodelService } from './metametamodel.service';
-
-const prisma = new PrismaClient();
+import prisma from '../config/database';
 
 const SALT_ROUNDS = 10;
 
