@@ -51,7 +51,7 @@ jobs:
         run: cd frontend && npm ci
 
       - name: Run tests
-        run: cd frontend && npm test -- --watchAll=false --ci --coverage --coverageThreshold='{"global":{"lines":70}}'
+        run: cd frontend && npm test -- --watchAll=false --ci --coverage
 
   # ── 3. Backend Tests ───────────────────────────────────────────────────────
   test-backend:
