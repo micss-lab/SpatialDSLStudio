@@ -585,8 +585,14 @@ const AuthenticatedApp: React.FC = () => {
               >
                 <MenuIcon />
               </IconButton>
+              <Box
+                component="img"
+                src="/uantwerp-logo.svg"
+                alt="University of Antwerp"
+                sx={{ height: 32, mr: 1.5 }}
+              />
               <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                Modeling Tool v1.0
+                SpatialDSL
               </Typography>
               <Button color="inherit" component={Link} to="/">
                 Home
