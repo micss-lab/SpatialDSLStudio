@@ -1,6 +1,8 @@
 # SpatialDSL Studio
 
-[![Test & Deploy](https://github.com/micss-lab/SpatialDSLStudio/actions/workflows/deploy.yml/badge.svg)](https://github.com/micss-lab/SpatialDSLStudio/actions/workflows/deploy.yml)
+[![CI](https://github.com/micss-lab/SpatialDSLStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/micss-lab/SpatialDSLStudio/actions/workflows/ci.yml)
+[![Deploy](https://github.com/micss-lab/SpatialDSLStudio/actions/workflows/deploy.yml/badge.svg)](https://github.com/micss-lab/SpatialDSLStudio/actions/workflows/deploy.yml)
+[![Health Check](https://github.com/micss-lab/SpatialDSLStudio/actions/workflows/health-check.yml/badge.svg)](https://github.com/micss-lab/SpatialDSLStudio/actions/workflows/health-check.yml)
 
 <p align="center">
   <a href="https://www.uantwerpen.be/en/">
@@ -22,6 +24,8 @@
 
 ## Overview
 A full-stack model-driven engineering platform for designing domain-specific languages and working with models end-to-end.
+
+**Live demo:** [https://spatialdsl.tmusml.cloud](https://spatialdsl.tmusml.cloud)
 
 You can:
 
