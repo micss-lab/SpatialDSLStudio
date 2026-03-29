@@ -85,8 +85,8 @@ describe('downloadAllFilesAsZip', () => {
 
     await downloadAllFilesAsZip(
       [
-        { filename: 'file1.ts', content: 'export const x = 1;', metaclassName: 'A', targetFile: 'file1.ts' },
-        { filename: 'file2.ts', content: 'export const y = 2;', metaclassName: 'B', targetFile: 'file2.ts' },
+        { filename: 'file1.ts', content: 'export const x = 1;' },
+        { filename: 'file2.ts', content: 'export const y = 2;' },
       ],
       'output.zip'
     );
@@ -101,7 +101,7 @@ describe('downloadAllFilesAsZip', () => {
 
   it('uses default filename when not specified', async () => {
     await downloadAllFilesAsZip([
-      { filename: 'file1.ts', content: 'content', metaclassName: 'A', targetFile: 'file1.ts' },
+      { filename: 'file1.ts', content: 'content' },
     ]);
 
     expect(mockLink.download).toBe('generated-artifacts.zip');
