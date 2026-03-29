@@ -1,6 +1,18 @@
-# Spatial DSL Studio
- <br><br>
+# SpatialDSL Studio
 
+[![Test & Deploy](https://github.com/micss-lab/SpatialDSLStudio/actions/workflows/deploy.yml/badge.svg)](https://github.com/micss-lab/SpatialDSLStudio/actions/workflows/deploy.yml)
+
+<p align="center">
+  <a href="https://www.uantwerpen.be/en/">
+    <img src="images/uantwerp-logo.svg" alt="University of Antwerp" height="60"/>
+  </a>
+</p>
+
+<p align="center">
+  Developed at the <a href="https://micss-lab.github.io/">MICSS (Modeling Intelligent Complex Software and Systems)</a> lab<br>
+  <a href="https://ansymo.uantwerpen.be/">AnSyMo (Antwerp Systems and Software Modeling)</a> group<br>
+  <a href="https://www.uantwerpen.be/en/">University of Antwerp</a>
+</p>
 
 <p align="center">
   <img src="images/example_metamodel.PNG" alt="Metamodel Design" width="800"/>
@@ -26,7 +38,7 @@ Spatial DSL Studio implements a multi-level modeling architecture based on Model
 
 The tool follows a four-layer architecture:
 - Meta-Metamodel Level (M3): Core language definition. Metamodels must conform to meta-metamodels
-- Metamodel Level (M2): Domain-specific languages defined as instances of the meta-metamodel  
+- Metamodel Level (M2): Domain-specific languages defined as instances of the meta-metamodel
 - Model Level (M1): Concrete models conforming to their metamodels
 - Visualization Level (M1): 2D and 3D representations of models
 - Code Generation Level (M0): Auto code generation from the designed models(Template-based)
@@ -103,6 +115,3 @@ For complete setup requirements (database, env vars, migrations), see the gettin
 - [API Reference](docs/reference/api.md)
 - [Data Model](docs/reference/data-model.md)
 - [Architecture](docs/reference/architecture.md)
-
-
-
