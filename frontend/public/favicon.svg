@@ -1,10 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#3641f5"/>
-      <stop offset="100%" style="stop-color:#1a237e"/>
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="12" fill="url(#bg)"/>
-  <text x="32" y="46" font-family="Arial, Helvetica, sans-serif" font-size="38" font-weight="bold" fill="white" text-anchor="middle">S</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56.693 56.693"><path d="M53.858 56.693H2.835A2.843 2.843 0 010 53.858V2.835A2.842 2.842 0 012.835 0h51.023a2.842 2.842 0 012.835 2.834v51.023a2.843 2.843 0 01-2.835 2.835" fill="#ee2840"/><path d="M36.372 30.027c.24 6.855-2.578 11.81-8.79 11.81-4.838 0-9.737-3.623-9.737-10.81V11.753H9.88v19.678c0 7.455 4.992 15.1 16.494 15.1 11.164 0 15.657-8.012 15.707-14.657 8.151 1.257 11.888-4.825 10.822-8.967-1.423 1.645-3.7 3.1-10.812 1.084V11.753h-5.718v10.299c-11.17-3.667-13.814 6.51-13.814 6.51s5.224-2.874 13.814 1.465" fill="#fff"/></svg>

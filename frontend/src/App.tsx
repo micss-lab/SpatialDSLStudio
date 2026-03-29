@@ -49,6 +49,8 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
 import ShareIcon from '@mui/icons-material/Share';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import HomeIcon from '@mui/icons-material/Home';
+import InfoIcon from '@mui/icons-material/Info';
 
 import MetamodelManager from './components/metamodel/MetamodelManager';
 import ModelManager from './components/model/ModelManager';
@@ -585,15 +587,17 @@ const AuthenticatedApp: React.FC = () => {
               >
                 <MenuIcon />
               </IconButton>
-              <Box
-                component="img"
-                src={`${process.env.PUBLIC_URL}/uantwerp-logo.svg`}
-                alt="University of Antwerp"
-                sx={{ height: 32, mr: 1.5 }}
-              />
-              <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                SpatialDSL
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+                <Box
+                  component="img"
+                  src={`${process.env.PUBLIC_URL}/uantwerp-logo.svg`}
+                  alt="University of Antwerp"
+                  sx={{ height: 28, mr: 1.5 }}
+                />
+                <Typography variant="h6" component="div">
+                  SpatialDSL Studio
+                </Typography>
+              </Box>
               <Button color="inherit" component={Link} to="/">
                 Home
               </Button>
@@ -661,46 +665,43 @@ const AuthenticatedApp: React.FC = () => {
               <List>
                 <ListItem disablePadding>
                   <ListItemButton component={Link} to="/">
+                    <ListItemIcon><HomeIcon /></ListItemIcon>
                     <ListItemText primary="Home" />
                   </ListItemButton>
                 </ListItem>
                 <ListItem disablePadding>
                   <ListItemButton component={Link} to="/metamodels">
-                    <SchemaIcon sx={{ mr: 2 }} />
+                    <ListItemIcon><SchemaIcon /></ListItemIcon>
                     <ListItemText primary="Metamodels" />
                   </ListItemButton>
                 </ListItem>
                 <ListItem disablePadding>
                   <ListItemButton component={Link} to="/models">
-                    <ModelTrainingIcon sx={{ mr: 2 }} />
+                    <ListItemIcon><ModelTrainingIcon /></ListItemIcon>
                     <ListItemText primary="Models" />
                   </ListItemButton>
                 </ListItem>
                 <ListItem disablePadding>
                   <ListItemButton component={Link} to="/diagrams">
-                    <DesignServicesIcon sx={{ mr: 2 }} />
+                    <ListItemIcon><DesignServicesIcon /></ListItemIcon>
                     <ListItemText primary="Diagrams" />
                   </ListItemButton>
                 </ListItem>
                 <ListItem disablePadding>
                   <ListItemButton component={Link} to="/code-generation">
-                    <CodeIcon sx={{ mr: 2 }} />
+                    <ListItemIcon><CodeIcon /></ListItemIcon>
                     <ListItemText primary="Code Generation" />
                   </ListItemButton>
                 </ListItem>
                 <ListItem disablePadding>
                   <ListItemButton component={Link} to="/transformations">
-                    <ListItemIcon>
-                      <AutorenewIcon />
-                    </ListItemIcon>
+                    <ListItemIcon><AutorenewIcon /></ListItemIcon>
                     <ListItemText primary="Transformations" />
                   </ListItemButton>
                 </ListItem>
                 <ListItem disablePadding>
                   <ListItemButton component={Link} to="/testing">
-                    <ListItemIcon>
-                      <BugReportIcon />
-                    </ListItemIcon>
+                    <ListItemIcon><BugReportIcon /></ListItemIcon>
                     <ListItemText primary="Metamodel-Based Testing" />
                   </ListItemButton>
                 </ListItem>
@@ -720,6 +721,7 @@ const AuthenticatedApp: React.FC = () => {
                 <Divider />
                 <ListItem disablePadding>
                   <ListItemButton component={Link} to="/about">
+                    <ListItemIcon><InfoIcon /></ListItemIcon>
                     <ListItemText primary="About" />
                   </ListItemButton>
                 </ListItem>

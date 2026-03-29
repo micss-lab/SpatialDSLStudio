@@ -1,0 +1,17 @@
+name: Health Check
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'  # every 30 minutes
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping Production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check production health
+        run: |
+          response=$(curl -sf --max-time 15 https://spatialdsl.tmusml.cloud/api/health)
+          echo "$response"
+          echo "$response" | jq -e '.success == true'

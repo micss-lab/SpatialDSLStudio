@@ -34,3 +34,7 @@ Thumbs.db
 .vscode/
 .idea/
 spatialdsl_deploy.key
+
+# Claude Code
+.claude/
+CLAUDE.md
