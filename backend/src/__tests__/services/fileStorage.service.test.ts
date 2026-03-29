@@ -369,7 +369,7 @@ describe('FileStorageService', () => {
 
   describe('getStorageStats', () => {
     it('returns stats with byType breakdown', async () => {
-      prismaMock.storedFile.groupBy.mockResolvedValue([
+      (prismaMock.storedFile.groupBy as jest.Mock).mockResolvedValue([
         { type: 'image', _count: 3, _sum: { size: 3000 } },
         { type: 'model', _count: 1, _sum: { size: 5000 } },
       ] as any);
@@ -385,7 +385,7 @@ describe('FileStorageService', () => {
     });
 
     it('initializes all types with zero counts', async () => {
-      prismaMock.storedFile.groupBy.mockResolvedValue([]);
+      (prismaMock.storedFile.groupBy as jest.Mock).mockResolvedValue([]);
 
       const result = await fileStorageService.getStorageStats('user-uuid-1');
 
@@ -397,7 +397,7 @@ describe('FileStorageService', () => {
     });
 
     it('handles null sum from groupBy', async () => {
-      prismaMock.storedFile.groupBy.mockResolvedValue([
+      (prismaMock.storedFile.groupBy as jest.Mock).mockResolvedValue([
         { type: 'other', _count: 2, _sum: { size: null } },
       ] as any);
 

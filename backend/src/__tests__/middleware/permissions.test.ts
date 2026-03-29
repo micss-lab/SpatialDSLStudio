@@ -26,7 +26,7 @@ import {
   getEffectivePermission,
   requireResourceAccess,
 } from '../../middleware/permissions';
-import { UserRole } from '../../../shared/types';
+import { UserRole } from '../../../../shared/types';
 
 describe('requireRole middleware', () => {
   let req: any;
