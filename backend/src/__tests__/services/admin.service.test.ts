@@ -19,7 +19,10 @@ import { ApiError } from '../../middleware/errorHandler';
 const makeUser = (overrides = {}) => ({
   id: 'user-uuid-1',
   email: 'user@example.com',
+  password: '$2b$10$hashedpassword',
   role: 'DSL_DESIGNER' as const,
+  isSuspended: false,
+  lastLogin: null,
   createdAt: new Date(),
   updatedAt: new Date(),
   _count: {

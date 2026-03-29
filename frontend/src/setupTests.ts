@@ -25,6 +25,7 @@ jest.mock('@react-three/drei', () => ({
   Text: () => null,
   Html: ({ children }: any) => children,
   useGLTF: () => ({ scene: {} }),
+  Billboard: ({ children }: any) => children,
 }));
 
 // Mock react-konva
@@ -39,25 +40,43 @@ jest.mock('react-konva', () => ({
   Line: () => null,
 }));
 
-// Mock window.URL.createObjectURL
-Object.defineProperty(window, 'URL', {
-  writable: true,
-  value: {
-    createObjectURL: jest.fn(() => 'mocked-url'),
-    revokeObjectURL: jest.fn(),
-  },
+// Mock window.URL.createObjectURL / revokeObjectURL without overwriting the URL constructor
+if (typeof window.URL.createObjectURL === 'undefined') {
+  Object.defineProperty(window.URL, 'createObjectURL', {
+    configurable: true,
+    writable: true,
+    value: jest.fn(() => 'mocked-url'),
+  });
+} else {
+  window.URL.createObjectURL = jest.fn(() => 'mocked-url');
+}
+if (typeof window.URL.revokeObjectURL === 'undefined') {
+  Object.defineProperty(window.URL, 'revokeObjectURL', {
+    configurable: true,
+    writable: true,
+    value: jest.fn(),
+  });
+} else {
+  window.URL.revokeObjectURL = jest.fn();
+}
+
+// Suppress console.error for specific well-known React warnings in tests
+let consoleErrorSpy: jest.SpyInstance;
+beforeAll(() => {
+  const originalConsoleError = console.error.bind(console);
+  consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation((...args: any[]) => {
+    if (
+      typeof args[0] === 'string' &&
+      (args[0].includes('ReactDOM.render is no longer supported') ||
+        args[0].includes('Warning: An update to') ||
+        args[0].includes('Warning: validateDOMNesting'))
+    ) {
+      return;
+    }
+    originalConsoleError(...args);
+  });
 });
 
-// Suppress console.error for specific well-known warnings in tests
-const originalConsoleError = console.error;
-console.error = (...args: any[]) => {
-  if (
-    typeof args[0] === 'string' &&
-    (args[0].includes('ReactDOM.render is no longer supported') ||
-      args[0].includes('Warning: An update to') ||
-      args[0].includes('Warning: validateDOMNesting'))
-  ) {
-    return;
-  }
-  originalConsoleError.call(console, ...args);
-};
+afterAll(() => {
+  consoleErrorSpy.mockRestore();
+});

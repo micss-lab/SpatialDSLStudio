@@ -30,9 +30,10 @@ beforeEach(() => {
     click: jest.fn(),
   };
 
+  const originalCreateElement = document.createElement.bind(document);
   jest.spyOn(document, 'createElement').mockImplementation((tag: string) => {
     if (tag === 'a') return mockLink as any;
-    return document.createElement(tag);
+    return originalCreateElement(tag);
   });
 
   jest.spyOn(document.body, 'appendChild').mockImplementation((_el) => _el as any);
@@ -81,12 +82,6 @@ describe('downloadAllFilesAsZip', () => {
   it('creates zip and triggers download', async () => {
     const JSZip = (require('jszip') as any).default;
     const mockZipInstance = JSZip._instance;
-    console.log('JSZip type:', typeof JSZip);
-    console.log('mockZipInstance:', mockZipInstance);
-    console.log('mockZipInstance.file type:', typeof mockZipInstance?.file);
-    const testZip = new JSZip();
-    console.log('testZip:', testZip);
-    console.log('testZip.file type:', typeof testZip?.file);
 
     await downloadAllFilesAsZip(
       [

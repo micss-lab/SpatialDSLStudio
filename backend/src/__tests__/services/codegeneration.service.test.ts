@@ -97,7 +97,7 @@ describe('CodeGenerationService', () => {
     it('throws 403 for MODELER role', async () => {
       await expect(
         codeGenerationService.createProject(
-          { id: 'proj-uuid-1', name: 'TestProject', templates: [] },
+          { id: 'proj-uuid-1', name: 'TestProject', targetMetamodelId: 'mm-uuid-1', templates: [] },
           'user-uuid-1',
           'MODELER'
         )
