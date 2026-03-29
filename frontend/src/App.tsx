@@ -587,7 +587,7 @@ const AuthenticatedApp: React.FC = () => {
               </IconButton>
               <Box
                 component="img"
-                src="/uantwerp-logo.svg"
+                src={`${process.env.PUBLIC_URL}/uantwerp-logo.svg`}
                 alt="University of Antwerp"
                 sx={{ height: 32, mr: 1.5 }}
               />

@@ -1,4 +1,4 @@
-# Spatial DSL Studio
+# SpatialDSL Studio
 
 [![Test & Deploy](https://github.com/micss-lab/SpatialDSLStudio/actions/workflows/deploy.yml/badge.svg)](https://github.com/micss-lab/SpatialDSLStudio/actions/workflows/deploy.yml)
 
