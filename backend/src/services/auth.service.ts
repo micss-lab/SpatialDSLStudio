@@ -92,12 +92,12 @@ class AuthService {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Create user with default DSL_DESIGNER role
+    // Create user with default MODELER role
     const user = await prisma.user.create({
       data: {
         email: email.toLowerCase(),
         password: hashedPassword,
-        role: 'DSL_DESIGNER',
+        role: 'MODELER',
       },
     });
 
