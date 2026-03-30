@@ -758,7 +758,7 @@ const HomePage: React.FC = () => {
   return (
     <Container sx={{ mt: 4, pb: 4, height: '100%', overflow: 'auto' }}>
       <Typography variant="h4" gutterBottom>
-        Welcome to Modeling Tool v1.0
+        Welcome to Spatial DSL Studio
       </Typography>
       
       <Typography paragraph>
