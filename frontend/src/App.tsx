@@ -1421,7 +1421,7 @@ const AboutPage: React.FC = () => {
   return (
     <Container sx={{ mt: 4, pb: 4, height: '100%', overflow: 'auto' }}>
       <Typography variant="h4" gutterBottom>
-        About Modeling Tool v1.0
+        About Spatial DSL Studio
       </Typography>
       
       <Typography paragraph>
