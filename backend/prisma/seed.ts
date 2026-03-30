@@ -3,12 +3,12 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'haphantran@gmail.com';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 async function main() {
-  if (!ADMIN_PASSWORD) {
-    console.log('ADMIN_PASSWORD not set, skipping admin seed.');
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+    console.log('ADMIN_EMAIL or ADMIN_PASSWORD not set, skipping admin seed.');
     return;
   }
 
