@@ -26,4 +26,6 @@ jobs:
             git clean -fd
             git reset --hard origin/main
             docker compose -f docker-compose.prod.yml up -d --build
+            docker compose -f docker-compose.prod.yml exec -T backend npx prisma migrate deploy
+            docker compose -f docker-compose.prod.yml exec -T backend npx prisma db seed
             docker image prune -f

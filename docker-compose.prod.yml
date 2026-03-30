@@ -33,6 +33,8 @@ services:
       LOG_LEVEL: info
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: 7d
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-haphantran@gmail.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     # No ports exposed to host — frontend nginx proxies /api/* internally
 
   frontend:
