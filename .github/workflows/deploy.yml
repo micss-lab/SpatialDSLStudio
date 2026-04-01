@@ -19,6 +19,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          envs: ADMIN_EMAIL,ADMIN_PASSWORD
           script: |
             set -e
             cd /opt/spatialdsl
@@ -26,4 +27,9 @@ jobs:
             git clean -fd
             git reset --hard origin/main
             docker compose -f docker-compose.prod.yml up -d --build
+            docker compose -f docker-compose.prod.yml exec -T -e ADMIN_EMAIL="$ADMIN_EMAIL" -e ADMIN_PASSWORD="$ADMIN_PASSWORD" backend npx prisma migrate deploy
+            docker compose -f docker-compose.prod.yml exec -T -e ADMIN_EMAIL="$ADMIN_EMAIL" -e ADMIN_PASSWORD="$ADMIN_PASSWORD" backend npx prisma db seed
             docker image prune -f
+        env:
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
