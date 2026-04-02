@@ -1,10 +1,12 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import config from '../config';
 import { JwtPayload } from '../middleware/auth';
 import { UserRole } from '../../../shared/types';
 import { metametamodelService } from './metametamodel.service';
 import prisma from '../config/database';
+import { sendWelcomeEmail, sendPasswordResetEmail } from './email.service';
 
 const SALT_ROUNDS = 10;
 
@@ -92,12 +94,12 @@ class AuthService {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Create user with default MODELER role
+    // Create user with default VIEWER role
     const user = await prisma.user.create({
       data: {
         email: email.toLowerCase(),
         password: hashedPassword,
-        role: 'MODELER',
+        role: 'VIEWER',
       },
     });
 
@@ -108,6 +110,9 @@ class AuthService {
       console.error('Error initializing core ePackage for new user:', error);
       // Don't fail registration if ePackage init fails - user can still use the app
     }
+
+    // Send welcome email (fire-and-forget)
+    sendWelcomeEmail(user.email);
 
     // Generate token
     const token = this.generateToken(user);
@@ -216,6 +221,88 @@ class AuthService {
       where: { id: userId },
       data: { password: hashedPassword },
     });
+  }
+
+  /**
+   * Request password reset - generates token and sends email
+   * Always succeeds (no information leakage about whether email exists)
+   */
+  /**
+   * Hash a token using SHA-256
+   */
+  private hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+
+    if (!user) {
+      return; // Silent - don't reveal if email exists
+    }
+
+    // Invalidate any prior unused tokens for this user
+    await prisma.passwordResetToken.updateMany({
+      where: { userId: user.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = this.hashToken(rawToken);
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await prisma.passwordResetToken.create({
+      data: {
+        tokenHash,
+        userId: user.id,
+        expiresAt,
+      },
+    });
+
+    sendPasswordResetEmail(user.email, rawToken);
+  }
+
+  /**
+   * Reset password using token
+   */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const passwordValidation = this.validatePassword(newPassword);
+    if (!passwordValidation.valid) {
+      throw new Error(passwordValidation.message);
+    }
+
+    const tokenHash = this.hashToken(token);
+    const resetToken = await prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
+    });
+
+    if (!resetToken) {
+      throw new Error('Invalid or expired reset token');
+    }
+
+    if (resetToken.usedAt) {
+      throw new Error('This reset token has already been used');
+    }
+
+    if (resetToken.expiresAt < new Date()) {
+      throw new Error('Invalid or expired reset token');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: resetToken.userId },
+        data: { password: hashedPassword },
+      }),
+      prisma.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { usedAt: new Date() },
+      }),
+    ]);
   }
 
   /**

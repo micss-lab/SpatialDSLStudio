@@ -11,6 +11,7 @@ import testRoutes from './test.routes';
 import fileRoutes from './file.routes';
 import shareRoutes from './share.routes';
 import adminRoutes from './admin.routes';
+import roleRequestRoutes from './roleRequest.routes';
 
 const router = Router();
 
@@ -37,5 +38,6 @@ router.use('/tests', authenticate, testRoutes);
 router.use('/files', authenticate, fileRoutes);
 router.use('/share', authenticate, shareRoutes);
 router.use('/admin', authenticate, adminRoutes);
+router.use('/role-requests', authenticate, roleRequestRoutes);
 
 export default router;

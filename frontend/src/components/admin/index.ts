@@ -7,3 +7,4 @@ export { default as UserManagement } from './UserManagement';
 export { default as ResourceDashboard } from './ResourceDashboard';
 export { default as ResourceManagement } from './ResourceManagement';
 export { default as SystemMonitoring } from './SystemMonitoring';
+export { default as RoleRequestManagement } from './RoleRequestManagement';

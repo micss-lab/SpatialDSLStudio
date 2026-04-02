@@ -19,6 +19,12 @@ jest.mock('../../services/metametamodel.service', () => ({
   },
 }));
 
+// Mock email service
+jest.mock('../../services/email.service', () => ({
+  sendWelcomeEmail: jest.fn(),
+  sendPasswordResetEmail: jest.fn(),
+}));
+
 beforeEach(() => {
   mockReset(prismaMock);
   jest.clearAllMocks();
@@ -56,7 +62,7 @@ describe('AuthService', () => {
         expect.objectContaining({
           data: expect.objectContaining({
             email: 'test@example.com',
-            role: 'MODELER',
+            role: 'VIEWER',
           }),
         })
       );
@@ -215,6 +221,107 @@ describe('AuthService', () => {
 
       await expect(
         authService.changePassword('user-uuid-1', 'currentpass', 'short')
+      ).rejects.toThrow('Password must be at least 6 characters long');
+    });
+  });
+
+  describe('requestPasswordReset', () => {
+    it('does nothing for unknown email (no token created)', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+
+      await authService.requestPasswordReset('unknown@example.com');
+
+      expect(prismaMock.passwordResetToken.create).not.toHaveBeenCalled();
+    });
+
+    it('creates a hashed token and invalidates prior tokens', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(mockUser);
+      prismaMock.passwordResetToken.updateMany.mockResolvedValue({ count: 0 });
+      prismaMock.passwordResetToken.create.mockResolvedValue({
+        id: 'token-1',
+        tokenHash: 'hashed-token',
+        userId: mockUser.id,
+        expiresAt: new Date(Date.now() + 3600000),
+        usedAt: null,
+        createdAt: new Date(),
+      });
+
+      await authService.requestPasswordReset('test@example.com');
+
+      // Should invalidate prior tokens
+      expect(prismaMock.passwordResetToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: mockUser.id, usedAt: null },
+        data: expect.objectContaining({ usedAt: expect.any(Date) }),
+      });
+      // Should create new token with hash (not raw)
+      expect(prismaMock.passwordResetToken.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          tokenHash: expect.any(String),
+          userId: mockUser.id,
+          expiresAt: expect.any(Date),
+        }),
+      });
+    });
+  });
+
+  describe('resetPassword', () => {
+    const mockResetToken = {
+      id: 'token-1',
+      tokenHash: 'hashed-token',
+      userId: mockUser.id,
+      expiresAt: new Date(Date.now() + 3600000),
+      usedAt: null,
+      createdAt: new Date(),
+      user: mockUser,
+    };
+
+    it('resets password successfully with valid token', async () => {
+      prismaMock.passwordResetToken.findUnique.mockResolvedValue(mockResetToken);
+      prismaMock.$transaction.mockResolvedValue([{}, {}]);
+
+      await expect(
+        authService.resetPassword('valid-raw-token', 'newpassword123')
+      ).resolves.toBeUndefined();
+
+      expect(prismaMock.passwordResetToken.findUnique).toHaveBeenCalledWith({
+        where: { tokenHash: expect.any(String) },
+        include: { user: true },
+      });
+    });
+
+    it('throws error for invalid token', async () => {
+      prismaMock.passwordResetToken.findUnique.mockResolvedValue(null);
+
+      await expect(
+        authService.resetPassword('invalid-token', 'newpassword123')
+      ).rejects.toThrow('Invalid or expired reset token');
+    });
+
+    it('throws error for already-used token', async () => {
+      prismaMock.passwordResetToken.findUnique.mockResolvedValue({
+        ...mockResetToken,
+        usedAt: new Date(),
+      });
+
+      await expect(
+        authService.resetPassword('used-token', 'newpassword123')
+      ).rejects.toThrow('This reset token has already been used');
+    });
+
+    it('throws error for expired token', async () => {
+      prismaMock.passwordResetToken.findUnique.mockResolvedValue({
+        ...mockResetToken,
+        expiresAt: new Date(Date.now() - 1000), // expired
+      });
+
+      await expect(
+        authService.resetPassword('expired-token', 'newpassword123')
+      ).rejects.toThrow('Invalid or expired reset token');
+    });
+
+    it('throws error when new password is too short', async () => {
+      await expect(
+        authService.resetPassword('some-token', 'short')
       ).rejects.toThrow('Password must be at least 6 characters long');
     });
   });

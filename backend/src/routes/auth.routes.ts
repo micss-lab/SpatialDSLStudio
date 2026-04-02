@@ -114,6 +114,54 @@ router.post('/change-password', authenticate, async (req: AuthenticatedRequest, 
 });
 
 /**
+ * POST /api/auth/forgot-password
+ * Request a password reset email (public, rate-limited)
+ */
+router.post('/forgot-password', authLimiter, async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    await authService.requestPasswordReset(email);
+    // Always return success to prevent email enumeration
+    res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+  } catch (error: any) {
+    console.error('Forgot password error:', error);
+    res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+  }
+});
+
+/**
+ * POST /api/auth/reset-password
+ * Reset password with token (public, rate-limited)
+ */
+router.post('/reset-password', authLimiter, async (req: Request, res: Response) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: 'Token and new password are required' });
+    }
+
+    await authService.resetPassword(token, newPassword);
+    res.json({ message: 'Password has been reset successfully.' });
+  } catch (error: any) {
+    console.error('Reset password error:', error);
+
+    if (error.message.includes('Password must be') ||
+        error.message.includes('Invalid or expired') ||
+        error.message.includes('already been used')) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+/**
  * POST /api/auth/verify
  * Verify a token is still valid
  */

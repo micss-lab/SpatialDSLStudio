@@ -1,12 +1,13 @@
 import prisma from '../config/database';
 import { ApiError } from '../middleware';
-import { 
-  ResourceType, 
-  SharePermission, 
+import {
+  ResourceType,
+  SharePermission,
   SharedResource as SharedResourceType,
-  UserRole 
+  UserRole
 } from '../../../shared/types';
 import { ResourceType as PrismaResourceType, SharePermission as PrismaSharePermission } from '@prisma/client';
+import { sendShareNotificationEmail } from './email.service';
 
 // Map string types to Prisma enums
 const toPrismaResourceType = (type: ResourceType): PrismaResourceType => type as PrismaResourceType;
@@ -111,7 +112,50 @@ class SharingService {
       },
     });
 
+    // Send share notification email (fire-and-forget)
+    const resourceName = await this.getResourceDisplayName(resourceType, resourceId);
+    sendShareNotificationEmail(
+      targetUser.email,
+      owner.email,
+      resourceType,
+      resourceName
+    );
+
     return this.mapToSharedResource(share);
+  }
+
+  /**
+   * Get a human-readable display name for a resource
+   */
+  private async getResourceDisplayName(resourceType: ResourceType, resourceId: string): Promise<string> {
+    switch (resourceType) {
+      case 'MODEL': {
+        const model = await prisma.model.findUnique({ where: { id: resourceId }, select: { name: true } });
+        return model?.name ?? resourceId;
+      }
+      case 'METAMODEL': {
+        const metamodel = await prisma.metamodel.findUnique({ where: { id: resourceId }, select: { name: true } });
+        return metamodel?.name ?? resourceId;
+      }
+      case 'DIAGRAM': {
+        const diagram = await prisma.diagram.findUnique({ where: { id: resourceId }, select: { name: true } });
+        return diagram?.name ?? resourceId;
+      }
+      case 'CODEGEN_PROJECT': {
+        const project = await prisma.codeGenerationProject.findUnique({ where: { id: resourceId }, select: { name: true } });
+        return project?.name ?? resourceId;
+      }
+      case 'TRANSFORMATION_RULE': {
+        const rule = await prisma.transformationRule.findUnique({ where: { id: resourceId }, select: { name: true } });
+        return rule?.name ?? resourceId;
+      }
+      case 'TEST_CASE': {
+        const testCase = await prisma.testCase.findUnique({ where: { id: resourceId }, select: { name: true } });
+        return testCase?.name ?? resourceId;
+      }
+      default:
+        return resourceId;
+    }
   }
 
   /**
