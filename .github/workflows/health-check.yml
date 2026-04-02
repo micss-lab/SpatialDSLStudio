@@ -12,6 +12,29 @@ jobs:
     steps:
       - name: Check production health
         run: |
-          response=$(curl -sf --max-time 15 https://spatialdsl.tmusml.cloud/api/health)
-          echo "$response"
-          echo "$response" | jq -e '.success == true'
+          max_attempts=3
+          attempt=1
+          delay=10
+          
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt of $max_attempts..."
+            
+            if response=$(curl -sf --max-time 30 https://spatialdsl.tmusml.cloud/api/health); then
+              echo "$response"
+              if echo "$response" | jq -e '.success == true' > /dev/null; then
+                echo "✅ Health check passed"
+                exit 0
+              fi
+            fi
+            
+            if [ $attempt -lt $max_attempts ]; then
+              echo "⚠️ Attempt $attempt failed, retrying in ${delay}s..."
+              sleep $delay
+              delay=$((delay * 2))
+            fi
+            
+            attempt=$((attempt + 1))
+          done
+          
+          echo "❌ Health check failed after $max_attempts attempts"
+          exit 1
