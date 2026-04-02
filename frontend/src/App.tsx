@@ -51,6 +51,7 @@ import ShareIcon from '@mui/icons-material/Share';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import HomeIcon from '@mui/icons-material/Home';
 import InfoIcon from '@mui/icons-material/Info';
+import UpgradeIcon from '@mui/icons-material/Upgrade';
 
 import MetamodelManager from './components/metamodel/MetamodelManager';
 import ModelManager from './components/model/ModelManager';
@@ -61,6 +62,9 @@ import TransformationDashboard from './components/transformation/TransformationD
 import ModelBasedTestingDashboard from './components/testing/ModelBasedTestingDashboard';
 import TestDetails from './components/testing/TestDetails';
 import LoginPage from './components/auth/LoginPage';
+import ForgotPasswordPage from './components/auth/ForgotPasswordPage';
+import ResetPasswordPage from './components/auth/ResetPasswordPage';
+import RoleRequestDialog from './components/auth/RoleRequestDialog';
 import { AdminPanel } from './components/admin';
 import { ShareDialog } from './components/common';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -201,6 +205,7 @@ const App: React.FC = () => {
 const AuthenticatedApp: React.FC = () => {
   const { isAuthenticated, isLoading, user, logout, isAdmin } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [roleRequestDialogOpen, setRoleRequestDialogOpen] = useState(false);
 
   const toggleDrawer = () => {
     setDrawerOpen(!drawerOpen);
@@ -568,9 +573,17 @@ const AuthenticatedApp: React.FC = () => {
     );
   }
 
-  // Show login page if not authenticated
+  // Show login/forgot/reset pages if not authenticated
   if (!isAuthenticated) {
-    return <LoginPage />;
+    return (
+      <Router>
+        <Routes>
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="*" element={<LoginPage />} />
+        </Routes>
+      </Router>
+    );
   }
 
   return (
@@ -718,6 +731,17 @@ const AuthenticatedApp: React.FC = () => {
                     </ListItem>
                   </>
                 )}
+                {!isAdmin && (
+                  <>
+                    <Divider />
+                    <ListItem disablePadding>
+                      <ListItemButton onClick={() => setRoleRequestDialogOpen(true)}>
+                        <ListItemIcon><UpgradeIcon /></ListItemIcon>
+                        <ListItemText primary="Request Role Upgrade" />
+                      </ListItemButton>
+                    </ListItem>
+                  </>
+                )}
                 <Divider />
                 <ListItem disablePadding>
                   <ListItemButton component={Link} to="/about">
@@ -749,6 +773,11 @@ const AuthenticatedApp: React.FC = () => {
             </Routes>
           </Box>
         </Box>
+
+        <RoleRequestDialog
+          open={roleRequestDialogOpen}
+          onClose={() => setRoleRequestDialogOpen(false)}
+        />
       </Router>
   );
 };

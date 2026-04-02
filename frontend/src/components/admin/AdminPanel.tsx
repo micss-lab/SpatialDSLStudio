@@ -24,11 +24,13 @@ import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import HomeIcon from '@mui/icons-material/Home';
 
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import { useAuth } from '../../contexts/AuthContext';
 import UserManagement from './UserManagement';
 import ResourceDashboard from './ResourceDashboard';
 import ResourceManagement from './ResourceManagement';
 import SystemMonitoring from './SystemMonitoring';
+import RoleRequestManagement from './RoleRequestManagement';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -161,6 +163,12 @@ const AdminPanel: React.FC = () => {
             label="System Monitoring"
             {...a11yProps(3)}
           />
+          <Tab
+            icon={<AssignmentIcon />}
+            iconPosition="start"
+            label="Role Requests"
+            {...a11yProps(4)}
+          />
         </Tabs>
       </Paper>
 
@@ -176,6 +184,9 @@ const AdminPanel: React.FC = () => {
       </TabPanel>
       <TabPanel value={activeTab} index={3}>
         <SystemMonitoring />
+      </TabPanel>
+      <TabPanel value={activeTab} index={4}>
+        <RoleRequestManagement />
       </TabPanel>
     </Container>
   );

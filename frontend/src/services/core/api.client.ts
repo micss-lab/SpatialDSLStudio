@@ -252,6 +252,12 @@ export const API_ENDPOINTS = {
   AUTH_ME: '/auth/me',
   AUTH_VERIFY: '/auth/verify',
   AUTH_CHANGE_PASSWORD: '/auth/change-password',
+  AUTH_FORGOT_PASSWORD: '/auth/forgot-password',
+  AUTH_RESET_PASSWORD: '/auth/reset-password',
+
+  // Role Requests
+  ROLE_REQUESTS: '/role-requests',
+  ROLE_REQUESTS_MY: '/role-requests/my',
   
   // Health
   HEALTH: '/health',
@@ -377,6 +383,32 @@ export const authApi = {
       body: JSON.stringify({ token }),
     });
     const result = await response.json();
+    return result;
+  },
+
+  forgotPassword: async (email: string): Promise<{ message: string }> => {
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH_FORGOT_PASSWORD}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to send reset email');
+    }
+    return result;
+  },
+
+  resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH_RESET_PASSWORD}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, newPassword }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to reset password');
+    }
     return result;
   },
 };

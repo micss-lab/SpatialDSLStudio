@@ -229,6 +229,18 @@ const LoginPage: React.FC = () => {
             </Button>
           </form>
 
+          {mode === 'login' && (
+            <Box sx={{ textAlign: 'right', mt: 1 }}>
+              <Link
+                href="/forgot-password"
+                variant="body2"
+                sx={{ fontWeight: 500, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+              >
+                Forgot password?
+              </Link>
+            </Box>
+          )}
+
           <Divider sx={{ my: 2 }}>
             <Typography variant="body2" color="text.secondary">
               or

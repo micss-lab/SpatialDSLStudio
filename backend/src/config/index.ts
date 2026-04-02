@@ -16,6 +16,9 @@ interface Config {
     secret: string;
     expiresIn: string;
   };
+  resendApiKey: string;
+  resendFromEmail: string;
+  appUrl: string;
 }
 
 const config: Config = {
@@ -29,6 +32,9 @@ const config: Config = {
     secret: process.env.JWT_SECRET || 'fallback-secret-key-change-in-production',
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
+  resendApiKey: process.env.RESEND_API_KEY || '',
+  resendFromEmail: process.env.RESEND_FROM_EMAIL || 'noreply@example.com',
+  appUrl: process.env.APP_URL || 'http://localhost:3000',
 };
 
 // Validate required configuration

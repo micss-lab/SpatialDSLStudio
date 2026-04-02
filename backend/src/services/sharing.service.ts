@@ -1,12 +1,13 @@
 import prisma from '../config/database';
 import { ApiError } from '../middleware';
-import { 
-  ResourceType, 
-  SharePermission, 
+import {
+  ResourceType,
+  SharePermission,
   SharedResource as SharedResourceType,
-  UserRole 
+  UserRole
 } from '../../../shared/types';
 import { ResourceType as PrismaResourceType, SharePermission as PrismaSharePermission } from '@prisma/client';
+import { sendShareNotificationEmail } from './email.service';
 
 // Map string types to Prisma enums
 const toPrismaResourceType = (type: ResourceType): PrismaResourceType => type as PrismaResourceType;
@@ -110,6 +111,14 @@ class SharingService {
         sharedWith: { select: { email: true } },
       },
     });
+
+    // Send share notification email (fire-and-forget)
+    sendShareNotificationEmail(
+      targetUser.email,
+      owner.email,
+      resourceType,
+      resourceId
+    );
 
     return this.mapToSharedResource(share);
   }

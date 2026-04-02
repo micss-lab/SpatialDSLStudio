@@ -56,7 +56,7 @@ describe('AuthService', () => {
         expect.objectContaining({
           data: expect.objectContaining({
             email: 'test@example.com',
-            role: 'MODELER',
+            role: 'VIEWER',
           }),
         })
       );

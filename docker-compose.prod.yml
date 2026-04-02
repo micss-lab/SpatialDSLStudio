@@ -35,6 +35,9 @@ services:
       JWT_EXPIRES_IN: 7d
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@example.com}
+      APP_URL: ${APP_URL:-https://spatialdsl.tmusml.cloud}
     # No ports exposed to host — frontend nginx proxies /api/* internally
 
   frontend:

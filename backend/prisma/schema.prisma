@@ -30,6 +30,12 @@ enum ResourceType {
   TEST_CASE
 }
 
+enum RoleRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum SharePermission {
   VIEWER
   EDITOR
@@ -43,7 +49,7 @@ model User {
   id          String    @id @default(uuid())
   email       String    @unique
   password    String    // Hashed with bcrypt
-  role        UserRole  @default(DSL_DESIGNER)
+  role        UserRole  @default(VIEWER)
   isSuspended Boolean   @default(false)
   lastLogin   DateTime?
   
@@ -63,7 +69,12 @@ model User {
   // Sharing relations
   ownedShares    SharedResource[] @relation("ShareOwner")
   receivedShares SharedResource[] @relation("ShareRecipient")
-  
+
+  // Password reset & role request relations
+  passwordResetTokens  PasswordResetToken[]
+  roleRequests         RoleRequest[]
+  reviewedRoleRequests RoleRequest[] @relation("RoleRequestReviewer")
+
   @@map("users")
 }
 
@@ -372,4 +383,40 @@ enum FileType {
   image
   model
   other
+}
+
+// ===========================================
+// Password Reset Tokens
+// ===========================================
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  @@map("password_reset_tokens")
+}
+
+// ===========================================
+// Role Requests
+// ===========================================
+
+model RoleRequest {
+  id            String            @id @default(uuid())
+  userId        String
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentRole   UserRole
+  requestedRole UserRole
+  reason        String
+  status        RoleRequestStatus @default(PENDING)
+  reviewedById  String?
+  reviewedBy    User?             @relation("RoleRequestReviewer", fields: [reviewedById], references: [id])
+  reviewNote    String?
+  reviewedAt    DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  @@map("role_requests")
 }
