@@ -391,7 +391,7 @@ enum FileType {
 
 model PasswordResetToken {
   id        String    @id @default(uuid())
-  token     String    @unique
+  tokenHash String    @unique @map("token_hash")
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime

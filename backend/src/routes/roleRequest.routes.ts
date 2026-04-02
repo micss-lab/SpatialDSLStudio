@@ -61,7 +61,11 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
     }
 
     const status = req.query.status as string | undefined;
-    const filters = status ? { status: status as any } : undefined;
+    const validStatuses = ['PENDING', 'APPROVED', 'REJECTED'];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+    }
+    const filters = status ? { status: status as 'PENDING' | 'APPROVED' | 'REJECTED' } : undefined;
 
     const requests = await roleRequestService.getAllRequests(filters);
     res.json({ success: true, data: requests });

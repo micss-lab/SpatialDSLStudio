@@ -227,6 +227,13 @@ class AuthService {
    * Request password reset - generates token and sends email
    * Always succeeds (no information leakage about whether email exists)
    */
+  /**
+   * Hash a token using SHA-256
+   */
+  private hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
   async requestPasswordReset(email: string): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
@@ -236,18 +243,25 @@ class AuthService {
       return; // Silent - don't reveal if email exists
     }
 
-    const token = crypto.randomBytes(32).toString('hex');
+    // Invalidate any prior unused tokens for this user
+    await prisma.passwordResetToken.updateMany({
+      where: { userId: user.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = this.hashToken(rawToken);
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     await prisma.passwordResetToken.create({
       data: {
-        token,
+        tokenHash,
         userId: user.id,
         expiresAt,
       },
     });
 
-    sendPasswordResetEmail(user.email, token);
+    sendPasswordResetEmail(user.email, rawToken);
   }
 
   /**
@@ -259,8 +273,9 @@ class AuthService {
       throw new Error(passwordValidation.message);
     }
 
+    const tokenHash = this.hashToken(token);
     const resetToken = await prisma.passwordResetToken.findUnique({
-      where: { token },
+      where: { tokenHash },
       include: { user: true },
     });
 

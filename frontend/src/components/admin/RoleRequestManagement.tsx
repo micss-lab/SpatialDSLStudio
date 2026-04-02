@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -41,11 +41,7 @@ const RoleRequestManagement: React.FC = () => {
   const [reviewNote, setReviewNote] = useState('');
   const [isReviewing, setIsReviewing] = useState(false);
 
-  useEffect(() => {
-    loadRequests();
-  }, [statusFilter]);
-
-  const loadRequests = async () => {
+  const loadRequests = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -56,7 +52,11 @@ const RoleRequestManagement: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [statusFilter]);
+
+  useEffect(() => {
+    loadRequests();
+  }, [loadRequests]);
 
   const openReviewDialog = (request: RoleRequest, approve: boolean) => {
     setReviewDialog({ open: true, request, approve });

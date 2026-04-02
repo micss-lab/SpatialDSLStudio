@@ -20,11 +20,13 @@ import {
   PersonAdd as RegisterIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 type AuthMode = 'login' | 'register';
 
 const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
   const { login, register, error, clearError, isLoading, registrationSuccess, clearRegistrationSuccess } = useAuth();
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
@@ -232,8 +234,10 @@ const LoginPage: React.FC = () => {
           {mode === 'login' && (
             <Box sx={{ textAlign: 'right', mt: 1 }}>
               <Link
-                href="/forgot-password"
+                component="button"
+                type="button"
                 variant="body2"
+                onClick={() => navigate('/forgot-password')}
                 sx={{ fontWeight: 500, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
               >
                 Forgot password?

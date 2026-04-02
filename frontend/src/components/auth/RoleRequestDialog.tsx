@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -40,19 +40,7 @@ const RoleRequestDialog: React.FC<RoleRequestDialogProps> = ({ open, onClose }) 
   const currentRoleIndex = user ? ROLE_HIERARCHY.indexOf(user.role) : 0;
   const availableRoles = ROLE_HIERARCHY.filter((_, i) => i > currentRoleIndex && i < ROLE_HIERARCHY.length - 1); // Exclude ADMIN
 
-  useEffect(() => {
-    if (open) {
-      setError(null);
-      setSuccess(false);
-      setReason('');
-      loadMyRequests();
-      if (availableRoles.length > 0) {
-        setRequestedRole(availableRoles[0]);
-      }
-    }
-  }, [open]);
-
-  const loadMyRequests = async () => {
+  const loadMyRequests = useCallback(async () => {
     setIsLoading(true);
     try {
       const requests = await roleRequestService.getMyRequests();
@@ -62,7 +50,21 @@ const RoleRequestDialog: React.FC<RoleRequestDialogProps> = ({ open, onClose }) 
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      setError(null);
+      setSuccess(false);
+      setReason('');
+      loadMyRequests();
+      // Set default requested role based on available options
+      const roles = ROLE_HIERARCHY.filter((_, i) => i > currentRoleIndex && i < ROLE_HIERARCHY.length - 1);
+      if (roles.length > 0) {
+        setRequestedRole(roles[0]);
+      }
+    }
+  }, [open, loadMyRequests, currentRoleIndex]);
 
   const handleSubmit = async () => {
     setError(null);
