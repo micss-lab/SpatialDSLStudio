@@ -114,7 +114,7 @@ describe('ApiClient', () => {
   });
 
   describe('401 handling', () => {
-    it('removes token and dispatches event on 401', async () => {
+    it('removes token and dispatches event on 401 when token exists', async () => {
       client.setToken('expired-token');
       mockFetch.mockResolvedValue({
         ok: false,
@@ -125,6 +125,17 @@ describe('ApiClient', () => {
       await expect(client.get('/test')).rejects.toThrow('Authentication required');
       expect(client.getToken()).toBeNull();
       expect(window.dispatchEvent).toHaveBeenCalled();
+    });
+
+    it('does not dispatch unauthorized event on 401 without token', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ success: false, error: 'Unauthorized' }),
+      });
+
+      await expect(client.get('/test')).rejects.toThrow('Authentication required');
+      expect(window.dispatchEvent).not.toHaveBeenCalled();
     });
   });
 

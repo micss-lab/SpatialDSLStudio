@@ -73,6 +73,7 @@ class ApiClient {
    */
   private async request<T>(endpoint: string, options: RequestOptions): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
+    let hadAuthToken = false;
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -84,6 +85,7 @@ class ApiClient {
       const token = this.getToken();
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+        hadAuthToken = true;
       }
     }
 
@@ -102,8 +104,10 @@ class ApiClient {
       // Handle 401 Unauthorized - token expired or invalid
       if (response.status === 401) {
         this.removeToken();
-        // Dispatch custom event to notify app of auth failure
-        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        // Only notify session-expired when there was an authenticated session.
+        if (hadAuthToken) {
+          window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        }
         throw new Error('Authentication required. Please log in again.');
       }
       
@@ -129,6 +133,7 @@ class ApiClient {
     additionalData?: Record<string, any>
   ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
+    let hadAuthToken = false;
     const formData = new FormData();
     formData.append('file', file);
 
@@ -147,6 +152,7 @@ class ApiClient {
       const token = this.getToken();
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+        hadAuthToken = true;
       }
 
       const response = await fetch(url, {
@@ -159,7 +165,9 @@ class ApiClient {
       // Handle 401 Unauthorized
       if (response.status === 401) {
         this.removeToken();
-        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        if (hadAuthToken) {
+          window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        }
         throw new Error('Authentication required. Please log in again.');
       }
 
@@ -181,12 +189,14 @@ class ApiClient {
    */
   async downloadFile(endpoint: string): Promise<Blob> {
     const url = `${this.baseUrl}${endpoint}`;
+    let hadAuthToken = false;
 
     try {
       const headers: Record<string, string> = {};
       const token = this.getToken();
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+        hadAuthToken = true;
       }
 
       const response = await fetch(url, {
@@ -197,7 +207,9 @@ class ApiClient {
       // Handle 401 Unauthorized
       if (response.status === 401) {
         this.removeToken();
-        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        if (hadAuthToken) {
+          window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        }
         throw new Error('Authentication required. Please log in again.');
       }
 
