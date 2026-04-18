@@ -22,6 +22,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import logoImage from '../../assets/logo.png';
 
 type AuthMode = 'login' | 'register';
 
@@ -136,9 +137,24 @@ const LoginPage: React.FC = () => {
         <CardContent sx={{ p: 4 }}>
           {/* Title */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <Typography variant="h4" fontWeight="bold" color="text.primary" sx={{ mb: 0.5 }}>
-              {mode === 'login' ? 'Spatial DSL Studio' : 'Create your account'}
-            </Typography>
+            <Box
+              component="img"
+              src={logoImage}
+              alt="Spatial DSL Studio"
+              sx={{
+                display: 'block',
+                maxWidth: 380,
+                width: '100%',
+                height: 'auto',
+                mx: 'auto',
+                mb: 1,
+              }}
+            />
+            {mode === 'register' && (
+              <Typography variant="h4" fontWeight="bold" color="text.primary" sx={{ mb: 0.5 }}>
+                Create your account
+              </Typography>
+            )}
             <Typography variant="body2" color="text.secondary">
               {mode === 'login' ? 'Sign in to start working on your models.' : 'Use your email and password to get started.'}
             </Typography>
