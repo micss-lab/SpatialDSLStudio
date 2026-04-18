@@ -22,7 +22,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import logoImage from '../../assets/logo.png';
+import logoImage from '../../assets/logo.webp';
 
 type AuthMode = 'login' | 'register';
 
