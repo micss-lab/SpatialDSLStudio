@@ -756,7 +756,7 @@ const AuthenticatedApp: React.FC = () => {
           <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
             <Routes>
               <Route path="/" element={<HomePage />} />
-              <Route path="/metamodels" element={<MetamodelsPage />} />
+              <Route path="/metamodels" element={<MetamodelEditorPage />} />
               <Route path="/metamodels/:id" element={<MetamodelEditorPage />} />
               <Route path="/models" element={<ModelsPage />} />
               <Route path="/models/:id" element={<ModelEditorPage />} />
@@ -1022,12 +1022,6 @@ const MetamodelsPage: React.FC = () => {
 
 // Metamodel Editor Page
 const MetamodelEditorPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  
-  if (!id) {
-    return <Typography>Invalid metamodel ID</Typography>;
-  }
-  
   return <MetamodelManager />;
 };
 
