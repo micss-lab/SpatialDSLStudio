@@ -25,7 +25,7 @@
 ## Overview
 A full-stack model-driven engineering platform for designing domain-specific languages and working with models end-to-end.
 
-**Live demo:** [https://spatialdsl.tmusml.cloud](https://spatialdsl.tmusml.cloud)
+**Live demo:** [https://dsl-studio.micss-lab.be](https://dsl-studio.micss-lab.be)
 
 You can:
 

@@ -19,7 +19,7 @@ jobs:
           while [ $attempt -le $max_attempts ]; do
             echo "Attempt $attempt of $max_attempts..."
             
-            if response=$(curl -sf --max-time 30 https://spatialdsl.tmusml.cloud/api/health); then
+            if response=$(curl -sf --max-time 30 https://dsl-studio.micss-lab.be/api/health); then
               echo "$response"
               if echo "$response" | jq -e '.success == true' > /dev/null; then
                 echo "✅ Health check passed"
