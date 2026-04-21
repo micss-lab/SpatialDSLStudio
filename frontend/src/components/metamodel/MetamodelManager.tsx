@@ -27,9 +27,12 @@ import VisualMetamodelEditor from './VisualMetamodelEditor';
 import { exportService, ecoreService } from '../../services/metamodel';
 import { ShareDialog } from '../common';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate, useParams } from 'react-router-dom';
 
 const MetamodelManager: React.FC = () => {
   const { canShare, canCreate, canDelete, canEditMetamodel } = useAuth();
+  const navigate = useNavigate();
+  const { id: routeMetamodelId } = useParams<{ id?: string }>();
   const [metamodels, setMetamodels] = useState<Metamodel[]>([]);
   const [selectedMetamodel, setSelectedMetamodel] = useState<Metamodel | null>(null);
   const [newMetamodelName, setNewMetamodelName] = useState('');
@@ -39,7 +42,7 @@ const MetamodelManager: React.FC = () => {
   const [importFileFormat, setImportFileFormat] = useState('');
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareTarget, setShareTarget] = useState<Metamodel | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Load metamodels when component mounts
@@ -49,6 +52,13 @@ const MetamodelManager: React.FC = () => {
   const refreshMetamodels = () => {
     const loadedMetamodels = metamodelService.getAllMetamodels();
     setMetamodels(loadedMetamodels);
+
+    // Keep route-driven selection consistent after data refreshes.
+    if (routeMetamodelId) {
+      const routeSelection = loadedMetamodels.find(m => m.id === routeMetamodelId);
+      setSelectedMetamodel(routeSelection || null);
+      return;
+    }
     
     // Update selected metamodel if it exists in the loaded metamodels
     if (selectedMetamodel) {
@@ -69,8 +79,9 @@ const MetamodelManager: React.FC = () => {
   const handleDeleteMetamodel = (id: string) => {
     if (window.confirm('Are you sure you want to delete this metamodel?')) {
       metamodelService.deleteMetamodel(id);
-      if (selectedMetamodel?.id === id) {
+      if (selectedMetamodel?.id === id || routeMetamodelId === id) {
         setSelectedMetamodel(null);
+        navigate('/metamodels');
       }
       refreshMetamodels();
     }
@@ -78,7 +89,18 @@ const MetamodelManager: React.FC = () => {
 
   const handleSelectMetamodel = (metamodel: Metamodel) => {
     setSelectedMetamodel(metamodel);
+    navigate(`/metamodels/${metamodel.id}`);
   };
+
+  useEffect(() => {
+    if (!routeMetamodelId) {
+      setSelectedMetamodel(null);
+      return;
+    }
+
+    const routeSelection = metamodels.find(m => m.id === routeMetamodelId) || null;
+    setSelectedMetamodel(routeSelection);
+  }, [routeMetamodelId, metamodels]);
 
   const handleExportMetamodel = async (metamodel: Metamodel) => {
     await exportService.exportMetamodel(metamodel.id);

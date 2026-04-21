@@ -22,6 +22,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import logoImage from '../../assets/logo.webp';
 
 type AuthMode = 'login' | 'register';
 
@@ -103,23 +104,59 @@ const LoginPage: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #3641f5 0%, #465fff 50%, #2a31d8 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+        backgroundColor: 'var(--color-gray-50)',
+        backgroundImage:
+          'radial-gradient(1000px 420px at -12% -20%, rgba(70, 95, 255, 0.14) 0%, rgba(70, 95, 255, 0) 72%), radial-gradient(800px 360px at 110% 115%, rgba(54, 65, 245, 0.08) 0%, rgba(54, 65, 245, 0) 72%)',
         padding: 2,
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          backgroundImage:
+            'linear-gradient(rgba(16, 24, 40, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(16, 24, 40, 0.03) 1px, transparent 1px)',
+          backgroundSize: '26px 26px',
+          opacity: 0.35,
+        },
       }}
     >
       <Card
         sx={{
+          position: 'relative',
+          zIndex: 1,
           maxWidth: 440,
           width: '100%',
-          borderRadius: 3,
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: 'grey.200',
+          boxShadow: '0 14px 28px rgba(16, 24, 40, 0.12)',
         }}
       >
         <CardContent sx={{ p: 4 }}>
           {/* Title */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <Typography variant="h4" fontWeight="bold" color="primary.main">
-              Modeling Tool
+            <Box
+              component="img"
+              src={logoImage}
+              alt="Spatial DSL Studio"
+              sx={{
+                display: 'block',
+                maxWidth: 380,
+                width: '100%',
+                height: 'auto',
+                mx: 'auto',
+                mb: 1,
+              }}
+            />
+            {mode === 'register' && (
+              <Typography variant="h4" fontWeight="bold" color="text.primary" sx={{ mb: 0.5 }}>
+                Create your account
+              </Typography>
+            )}
+            <Typography variant="body2" color="text.secondary">
+              {mode === 'login' ? 'Sign in to start working on your models.' : 'Use your email and password to get started.'}
             </Typography>
           </Box>
 
@@ -219,9 +256,11 @@ const LoginPage: React.FC = () => {
                 textTransform: 'none',
                 fontSize: '1rem',
                 fontWeight: 600,
-                background: 'linear-gradient(135deg, #3641f5 0%, #465fff 100%)',
+                backgroundColor: 'primary.main',
+                boxShadow: 'none',
                 '&:hover': {
-                  background: 'linear-gradient(135deg, #2a31d8 0%, #3641f5 100%)',
+                  backgroundColor: 'primary.dark',
+                  boxShadow: 'none',
                 },
               }}
             >
