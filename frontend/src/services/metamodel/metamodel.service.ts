@@ -28,11 +28,6 @@ class MetamodelService {
   // Track pending save operations to prevent race conditions
   private pendingSaves: Map<string, Promise<void>> = new Map();
 
-  constructor() {
-    // Start loading from API immediately
-    this.initPromise = this.initialize();
-  }
-
   private async initialize(): Promise<void> {
     try {
       // Try to load from API first
@@ -54,9 +49,10 @@ class MetamodelService {
 
   // Wait for initialization to complete
   async waitForInit(): Promise<void> {
-    if (this.initPromise) {
-      await this.initPromise;
+    if (!this.initPromise) {
+      this.initPromise = this.initialize();
     }
+    await this.initPromise;
   }
 
   private async loadExampleMetamodels(): Promise<void> {

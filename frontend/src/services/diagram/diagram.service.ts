@@ -12,11 +12,6 @@ import { diagramImportExportService } from './diagram-import-export.service';
 class DiagramService {
   private initPromise: Promise<void> | null = null;
 
-  constructor() {
-    // Start loading from API
-    this.initPromise = this.initialize();
-  }
-
   private async initialize(): Promise<void> {
     try {
       // Load from API only

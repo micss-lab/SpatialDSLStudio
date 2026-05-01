@@ -22,9 +22,6 @@ class CodeGenerationService {
   constructor() {
     // Initialize handlebars helpers
     codegenHandlebarsService.registerAllHelpers();
-    
-    // Initialize from API
-    this.initPromise = this.initializeFromAPI();
   }
 
   private async initializeFromAPI(): Promise<void> {
@@ -46,9 +43,10 @@ class CodeGenerationService {
   }
 
   private async ensureInitialized(): Promise<void> {
-    if (this.initPromise) {
-      await this.initPromise;
+    if (!this.initPromise) {
+      this.initPromise = this.initializeFromAPI();
     }
+    await this.initPromise;
   }
 
   // ==============================

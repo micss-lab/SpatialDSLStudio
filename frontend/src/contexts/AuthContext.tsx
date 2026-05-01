@@ -6,17 +6,19 @@ import { diagramService } from '../services/diagram';
 import { metaMetamodelService } from '../services/metametamodel';
 import { codeGenerationService } from '../services/codegeneration';
 import { transformationService } from '../services/transformation';
+import { testGenerationService } from '../services/testing';
 
 // Function to clear all service caches and reinitialize
 const clearAllServiceCaches = async () => {
   console.log('Clearing all service caches...');
+  await metaMetamodelService.clearCacheAndReinitialize();
+  await metamodelService.clearCacheAndReinitialize();
   await Promise.all([
-    metaMetamodelService.clearCacheAndReinitialize(),
-    metamodelService.clearCacheAndReinitialize(),
     modelService.clearCacheAndReinitialize(),
     diagramService.clearCacheAndReinitialize(),
     codeGenerationService.clearCacheAndReinitialize(),
     transformationService.clearCacheAndReinitialize(),
+    testGenerationService.clearCacheAndReinitialize(),
   ]);
   console.log('All service caches cleared and reinitialized');
 };
@@ -31,6 +33,7 @@ const clearAllServiceCachesLocal = () => {
   metaMetamodelService.clearCacheLocal();
   codeGenerationService.clearCacheLocal();
   transformationService.clearCacheLocal();
+  testGenerationService.clearCacheLocal();
   console.log('All service caches cleared locally');
 };
 
@@ -90,6 +93,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           const result = await authApi.verifyToken(token);
           if (result.valid && result.user) {
+            try {
+              await clearAllServiceCaches();
+            } catch (error) {
+              console.warn('Failed to reinitialize service caches:', error);
+            }
             setUser(result.user);
           } else {
             apiClient.removeToken();

@@ -16,10 +16,6 @@ class TestingService {
   // Track which test cases have been synced to the database
   private syncedToDb: Set<string> = new Set();
 
-  constructor() {
-    this.initPromise = this.initializeFromAPI();
-  }
-
   // ── initialization & API sync ──────────────────────────────────────────
 
   private async initializeFromAPI(): Promise<void> {
@@ -55,9 +51,10 @@ class TestingService {
   }
 
   private async ensureInitialized(): Promise<void> {
-    if (this.initPromise) {
-      await this.initPromise;
+    if (!this.initPromise) {
+      this.initPromise = this.initializeFromAPI();
     }
+    await this.initPromise;
   }
 
   private async saveToStorage(changedModelId?: string): Promise<void> {
@@ -158,9 +155,28 @@ class TestingService {
   }
 
   async refresh(): Promise<void> {
+    this.testCases.clear();
+    this.syncedToDb.clear();
     this.initialized = false;
     this.initPromise = this.initializeFromAPI();
     await this.initPromise;
+  }
+
+  async clearCacheAndReinitialize(): Promise<void> {
+    console.log('TestingService: Clearing cache and reinitializing');
+    this.testCases.clear();
+    this.syncedToDb.clear();
+    this.initialized = false;
+    this.initPromise = this.initializeFromAPI();
+    await this.initPromise;
+  }
+
+  clearCacheLocal(): void {
+    console.log('TestingService: Clearing cache locally');
+    this.testCases.clear();
+    this.syncedToDb.clear();
+    this.initialized = false;
+    this.initPromise = null;
   }
 
   // ── test generation (orchestration) ────────────────────────────────────

@@ -11,11 +11,6 @@ class MetaMetamodelService {
   private initialized: boolean = false;
   private initPromise: Promise<void> | null = null;
 
-  constructor() {
-    // Initialize from API
-    this.initPromise = this.initializeFromAPI();
-  }
-
   private async initializeFromAPI(): Promise<void> {
     if (this.initialized) return;
     
@@ -55,9 +50,10 @@ class MetaMetamodelService {
   }
 
   private async ensureInitialized(): Promise<void> {
-    if (this.initPromise) {
-      await this.initPromise;
+    if (!this.initPromise) {
+      this.initPromise = this.initializeFromAPI();
     }
+    await this.initPromise;
   }
 
   private async saveToStorage(changedPackageId?: string): Promise<void> {
