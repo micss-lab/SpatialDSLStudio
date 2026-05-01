@@ -39,7 +39,7 @@ class TestRunnerService {
     }
 
     // Create a clone of the original model
-    const testModel = modelService.createTempModel(
+    const testModel = modelService.createModel(
       `Test Model for ${originalModel.name} - ${testCaseId}`,
       originalModel.metamodelId
     );
@@ -89,7 +89,7 @@ class TestRunnerService {
       }
 
       // Create a test model for this metamodel
-      const testModel = modelService.createTempModel(
+      const testModel = modelService.createModel(
         `Test Model for ${metamodel.name}`,
         metamodelId
       );
