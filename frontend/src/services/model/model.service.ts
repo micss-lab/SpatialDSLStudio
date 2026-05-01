@@ -17,6 +17,7 @@ import { modelApiSyncService } from './model-api-sync.service';
  */
 class ModelService {
   private initPromise: Promise<void> | null = null;
+  private tempModelIds: Set<string> = new Set();
 
   private async initialize(): Promise<void> {
     try {
@@ -52,9 +53,13 @@ class ModelService {
     modelMigrationService.migrateNewAttributesOnLoad(models);
   }
 
+  private isTempModelId(id: string): boolean {
+    return this.tempModelIds.has(id);
+  }
+
   private saveToStorage(changedModelId?: string): void {
     // Sync to API only - no localStorage
-    if (changedModelId) {
+    if (changedModelId && !this.isTempModelId(changedModelId)) {
       const model = this.getModelById(changedModelId);
       if (model) {
         modelApiSyncService.syncModelToAPI(model);
@@ -75,6 +80,14 @@ class ModelService {
     return modelCrudService.getModelsByMetamodelId(metamodelId);
   }
 
+  createTempModel(name: string, metamodelId: string): Model {
+    const tempModel = modelCrudService.createModel(name, metamodelId, () => {
+      // Skip persistence for temp models used in testing
+    });
+    this.tempModelIds.add(tempModel.id);
+    return tempModel;
+  }
+
   createModel(name: string, metamodelId: string): Model {
     return modelCrudService.createModel(name, metamodelId, (model) => {
       this.saveToStorage();
@@ -87,11 +100,27 @@ class ModelService {
   }
 
   deleteModel(id: string): boolean {
+    const isTemp = this.isTempModelId(id);
+    if (isTemp) {
+      this.tempModelIds.delete(id);
+    }
     return modelCrudService.deleteModel(
       id,
-      () => this.saveToStorage(),
-      (id) => modelApiSyncService.deleteModelFromAPI(id),
-      (id) => modelApiSyncService.removeSyncedModel(id)
+      () => {
+        if (!isTemp) {
+          this.saveToStorage();
+        }
+      },
+      (modelId) => {
+        if (!isTemp) {
+          modelApiSyncService.deleteModelFromAPI(modelId);
+        }
+      },
+      (modelId) => {
+        if (!isTemp) {
+          modelApiSyncService.removeSyncedModel(modelId);
+        }
+      }
     );
   }
 
@@ -254,6 +283,7 @@ class ModelService {
     modelApiSyncService.clearSyncState();
     modelValidationService.clearLastValidationIssues();
     modelElementCrudService.clearNewlyCreatedElements();
+    this.tempModelIds.clear();
     this.initPromise = this.initialize();
     await this.initPromise;
   }
@@ -264,6 +294,7 @@ class ModelService {
     modelApiSyncService.clearSyncState();
     modelValidationService.clearLastValidationIssues();
     modelElementCrudService.clearNewlyCreatedElements();
+    this.tempModelIds.clear();
     this.initPromise = null;
   }
 }
