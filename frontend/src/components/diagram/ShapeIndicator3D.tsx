@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { Text } from '@react-three/drei';
 import { DiagramElement, Model } from '../../models/types';
 import { appearanceService } from '../../services/diagram';
 

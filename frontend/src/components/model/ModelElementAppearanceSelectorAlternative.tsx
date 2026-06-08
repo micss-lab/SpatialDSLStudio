@@ -4,27 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  TextField,
-  Button,
-  Paper,
-  SelectChangeEvent,
-  IconButton,
-  Tooltip,
-  Grid
-} from '@mui/material';
+import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField, Button, Grid } from '@mui/material';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
-import DeleteIcon from '@mui/icons-material/Delete';
-import SquareIcon from '@mui/icons-material/Square';
-import CircleIcon from '@mui/icons-material/Circle';
-import ChangeHistoryIcon from '@mui/icons-material/ChangeHistory';
-import StarIcon from '@mui/icons-material/Star';
 import ViewInArIcon from '@mui/icons-material/ViewInAr';
 import { ModelElement } from '../../models/types';
 
@@ -61,8 +42,10 @@ const ModelElementAppearanceSelectorAlternative: React.FC<ModelElementAppearance
   onUpdate
 }) => {
   const [appearanceType, setAppearanceType] = useState<AppearanceOption>('default');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [imageUrl, setImageUrl] = useState<string>('');
   const [imageBlobUrl, setImageBlobUrl] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [modelUrl, setModelUrl] = useState<string>('');
   const [modelBlobUrl, setModelBlobUrl] = useState<string>('');
   const [color, setColor] = useState<string>('#ffffff');

@@ -1,63 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Stage, Layer, Rect, Text, Group, Line, Circle, Arrow } from 'react-konva';
-import { 
-  Box, 
-  Paper, 
-  Typography, 
-  Drawer, 
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  IconButton,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  SelectChangeEvent,
-  FormControlLabel,
-  Checkbox,
-  Slider,
-  Tooltip,
-  Tabs,
-  Tab,
-  Chip
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import ZoomInIcon from '@mui/icons-material/ZoomIn';
-import ZoomOutIcon from '@mui/icons-material/ZoomOut';
-import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
-import SaveIcon from '@mui/icons-material/Save';
-import BugReportIcon from '@mui/icons-material/BugReport';
+import { Stage, Layer, Circle } from 'react-konva';
+import { Box, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Metamodel, MetaClass, MetaAttribute, MetaReference } from '../../models/types';
 import { metamodelService } from '../../services/metamodel';
-import { searchService, SearchEntry, SearchResult } from '../../services/common';
-import OCLConstraintEditor from './OCLConstraintEditor';
-import ConstraintTypeSelector from './ConstraintTypeSelector';
-import SearchBar from '../common/SearchBar';
-import {
-  calculateConnectionPoint,
-  isPointInClass,
-  findLabelPosition,
-  getClassPosition,
-  parseBendPoints,
-  setupMetamodelExport,
-  CLASS_WIDTH,
-  CLASS_HEADER_HEIGHT,
-  ATTRIBUTE_HEIGHT,
-  CLASS_PADDING,
-  getClassHeight
-} from './utils';
+import { parseBendPoints, setupMetamodelExport } from './utils';
 import {
   ClassNode,
   ReferenceEdge,
@@ -99,6 +46,7 @@ interface TabPanelProps {
 }
 
 // Tab Panel component
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const TabPanel = (props: TabPanelProps) => {
   const { children, value, index, ...other } = props;
 
@@ -129,6 +77,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
   const { setSelectedClass, setSelectedReference, setSelectedInheritance } = selectionHandlers;
   
   const [highlightState, highlightHandlers] = useMetamodelHighlight();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { highlightedClasses, highlightedAttributes, highlightedReferences, highlightedConstraints } = highlightState;
   const { 
     clearHighlights, 
@@ -136,6 +85,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
     setHighlightedAttributes, 
     setHighlightedReferences, 
     setHighlightedConstraints,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     isClassHighlighted,
     isAttributeHighlighted,
     isReferenceHighlighted
@@ -158,6 +108,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
     setHighlightedReferences,
     setHighlightedConstraints
   });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { searchIndex, searchResults } = searchState;
   const { handleSearch, handleSelectSearchResult, handleHighlightAllResults } = searchHandlers;
   
@@ -217,6 +168,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
       setStagePosition,
       { pixelRatio: 2, padding: 100 }
     );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metamodel, scale, stagePosition]);
   
   // State for temporary bend points during edge creation
@@ -238,6 +190,14 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
   const [newReferenceAttributeType, setNewReferenceAttributeType] = useState('string');
   const [newReferenceAttributeRequired, setNewReferenceAttributeRequired] = useState(false);
   const [newReferenceAttributeDefaultValue, setNewReferenceAttributeDefaultValue] = useState('');
+
+  const parseAttributeType = (type: string) => (
+    type.startsWith('enum:') ? { enumId: type.slice('enum:'.length) } : type
+  );
+
+  const formatAttributeType = (type: any): string => (
+    typeof type === 'object' && type?.enumId ? `enum:${type.enumId}` : type
+  );
   
   // Change tab handler
   const handleChangeTab = (event: React.SyntheticEvent, newValue: number) => {
@@ -308,6 +268,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
         console.error('Error parsing highlight data:', error);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
   
   // Center view on elements when the metamodel loads or when stage size changes
@@ -323,6 +284,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
       
       return () => clearTimeout(timerId);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metamodel, stageSize]);
   
   // Stage size handler
@@ -630,7 +592,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
       const newAttribute: MetaAttribute = {
         id: `attr-${Date.now()}`,
         name: newAttributeName,
-        type: newAttributeType as any,
+        type: parseAttributeType(newAttributeType) as any,
         required: newAttributeRequired,
         many: false,
         eClass: ''
@@ -669,6 +631,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
       const upperBound = newReferenceUpperBound === '*' ? '*' : parseInt(newReferenceUpperBound) || 1;
       
       // Check if it's a self-reference
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const isSelfReference = referenceStartClass.id === newReferenceTarget;
       
       // Add the reference through the service
@@ -781,7 +744,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
   const handleEditAttribute = (attribute: MetaAttribute) => {
     setEditingAttribute(attribute);
     setNewAttributeName(attribute.name);
-    setNewAttributeType(attribute.type);
+    setNewAttributeType(formatAttributeType(attribute.type));
     setNewAttributeRequired(attribute.required || false);
     setNewAttributeDefaultValue(attribute.defaultValue || '');
     setIsEditAttributeDialogOpen(true);
@@ -799,7 +762,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
                 return {
                   ...attr,
                   name: newAttributeName,
-                  type: newAttributeType as any,
+                  type: parseAttributeType(newAttributeType) as any,
                   required: newAttributeRequired,
                   defaultValue: newAttributeDefaultValue.trim() ? newAttributeDefaultValue : undefined
                 };
@@ -828,7 +791,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
         selectedReference.sourceClass.id,
         selectedReference.reference.id,
         newReferenceAttributeName,
-        newReferenceAttributeType as any,
+        parseAttributeType(newReferenceAttributeType) as any,
         newReferenceAttributeDefaultValue || undefined,
         newReferenceAttributeRequired,
         false // not many-valued
@@ -1040,6 +1003,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
     return () => {
       if (stageRef.current) {
         stageRef.current.destroyChildren();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         stageRef.current.destroy();
       }
     };
@@ -1290,6 +1254,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
         onDefaultValueChange={setNewAttributeDefaultValue}
         onRequiredChange={setNewAttributeRequired}
         onAdd={handleAddAttribute}
+        enums={metamodel.enums || []}
       />
       <ReferenceDialog
         open={isReferenceDialogOpen}
@@ -1322,6 +1287,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
         onDefaultValueChange={setNewReferenceAttributeDefaultValue}
         onRequiredChange={setNewReferenceAttributeRequired}
         onAdd={handleAddReferenceAttribute}
+        enums={metamodel.enums || []}
       />
       <EditAttributeDialog
         open={isEditAttributeDialogOpen}
@@ -1335,9 +1301,10 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
         onDefaultValueChange={setNewAttributeDefaultValue}
         onRequiredChange={setNewAttributeRequired}
         onSave={handleSaveEditedAttribute}
+        enums={metamodel.enums || []}
       />
     </Box>
   );
 };
 
-export default VisualMetamodelEditor; 
+export default VisualMetamodelEditor;

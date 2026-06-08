@@ -313,8 +313,10 @@ function evaluateOperation(expression: Expression, context: EvalContext): any {
     case ExpressionOperator.DECREMENT:
       return leftValue - 1;
     case ExpressionOperator.EQUALS:
+      // eslint-disable-next-line eqeqeq
       return leftValue == rightValue;
     case ExpressionOperator.NOT_EQUALS:
+      // eslint-disable-next-line eqeqeq
       return leftValue != rightValue;
     case ExpressionOperator.GREATER_THAN:
       return leftValue > rightValue;

@@ -1,17 +1,6 @@
 // Add Reference Dialog Component
 import React from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-} from '@mui/material';
-import { Model, Metamodel, ModelElement, MetaReference } from '../../../../models/types';
+import { Model, Metamodel, ModelElement } from '../../../../models/types';
 
 interface AddReferenceDialogProps {
   open: boolean;

@@ -284,6 +284,7 @@ function generateConstraintTests(
   count: number
 ): TestCase[] {
   const testCases: TestCase[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const constraintType = 'type' in constraint ? constraint.type : 'unknown';
 
   const testCase: TestCase = {

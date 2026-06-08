@@ -98,15 +98,21 @@ export const ReferenceEdge: React.FC<ReferenceEdgeProps> = ({
     }
   }
   
+  const notation = reference.concreteSyntax || {};
+  const strokeColor = isSelected ? 'blue' : isHighlighted ? 'green' : (notation.lineColor || 'black');
+  const strokeWidth = isSelected ? 2 : isHighlighted ? 2 : (notation.lineWidth || 1);
+  const showArrow = notation.arrowHead !== 'none';
+
   return (
     <Arrow
       key={`${reference.id}-line`}
       points={points}
-      stroke={isSelected ? "blue" : isHighlighted ? "green" : "black"}
-      strokeWidth={isSelected ? 2 : isHighlighted ? 2 : 1}
-      fill={isSelected ? "blue" : isHighlighted ? "green" : "black"}
-      pointerLength={10}
-      pointerWidth={10}
+      stroke={strokeColor}
+      strokeWidth={strokeWidth}
+      fill={strokeColor}
+      dash={notation.lineDash}
+      pointerLength={showArrow ? 10 : 0}
+      pointerWidth={showArrow ? 10 : 0}
       onClick={() => onReferenceClick(sourceClass, reference)}
     />
   );

@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
-import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Text, Billboard } from '@react-three/drei';
 import { DiagramElement, MetaClass, Model } from '../../models/types';
@@ -47,6 +46,7 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
   const meshRef = useRef<THREE.Mesh>(null);
   const [hover, setHover] = useState(false);
   const [loadedModel, setLoadedModel] = useState<THREE.Group | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [modelLoading, setModelLoading] = useState(false);
 
   // Get appearance settings from the shared service
@@ -212,6 +212,7 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
   // Get the geometry for this element based on shape type
   const geometry = React.useMemo(() => {
     return appearanceService.getGeometry(element, model, lowPerformance);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [element, model, lowPerformance, widthMm, heightMm, depthMm, shapeType]);
   
   // Get the material for this element

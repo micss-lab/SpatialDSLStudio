@@ -1,7 +1,4 @@
-import {
-  Metamodel,
-  Model
-} from '../../models/types';
+import { Model } from '../../models/types';
 import { metamodelService } from '../metamodel';
 import { modelService } from '../model';
 import { apiClient, API_ENDPOINTS } from '../core';

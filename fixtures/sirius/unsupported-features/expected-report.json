@@ -1,0 +1,58 @@
+{
+  "sourceFormat": "project-zip",
+  "targetFormat": "spatialdsl",
+  "supported": false,
+  "warnings": [
+    {
+      "severity": "info",
+      "code": "SIRIUS_SYNTHETIC_FIXTURE",
+      "message": "Fixture intentionally contains Sirius constructs outside the supported subset.",
+      "sourcePath": "fixtures/sirius/unsupported-features"
+    }
+  ],
+  "droppedFeatures": [
+    {
+      "severity": "warning",
+      "code": "SIRIUS_UNSUPPORTED_EXPRESSION",
+      "message": "Complex AQL expression is outside the supported subset.",
+      "sourcePath": "description/unsupported.odesign",
+      "sourceElementId": "diagram-unsupported"
+    },
+    {
+      "severity": "warning",
+      "code": "SIRIUS_UNSUPPORTED_EXPRESSION",
+      "message": "Java service expression is outside the supported subset.",
+      "sourcePath": "description/unsupported.odesign",
+      "sourceElementId": "mapping-child"
+    },
+    {
+      "severity": "warning",
+      "code": "SIRIUS_UNSUPPORTED_STYLE",
+      "message": "Conditional styles are outside the supported subset.",
+      "sourcePath": "description/unsupported.odesign",
+      "sourceElementId": "style-child-conditional"
+    },
+    {
+      "severity": "warning",
+      "code": "SIRIUS_UNSUPPORTED_LAYER",
+      "message": "Additional layers are outside the supported subset.",
+      "sourcePath": "description/unsupported.odesign",
+      "sourceElementId": "layer-review"
+    },
+    {
+      "severity": "warning",
+      "code": "SIRIUS_UNSUPPORTED_DIALECT",
+      "message": "Table representations are outside the supported subset.",
+      "sourcePath": "description/unsupported.odesign",
+      "sourceElementId": "table-unsupported"
+    },
+    {
+      "severity": "warning",
+      "code": "SIRIUS_UNSUPPORTED_DIALECT",
+      "message": "Tree representations are outside the supported subset.",
+      "sourcePath": "description/unsupported.odesign",
+      "sourceElementId": "tree-unsupported"
+    }
+  ],
+  "unresolvedReferences": []
+}

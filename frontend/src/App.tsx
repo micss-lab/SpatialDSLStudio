@@ -1,16 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
-  AppBar,
-  Toolbar,
   Typography,
   Button,
   Container,
   Box,
   Paper,
-  List,
-  ListItem,
-  ListItemText,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -18,23 +13,17 @@ import {
   TextField,
   IconButton,
   CssBaseline,
-  Drawer,
-  Divider,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
   SelectChangeEvent,
-  ListItemButton,
   Snackbar,
   Alert,
-  ListItemIcon,
-  CircularProgress,
-  Tooltip
+  CircularProgress
 } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
-import MenuIcon from '@mui/icons-material/Menu';
 import CodeIcon from '@mui/icons-material/Code';
 import SchemaIcon from '@mui/icons-material/Schema';
 import ModelTrainingIcon from '@mui/icons-material/ModelTraining';
@@ -42,18 +31,13 @@ import DesignServicesIcon from '@mui/icons-material/DesignServices';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
-import AutorenewIcon from '@mui/icons-material/Autorenew';
 import BugReportIcon from '@mui/icons-material/BugReport';
-import LogoutIcon from '@mui/icons-material/Logout';
-import PersonIcon from '@mui/icons-material/Person';
 import ShareIcon from '@mui/icons-material/Share';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import HomeIcon from '@mui/icons-material/Home';
-import InfoIcon from '@mui/icons-material/Info';
-import UpgradeIcon from '@mui/icons-material/Upgrade';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 import MetamodelManager from './components/metamodel/MetamodelManager';
+import { ViewpointManager } from './components/viewpoints';
 import ModelManager from './components/model/ModelManager';
 import DiagramEditor from './components/diagram/DiagramEditor';
 import Diagram3DEditor from './components/diagram/Diagram3DEditor';
@@ -67,12 +51,15 @@ import ResetPasswordPage from './components/auth/ResetPasswordPage';
 import RoleRequestDialog from './components/auth/RoleRequestDialog';
 import { AdminPanel } from './components/admin';
 import { ShareDialog } from './components/common';
+import { Sidebar } from './components/layout';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { metamodelService } from './services/metamodel';
 import { diagramService } from './services/diagram';
 import { modelService } from './services/model';
+import { viewpointService } from './services/viewpoint.service';
+import { getParentGroupColor, getParentGroupSurfaceColor, groupByParent } from './services/common/grouping.service';
 import { jsService } from './services/constraint';
-import { Metamodel, Diagram, Model, Constraint } from './models/types';
+import { Metamodel, Diagram, Model, Constraint, Viewpoint, RepresentationDescription } from './models/types';
 
 // Create a theme
 const theme = createTheme({
@@ -204,12 +191,7 @@ const App: React.FC = () => {
 // The main app content that requires authentication
 const AuthenticatedApp: React.FC = () => {
   const { isAuthenticated, isLoading, user, logout, isAdmin } = useAuth();
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [roleRequestDialogOpen, setRoleRequestDialogOpen] = useState(false);
-
-  const toggleDrawer = () => {
-    setDrawerOpen(!drawerOpen);
-  };
   
   // Apply template styles to body
   useEffect(() => {
@@ -409,6 +391,7 @@ const AuthenticatedApp: React.FC = () => {
               
               // First, deduplicate constraints by ID to prevent double-processing
               const uniqueConstraints = new Map<string, any>();
+              // eslint-disable-next-line no-loop-func
               cls.constraints.forEach((c: Constraint) => {
                 if (!uniqueConstraints.has(c.id)) {
                   uniqueConstraints.set(c.id, c);
@@ -473,6 +456,7 @@ const AuthenticatedApp: React.FC = () => {
             
             // Deduplicate global constraints
             const uniqueGlobalConstraints = new Map<string, any>();
+            // eslint-disable-next-line no-loop-func
             metamodel.constraints.forEach((c: Constraint) => {
               if (!uniqueGlobalConstraints.has(c.id)) {
                 uniqueGlobalConstraints.set(c.id, c);
@@ -588,187 +572,37 @@ const AuthenticatedApp: React.FC = () => {
 
   return (
       <Router>
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-          <AppBar position="static">
-            <Toolbar>
-              <IconButton
-                edge="start"
-                color="inherit"
-                aria-label="menu"
-                onClick={toggleDrawer}
-                sx={{ mr: 2 }}
-              >
-                <MenuIcon />
-              </IconButton>
-              <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-                <Box
-                  component="img"
-                  src={`${process.env.PUBLIC_URL}/uantwerp-logo.svg`}
-                  alt="University of Antwerp"
-                  sx={{ height: 28, mr: 1.5 }}
-                />
-                <Typography variant="h6" component="div">
-                  SpatialDSL Studio
-                </Typography>
-              </Box>
-              <Button color="inherit" component={Link} to="/">
-                Home
-              </Button>
-              <Button color="inherit" component={Link} to="/metamodels">
-                Metamodels
-              </Button>
-              <Button color="inherit" component={Link} to="/models">
-                Models
-              </Button>
-              <Button color="inherit" component={Link} to="/diagrams">
-                Diagrams
-              </Button>
-              <Button color="inherit" component={Link} to="/code-generation">
-                Code Generation
-              </Button>
-              <Button color="inherit" component={Link} to="/transformations">
-                Transformations
-              </Button>
-              <Button color="inherit" component={Link} to="/testing">
-                Testing
-              </Button>
-              {isAdmin && (
-                <Button 
-                  color="inherit" 
-                  component={Link} 
-                  to="/admin"
-                  startIcon={<AdminPanelSettingsIcon />}
-                  sx={{ 
-                    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.2)' }
-                  }}
-                >
-                  Admin
-                </Button>
-              )}
-              
-              {/* User info and logout */}
-              <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: 'rgba(0,0,0,0.1)' }} />
-              <Tooltip title={user?.email || 'User'}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mx: 1 }}>
-                  <PersonIcon sx={{ fontSize: 20, mr: 0.5 }} />
-                  <Typography variant="body2" sx={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {user?.email?.split('@')[0] || 'User'}
-                  </Typography>
-                </Box>
-              </Tooltip>
-              <Tooltip title="Logout">
-                <IconButton color="inherit" onClick={logout} size="small">
-                  <LogoutIcon />
-                </IconButton>
-              </Tooltip>
-            </Toolbar>
-          </AppBar>
+        <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+          <Sidebar
+            user={user}
+            isAdmin={isAdmin}
+            onLogout={logout}
+            onRoleRequest={() => setRoleRequestDialogOpen(true)}
+          />
 
-          <Drawer
-            anchor="left"
-            open={drawerOpen}
-            onClose={toggleDrawer}
-          >
-            <Box
-              sx={{ width: 250 }}
-              role="presentation"
-              onClick={toggleDrawer}
-            >
-              <List>
-                <ListItem disablePadding>
-                  <ListItemButton component={Link} to="/">
-                    <ListItemIcon><HomeIcon /></ListItemIcon>
-                    <ListItemText primary="Home" />
-                  </ListItemButton>
-                </ListItem>
-                <ListItem disablePadding>
-                  <ListItemButton component={Link} to="/metamodels">
-                    <ListItemIcon><SchemaIcon /></ListItemIcon>
-                    <ListItemText primary="Metamodels" />
-                  </ListItemButton>
-                </ListItem>
-                <ListItem disablePadding>
-                  <ListItemButton component={Link} to="/models">
-                    <ListItemIcon><ModelTrainingIcon /></ListItemIcon>
-                    <ListItemText primary="Models" />
-                  </ListItemButton>
-                </ListItem>
-                <ListItem disablePadding>
-                  <ListItemButton component={Link} to="/diagrams">
-                    <ListItemIcon><DesignServicesIcon /></ListItemIcon>
-                    <ListItemText primary="Diagrams" />
-                  </ListItemButton>
-                </ListItem>
-                <ListItem disablePadding>
-                  <ListItemButton component={Link} to="/code-generation">
-                    <ListItemIcon><CodeIcon /></ListItemIcon>
-                    <ListItemText primary="Code Generation" />
-                  </ListItemButton>
-                </ListItem>
-                <ListItem disablePadding>
-                  <ListItemButton component={Link} to="/transformations">
-                    <ListItemIcon><AutorenewIcon /></ListItemIcon>
-                    <ListItemText primary="Transformations" />
-                  </ListItemButton>
-                </ListItem>
-                <ListItem disablePadding>
-                  <ListItemButton component={Link} to="/testing">
-                    <ListItemIcon><BugReportIcon /></ListItemIcon>
-                    <ListItemText primary="Metamodel-Based Testing" />
-                  </ListItemButton>
-                </ListItem>
-                {isAdmin && (
-                  <>
-                    <Divider />
-                    <ListItem disablePadding>
-                      <ListItemButton component={Link} to="/admin">
-                        <ListItemIcon>
-                          <AdminPanelSettingsIcon />
-                        </ListItemIcon>
-                        <ListItemText primary="Admin Panel" />
-                      </ListItemButton>
-                    </ListItem>
-                  </>
-                )}
-                {!isAdmin && (
-                  <>
-                    <Divider />
-                    <ListItem disablePadding>
-                      <ListItemButton onClick={() => setRoleRequestDialogOpen(true)}>
-                        <ListItemIcon><UpgradeIcon /></ListItemIcon>
-                        <ListItemText primary="Request Role Upgrade" />
-                      </ListItemButton>
-                    </ListItem>
-                  </>
-                )}
-                <Divider />
-                <ListItem disablePadding>
-                  <ListItemButton component={Link} to="/about">
-                    <ListItemIcon><InfoIcon /></ListItemIcon>
-                    <ListItemText primary="About" />
-                  </ListItemButton>
-                </ListItem>
-              </List>
-            </Box>
-          </Drawer>
-
-          <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+          <Box sx={{ flexGrow: 1, overflow: 'auto', minWidth: 0 }}>
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/metamodels" element={<MetamodelEditorPage />} />
+              <Route path="/viewpoints" element={<ViewpointsPage />} />
+              <Route path="/metamodels/:metamodelId/viewpoints" element={<ViewpointManager />} />
               <Route path="/metamodels/:id" element={<MetamodelEditorPage />} />
               <Route path="/models" element={<ModelsPage />} />
               <Route path="/models/:id" element={<ModelEditorPage />} />
+              <Route path="/models/:id/code" element={<ModelCodeGenerationPage />} />
               <Route path="/diagrams" element={<DiagramsPage />} />
               <Route path="/diagrams/:id" element={<DiagramEditorPage />} />
-              <Route path="/diagrams/:id/code" element={<CodeGenerationPage />} />
+              <Route path="/diagrams/:id/code" element={<LegacyViewCodeGenerationRedirect />} />
+              <Route path="/views" element={<DiagramsPage />} />
+              <Route path="/views/:id" element={<DiagramEditorPage />} />
+              <Route path="/views/:id/code" element={<LegacyViewCodeGenerationRedirect />} />
               <Route path="/code-generation" element={<StandaloneCodeGenerationPage />} />
               <Route path="/transformations" element={<TransformationDashboard />} />
               <Route path="/testing" element={<ModelBasedTestingDashboard />} />
               <Route path="/testing/:metamodelId" element={<ModelBasedTestingDashboard />} />
               <Route path="/test-details" element={<TestDetails />} />
               <Route path="/admin" element={<AdminPanel />} />
+              <Route path="/help" element={<HelpPage />} />
               <Route path="/about" element={<AboutPage />} />
             </Routes>
           </Box>
@@ -792,7 +626,7 @@ const HomePage: React.FC = () => {
       
       <Typography paragraph>
         This tool allows you to create your own custom modeling language by defining metamodels,
-        creating models based on those metamodels, and visualizing models with diagrams.
+        creating models based on those metamodels, and visualizing model subsets with views.
       </Typography>
       
       <Box sx={{ display: 'flex', gap: 2, mt: 4, flexWrap: 'wrap' }}>
@@ -835,18 +669,18 @@ const HomePage: React.FC = () => {
         <Paper sx={{ p: 3, flexGrow: 1, minWidth: '270px' }}>
           <DesignServicesIcon sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
           <Typography variant="h6" gutterBottom>
-            Design Diagrams
+            Design Views
           </Typography>
           <Typography>
-            Create visual representations of your models with customizable diagrams.
+            Create visual projections of your models with customizable views.
           </Typography>
           <Button
             component={Link}
-            to="/diagrams"
+            to="/views"
             variant="contained"
             sx={{ mt: 2 }}
           >
-            Manage Diagrams
+            Manage Views
           </Button>
         </Paper>
         
@@ -891,6 +725,7 @@ const HomePage: React.FC = () => {
 };
 
 // Metamodels Page
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const MetamodelsPage: React.FC = () => {
   const navigate = useNavigate();
   const { canCreate, canDelete } = useAuth();
@@ -1041,16 +876,305 @@ const ModelEditorPage: React.FC = () => {
   return <ModelManager />;
 };
 
-// Diagrams Page
+const ViewpointsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [metamodels] = useState<Metamodel[]>(metamodelService.getAllMetamodels());
+  const [countsByMetamodelId, setCountsByMetamodelId] = useState<Record<string, { viewpoints: number; representations: number }>>(() => {
+    const counts: Record<string, { viewpoints: number; representations: number }> = {};
+    metamodelService.getAllMetamodels().forEach(metamodel => {
+      const viewpoints = viewpointService.getCachedViewpoints(metamodel.id);
+      counts[metamodel.id] = {
+        viewpoints: viewpoints.length,
+        representations: viewpoints.reduce((total, viewpoint) => total + viewpoint.representationDescriptions.length, 0),
+      };
+    });
+    return counts;
+  });
+  const [isLoadingCounts, setIsLoadingCounts] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoadingCounts(true);
+
+    Promise.all(metamodels.map(async metamodel => {
+      try {
+        const viewpoints = await viewpointService.loadViewpoints(metamodel.id);
+        return {
+          metamodelId: metamodel.id,
+          viewpoints: viewpoints.length,
+          representations: viewpoints.reduce((total, viewpoint) => total + viewpoint.representationDescriptions.length, 0),
+        };
+      } catch {
+        const viewpoints = viewpointService.getCachedViewpoints(metamodel.id);
+        return {
+          metamodelId: metamodel.id,
+          viewpoints: viewpoints.length,
+          representations: viewpoints.reduce((total, viewpoint) => total + viewpoint.representationDescriptions.length, 0),
+        };
+      }
+    }))
+      .then(results => {
+        if (cancelled) return;
+        const nextCounts: Record<string, { viewpoints: number; representations: number }> = {};
+        results.forEach(result => {
+          nextCounts[result.metamodelId] = {
+            viewpoints: result.viewpoints,
+            representations: result.representations,
+          };
+        });
+        setCountsByMetamodelId(nextCounts);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingCounts(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [metamodels]);
+
+  return (
+    <Container sx={{ mt: 4, pb: 4, height: '100%', overflow: 'auto' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <Box sx={{ flexGrow: 1 }}>
+          <Typography variant="h4">Viewpoints</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Representation descriptions are managed inside each metamodel viewpoint.
+          </Typography>
+        </Box>
+        {isLoadingCounts && <CircularProgress size={24} />}
+      </Box>
+
+      <Paper sx={{ overflow: 'hidden' }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: 'minmax(220px, 1fr) 140px 190px 140px' },
+            px: 2,
+            py: 1.25,
+            bgcolor: 'grey.50',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            gap: 1,
+          }}
+        >
+          <Typography variant="subtitle2">Metamodel</Typography>
+          <Typography variant="subtitle2">Viewpoints</Typography>
+          <Typography variant="subtitle2">Representations</Typography>
+          <Typography variant="subtitle2">Action</Typography>
+        </Box>
+
+        {metamodels.map(metamodel => {
+          const counts = countsByMetamodelId[metamodel.id] || { viewpoints: 0, representations: 0 };
+          const groupColor = getParentGroupColor(metamodel.id);
+          return (
+            <Box
+              key={metamodel.id}
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: 'minmax(220px, 1fr) 140px 190px 140px' },
+                alignItems: 'center',
+                px: 2,
+                py: 1.5,
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                borderLeft: '4px solid',
+                borderLeftColor: groupColor,
+                bgcolor: getParentGroupSurfaceColor(metamodel.id),
+                gap: 1,
+              }}
+            >
+              <Box sx={{ minWidth: 0 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: groupColor, flexShrink: 0 }} />
+                  <Typography variant="body1" noWrap>{metamodel.name}</Typography>
+                </Box>
+                <Typography variant="caption" color="text.secondary" noWrap>{metamodel.uri}</Typography>
+              </Box>
+              <Typography variant="body2">{counts.viewpoints}</Typography>
+              <Typography variant="body2">{counts.representations}</Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<AccountTreeIcon />}
+                onClick={() => navigate(`/metamodels/${metamodel.id}/viewpoints`)}
+              >
+                Manage
+              </Button>
+            </Box>
+          );
+        })}
+
+        {metamodels.length === 0 && (
+          <Box sx={{ p: 3 }}>
+            <Typography color="text.secondary">No metamodels found.</Typography>
+          </Box>
+        )}
+      </Paper>
+    </Container>
+  );
+};
+
+const HelpPage: React.FC = () => {
+  const concepts = [
+    {
+      term: 'Metamodel',
+      scope: 'Language definition',
+      meaning: 'Defines the metaclasses, attributes, references, and constraints for a domain. Fallback notation may exist only as a compatibility seed.',
+      action: 'Manage Metamodels',
+      path: '/metamodels',
+    },
+    {
+      term: 'Viewpoint',
+      scope: 'Perspective for one metamodel',
+      meaning: 'Groups representation descriptions for a metamodel, such as an operations viewpoint or analysis viewpoint.',
+      action: 'Manage Viewpoints',
+      path: '/viewpoints',
+    },
+    {
+      term: 'Representation Description',
+      scope: 'View specification',
+      meaning: 'Defines one diagram/table/tree specification: visible metaclasses, creatable metaclasses, mappings, tools, and canonical notation for that representation.',
+      action: 'Open Viewpoints',
+      path: '/viewpoints',
+    },
+    {
+      term: 'Model',
+      scope: 'Semantic data',
+      meaning: 'Stores instances of metaclasses and their attribute/reference values. This is the source data that views project.',
+      action: 'Manage Models',
+      path: '/models',
+    },
+    {
+      term: 'View',
+      scope: 'Saved projection',
+      meaning: 'A concrete saved diagram/view over a model, using a selected viewpoint and representation description. Layout and membership live here.',
+      action: 'Manage Views',
+      path: '/views',
+    },
+  ];
+
+  const workflow = [
+    { label: 'Define', text: 'Create a metamodel for the domain language.' },
+    { label: 'Specify', text: 'Create viewpoints and representation descriptions for the modeling perspectives users need.' },
+    { label: 'Instantiate', text: 'Create models that conform to the metamodel.' },
+    { label: 'Project', text: 'Create views from a model, viewpoint, and representation description.' },
+    { label: 'Edit', text: 'Edit semantic data in models and view-specific layout/membership in views.' },
+    { label: 'Exchange', text: 'Use Ecore/XMI for semantic assets and Sirius .odesign for the supported viewpoint specification subset.' },
+  ];
+
+  return (
+    <Container sx={{ mt: 4, pb: 4, height: '100%', overflow: 'auto' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <HelpOutlineIcon sx={{ fontSize: 36, color: 'primary.main', mr: 1.5 }} />
+        <Box>
+          <Typography variant="h4">Help</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Modeling concepts and workflow reference.
+          </Typography>
+        </Box>
+      </Box>
+
+      <Paper sx={{ mb: 3, overflow: 'hidden' }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '180px 190px minmax(300px, 1fr) 180px' },
+            px: 2,
+            py: 1.25,
+            bgcolor: 'grey.50',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            gap: 1.5,
+          }}
+        >
+          <Typography variant="subtitle2">Concept</Typography>
+          <Typography variant="subtitle2">Scope</Typography>
+          <Typography variant="subtitle2">Meaning</Typography>
+          <Typography variant="subtitle2">Where</Typography>
+        </Box>
+
+        {concepts.map(concept => (
+          <Box
+            key={concept.term}
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '180px 190px minmax(300px, 1fr) 180px' },
+              alignItems: 'center',
+              px: 2,
+              py: 1.5,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              gap: 1.5,
+            }}
+          >
+            <Typography variant="subtitle1">{concept.term}</Typography>
+            <Typography variant="body2" color="text.secondary">{concept.scope}</Typography>
+            <Typography variant="body2">{concept.meaning}</Typography>
+            <Button component={Link} to={concept.path} variant="outlined" size="small">
+              {concept.action}
+            </Button>
+          </Box>
+        ))}
+      </Paper>
+
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>Workflow</Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
+          {workflow.map((step, index) => (
+            <Box key={step.label} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+              <Typography variant="caption" color="text.secondary">Step {index + 1}</Typography>
+              <Typography variant="subtitle1">{step.label}</Typography>
+              <Typography variant="body2">{step.text}</Typography>
+            </Box>
+          ))}
+        </Box>
+      </Paper>
+
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>Notation</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Define class and reference notation on representation descriptions. Metaclass and reference notation in the metamodel are retained as fallback values for existing assets and import compatibility; representation notation wins when a view is rendered or exported.
+        </Typography>
+      </Paper>
+
+      <Paper sx={{ p: 2 }}>
+        <Typography variant="h6" gutterBottom>SpatialDSL and Sirius Terms</Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+          <Box>
+            <Typography variant="subtitle2">SpatialDSL</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Viewpoints and representation descriptions are stored as SpatialDSL records. Views are saved app resources backed by model membership and presentation data.
+            </Typography>
+          </Box>
+          <Box>
+            <Typography variant="subtitle2">Sirius Desktop</Typography>
+            <Typography variant="body2" color="text.secondary">
+              `.odesign` maps to the supported viewpoint specification subset. `.aird` session and diagram resources are detected but remain deferred.
+            </Typography>
+          </Box>
+        </Box>
+      </Paper>
+    </Container>
+  );
+};
+
+// Views Page
 const DiagramsPage: React.FC = () => {
   const navigate = useNavigate();
   const { canCreate, canDelete, canShare } = useAuth();
   const [diagrams, setDiagrams] = useState<Diagram[]>(diagramService.getAllDiagrams());
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [models, setModels] = useState<Model[]>(modelService.getAllModels());
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [metamodels, setMetamodels] = useState<Metamodel[]>(metamodelService.getAllMetamodels());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newDiagramName, setNewDiagramName] = useState('');
   const [selectedModelId, setSelectedModelId] = useState('');
+  const [availableViewpoints, setAvailableViewpoints] = useState<Viewpoint[]>([]);
+  const [selectedViewpointId, setSelectedViewpointId] = useState('');
+  const [selectedRepresentationDescriptionId, setSelectedRepresentationDescriptionId] = useState('');
+  const [isLoadingViewpoints, setIsLoadingViewpoints] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
@@ -1060,18 +1184,141 @@ const DiagramsPage: React.FC = () => {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [selectedDiagramForSharing, setSelectedDiagramForSharing] = useState<Diagram | null>(null);
 
+  const getModelMetamodelId = useCallback((modelId: string): string | undefined => {
+    const model = models.find((candidate: Model) => candidate.id === modelId);
+    return model?.conformsTo || model?.metamodelId;
+  }, [models]);
+
+  const getDiagramViewpointContext = useCallback((
+    diagram: Diagram,
+    metamodelId?: string
+  ): { viewpoint?: Viewpoint; representationDescription?: RepresentationDescription } => {
+    const explicit = viewpointService.resolveRepresentationDescription(diagram);
+    if (explicit.viewpoint || explicit.representationDescription) {
+      return explicit;
+    }
+
+    return viewpointService.resolveDefaultForMetamodel(metamodelId);
+  }, []);
+
+  const getMetamodelName = useCallback((metamodelId: string): string => {
+    return metamodels.find((candidate: Metamodel) => candidate.id === metamodelId)?.name || 'Unknown metamodel';
+  }, [metamodels]);
+
+  const groupedDiagrams = useMemo(() => (
+    groupByParent(
+      diagrams,
+      (diagram: Diagram) => {
+        const model = models.find((candidate: Model) => candidate.id === diagram.modelId);
+        return model?.conformsTo || model?.metamodelId;
+      },
+      (parentId: string) => getMetamodelName(parentId)
+    )
+  ), [diagrams, models, getMetamodelName]);
+
+  const selectedViewpoint = useMemo(
+    () => availableViewpoints.find(viewpoint => viewpoint.id === selectedViewpointId),
+    [availableViewpoints, selectedViewpointId]
+  );
+  const selectableRepresentationDescriptions = useMemo(
+    () => (selectedViewpoint?.representationDescriptions || []).filter(description => description.kind === 'diagram'),
+    [selectedViewpoint]
+  );
+
+  const resetCreateDialog = () => {
+    setNewDiagramName('');
+    setSelectedModelId('');
+    setAvailableViewpoints([]);
+    setSelectedViewpointId('');
+    setSelectedRepresentationDescriptionId('');
+    setIsLoadingViewpoints(false);
+  };
+
+  useEffect(() => {
+    if (!isDialogOpen || !selectedModelId) {
+      setAvailableViewpoints([]);
+      setSelectedViewpointId('');
+      setSelectedRepresentationDescriptionId('');
+      return;
+    }
+
+    const metamodelId = getModelMetamodelId(selectedModelId);
+    if (!metamodelId) {
+      setAvailableViewpoints([]);
+      setSelectedViewpointId('');
+      setSelectedRepresentationDescriptionId('');
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingViewpoints(true);
+
+    const selectDefaults = (viewpoints: Viewpoint[]) => {
+      if (cancelled) return;
+      setAvailableViewpoints(viewpoints);
+
+      const defaultViewpoint = viewpoints.find(viewpoint => viewpoint.isDefault) || viewpoints[0];
+      const defaultRepresentation = defaultViewpoint?.representationDescriptions.find(
+        description => description.isDefault && description.kind === 'diagram'
+      ) || defaultViewpoint?.representationDescriptions.find(description => description.kind === 'diagram');
+
+      setSelectedViewpointId(defaultViewpoint?.id || '');
+      setSelectedRepresentationDescriptionId(defaultRepresentation?.id || '');
+    };
+
+    const cached = viewpointService.getCachedViewpoints(metamodelId);
+    if (cached.length > 0) {
+      selectDefaults(cached);
+    }
+
+    viewpointService.loadViewpoints(metamodelId)
+      .then(selectDefaults)
+      .catch(() => {
+        if (cached.length === 0) {
+          selectDefaults([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingViewpoints(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isDialogOpen, selectedModelId, getModelMetamodelId]);
+
+  useEffect(() => {
+    if (!selectedViewpoint) {
+      setSelectedRepresentationDescriptionId('');
+      return;
+    }
+
+    const selectedStillValid = selectableRepresentationDescriptions.some(
+      description => description.id === selectedRepresentationDescriptionId
+    );
+    if (selectedStillValid) return;
+
+    const defaultRepresentation = selectableRepresentationDescriptions.find(description => description.isDefault)
+      || selectableRepresentationDescriptions[0];
+    setSelectedRepresentationDescriptionId(defaultRepresentation?.id || '');
+  }, [selectedViewpoint, selectableRepresentationDescriptions, selectedRepresentationDescriptionId]);
+
   const handleCreateDiagram = () => {
     if (newDiagramName.trim() && selectedModelId) {
-      const newDiagram = diagramService.createDiagram(newDiagramName, selectedModelId);
+      const newDiagram = diagramService.createDiagram(newDiagramName, selectedModelId, {
+        ...(selectedViewpointId ? { viewpointId: selectedViewpointId } : {}),
+        ...(selectedRepresentationDescriptionId ? { representationDescriptionId: selectedRepresentationDescriptionId } : {}),
+      });
       setDiagrams([...diagrams, newDiagram]);
-      setNewDiagramName('');
-      setSelectedModelId('');
+      resetCreateDialog();
       setIsDialogOpen(false);
     }
   };
 
   const handleDeleteDiagram = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this diagram?')) {
+    if (window.confirm('Are you sure you want to delete this view?')) {
       diagramService.deleteDiagram(id);
       setDiagrams(diagrams.filter(d => d.id !== id));
     }
@@ -1079,6 +1326,14 @@ const DiagramsPage: React.FC = () => {
 
   const handleModelChange = (event: SelectChangeEvent) => {
     setSelectedModelId(event.target.value);
+  };
+
+  const handleViewpointChange = (event: SelectChangeEvent) => {
+    setSelectedViewpointId(event.target.value);
+  };
+
+  const handleRepresentationDescriptionChange = (event: SelectChangeEvent) => {
+    setSelectedRepresentationDescriptionId(event.target.value);
   };
 
   const handleImportDiagram = () => {
@@ -1099,14 +1354,14 @@ const DiagramsPage: React.FC = () => {
         
         if (importedDiagram) {
           setDiagrams(diagramService.getAllDiagrams());
-          setSnackbarMessage('Diagram imported successfully');
+          setSnackbarMessage('View imported successfully');
           setSnackbarSeverity('success');
         } else {
-          setSnackbarMessage('Failed to import diagram. Check if the referenced model exists.');
+          setSnackbarMessage('Failed to import view. Check if the referenced model exists.');
           setSnackbarSeverity('error');
         }
       } catch (error) {
-        setSnackbarMessage('Error importing diagram: Invalid file format');
+        setSnackbarMessage('Error importing view: Invalid file format');
         setSnackbarSeverity('error');
       }
       setSnackbarOpen(true);
@@ -1123,7 +1378,7 @@ const DiagramsPage: React.FC = () => {
   const handleExportDiagram = (id: string, name: string) => {
     const jsonData = diagramService.exportDiagramToJSON(id);
     if (!jsonData) {
-      setSnackbarMessage('Failed to export diagram');
+      setSnackbarMessage('Failed to export view');
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
       return;
@@ -1134,13 +1389,13 @@ const DiagramsPage: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${name.replace(/\s+/g, '_')}_diagram.json`;
+    a.download = `${name.replace(/\s+/g, '_')}_view.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    setSnackbarMessage('Diagram exported successfully');
+    setSnackbarMessage('View exported successfully');
     setSnackbarSeverity('success');
     setSnackbarOpen(true);
   };
@@ -1153,7 +1408,7 @@ const DiagramsPage: React.FC = () => {
     <Container sx={{ mt: 4, pb: 4, height: '100%', overflow: 'auto' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          Diagrams
+          Views
         </Typography>
         {canCreate && (
           <>
@@ -1165,7 +1420,7 @@ const DiagramsPage: React.FC = () => {
               sx={{ mr: 2 }}
               disabled={models.length === 0}
             >
-              Import Diagram
+              Import View
             </Button>
             <input
               type="file"
@@ -1180,7 +1435,7 @@ const DiagramsPage: React.FC = () => {
               onClick={() => setIsDialogOpen(true)}
               disabled={models.length === 0}
             >
-              Create Diagram
+              Create View
             </Button>
           </>
         )}
@@ -1192,7 +1447,7 @@ const DiagramsPage: React.FC = () => {
             No Models Available
           </Typography>
           <Typography color="textSecondary" paragraph>
-            You need to create a model before creating diagrams.
+            You need to create a model before creating views.
           </Typography>
           <Button
             variant="outlined"
@@ -1205,10 +1460,10 @@ const DiagramsPage: React.FC = () => {
       ) : diagrams.length === 0 ? (
         <Paper sx={{ p: 4, textAlign: 'center' }}>
           <Typography variant="h6" color="textSecondary" gutterBottom>
-            No Diagrams Found
+            No Views Found
           </Typography>
           <Typography color="textSecondary" paragraph>
-            {canCreate ? 'Create your first diagram to get started.' : 'No diagrams available yet.'}
+            {canCreate ? 'Create your first view to get started.' : 'No views available yet.'}
           </Typography>
           {canCreate && (
             <Button
@@ -1216,114 +1471,157 @@ const DiagramsPage: React.FC = () => {
               startIcon={<AddIcon />}
               onClick={() => setIsDialogOpen(true)}
             >
-              Create Diagram
+              Create View
             </Button>
           )}
         </Paper>
       ) : (
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
-          {diagrams.map(diagram => {
-            const model = models.find((m: Model) => m.id === diagram.modelId);
-            const metamodel = model ? metamodels.find((m: Metamodel) => m.id === model.conformsTo) : undefined;
-            return (
-              <Paper
-                key={diagram.id}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {groupedDiagrams.map(group => (
+            <Box key={group.parentId}>
+              <Box
                 sx={{
-                  p: 3,
-                  cursor: 'pointer',
-                  '&:hover': { boxShadow: 6 }
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  mb: 1.5,
+                  px: 1.5,
+                  py: 1,
+                  borderLeft: '4px solid',
+                  borderLeftColor: group.color,
+                  bgcolor: getParentGroupSurfaceColor(group.parentId),
+                  borderRadius: 1,
                 }}
-                onClick={() => navigate(`/diagrams/${diagram.id}`)}
               >
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                  <Typography variant="h6" gutterBottom>
-                    {diagram.name}
-                  </Typography>
-                  <Box>
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleExportDiagram(diagram.id, diagram.name);
+                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: group.color, flexShrink: 0 }} />
+                <Typography variant="subtitle2">{group.parentName}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {group.items.length} view{group.items.length === 1 ? '' : 's'}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
+                {group.items.map(diagram => {
+                  const model = models.find((m: Model) => m.id === diagram.modelId);
+                  const metamodel = model ? metamodels.find((m: Metamodel) => m.id === (model.conformsTo || model.metamodelId)) : undefined;
+                  const { viewpoint, representationDescription } = getDiagramViewpointContext(diagram, metamodel?.id);
+                  return (
+                    <Paper
+                      key={diagram.id}
+                      sx={{
+                        p: 3,
+                        cursor: 'pointer',
+                        borderLeft: '4px solid',
+                        borderLeftColor: group.color,
+                        '&:hover': { boxShadow: 6 }
                       }}
-                      sx={{ mr: 1 }}
+                      onClick={() => navigate(`/views/${diagram.id}`)}
                     >
-                      <FileDownloadIcon />
-                    </IconButton>
-                    {canShare && (
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedDiagramForSharing(diagram);
-                          setShareDialogOpen(true);
-                        }}
-                        sx={{ mr: 1 }}
-                      >
-                        <ShareIcon />
-                      </IconButton>
-                    )}
-                    {canDelete && (
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteDiagram(diagram.id);
-                        }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    )}
-                  </Box>
-                </Box>
-                <Typography color="textSecondary" gutterBottom>
-                  Model: {model?.name || 'Unknown'} 
-                </Typography>
-                <Typography color="textSecondary" gutterBottom>
-                  Metamodel: {metamodel?.name || 'Unknown'}
-                </Typography>
-                <Typography color="textSecondary" gutterBottom>
-                  {diagram.elements.length} Elements
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/diagrams/${diagram.id}`);
-                    }}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<CodeIcon />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/diagrams/${diagram.id}/code`);
-                    }}
-                  >
-                    Generate Code
-                  </Button>
-                </Box>
-              </Paper>
-            );
-          })}
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                        <Typography variant="h6" gutterBottom>
+                          {diagram.name}
+                        </Typography>
+                        <Box>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleExportDiagram(diagram.id, diagram.name);
+                            }}
+                            sx={{ mr: 1 }}
+                          >
+                            <FileDownloadIcon />
+                          </IconButton>
+                          {canShare && (
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDiagramForSharing(diagram);
+                                setShareDialogOpen(true);
+                              }}
+                              sx={{ mr: 1 }}
+                            >
+                              <ShareIcon />
+                            </IconButton>
+                          )}
+                          {canDelete && (
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteDiagram(diagram.id);
+                              }}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          )}
+                        </Box>
+                      </Box>
+                      <Typography color="textSecondary" gutterBottom>
+                        Model: {model?.name || 'Unknown'} 
+                      </Typography>
+                      <Typography color="textSecondary" gutterBottom>
+                        Metamodel: {metamodel?.name || 'Unknown'}
+                      </Typography>
+                      <Typography color="textSecondary" gutterBottom>
+                        Viewpoint: {viewpoint?.name || 'Default'}
+                      </Typography>
+                      <Typography color="textSecondary" gutterBottom>
+                        Representation: {representationDescription?.name || 'Default Diagram'}
+                      </Typography>
+                      <Typography color="textSecondary" gutterBottom>
+                        {(diagram.includedElementIds?.length || diagram.elements.filter(element => element.type === 'node').length)} Elements
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/views/${diagram.id}`);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<CodeIcon />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/models/${diagram.modelId}/code`);
+                          }}
+                        >
+                          Generate Code
+                        </Button>
+                      </Box>
+                    </Paper>
+                  );
+                })}
+              </Box>
+            </Box>
+          ))}
         </Box>
       )}
       
-      <Dialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
-        <DialogTitle>Create New Diagram</DialogTitle>
+      <Dialog
+        open={isDialogOpen}
+        onClose={() => {
+          resetCreateDialog();
+          setIsDialogOpen(false);
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Create New View</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             margin="dense"
-            label="Diagram Name"
+            label="View Name"
             fullWidth
             value={newDiagramName}
             onChange={(e) => setNewDiagramName(e.target.value)}
@@ -1344,10 +1642,64 @@ const DiagramsPage: React.FC = () => {
               ))}
             </Select>
           </FormControl>
+          <FormControl fullWidth sx={{ mt: 2 }} disabled={!selectedModelId || isLoadingViewpoints || availableViewpoints.length === 0}>
+            <InputLabel id="viewpoint-select-label">Viewpoint</InputLabel>
+            <Select
+              labelId="viewpoint-select-label"
+              value={selectedViewpointId}
+              label="Viewpoint"
+              onChange={handleViewpointChange}
+            >
+              {availableViewpoints.map((viewpoint: Viewpoint) => (
+                <MenuItem key={viewpoint.id} value={viewpoint.id}>
+                  {viewpoint.name}{viewpoint.isDefault ? ' (Default)' : ''}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth sx={{ mt: 2 }} disabled={!selectedViewpointId || selectableRepresentationDescriptions.length === 0}>
+            <InputLabel id="representation-select-label">Representation</InputLabel>
+            <Select
+              labelId="representation-select-label"
+              value={selectedRepresentationDescriptionId}
+              label="Representation"
+              onChange={handleRepresentationDescriptionChange}
+            >
+              {selectableRepresentationDescriptions.map((description: RepresentationDescription) => (
+                <MenuItem key={description.id} value={description.id}>
+                  {description.name}{description.isDefault ? ' (Default)' : ''}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          {selectedModelId && isLoadingViewpoints && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+              <CircularProgress size={18} />
+              <Typography variant="body2" color="textSecondary">
+                Loading viewpoints...
+              </Typography>
+            </Box>
+          )}
+          {selectedModelId && !isLoadingViewpoints && availableViewpoints.length === 0 && (
+            <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
+              No viewpoint is configured for this metamodel. The backend will use or generate the default diagram representation.
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleCreateDiagram} color="primary">
+          <Button
+            onClick={() => {
+              resetCreateDialog();
+              setIsDialogOpen(false);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreateDiagram}
+            color="primary"
+            disabled={!newDiagramName.trim() || !selectedModelId || isLoadingViewpoints}
+          >
             Create
           </Button>
         </DialogActions>
@@ -1380,14 +1732,50 @@ const DiagramsPage: React.FC = () => {
 const DiagramEditorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [mode, setMode] = useState<'2D' | '3D'>('2D');
-  
-  if (!id) {
-    return <Typography>Invalid diagram ID</Typography>;
+  const [diagramVersion, setDiagramVersion] = useState(0);
+  const diagramId = id || '';
+
+  useEffect(() => {
+    if (!diagramId) return;
+
+    const handleViewChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ diagramId?: string }>).detail;
+      if (!detail?.diagramId || detail.diagramId === diagramId) {
+        setDiagramVersion(version => version + 1);
+      }
+    };
+
+    window.addEventListener('view:changed', handleViewChanged);
+    window.addEventListener('storage', handleViewChanged);
+    return () => {
+      window.removeEventListener('view:changed', handleViewChanged);
+      window.removeEventListener('storage', handleViewChanged);
+    };
+  }, [diagramId]);
+
+  if (!diagramId) {
+    return <Typography>Invalid view ID</Typography>;
   }
+
+  const diagram = diagramService.getDiagramById(diagramId);
+  const model = diagram ? modelService.getModelById(diagram.modelId) : undefined;
+  const metamodelId = model?.conformsTo || model?.metamodelId;
+  const explicitContext = diagram ? viewpointService.resolveRepresentationDescription(diagram) : {};
+  const fallbackContext = viewpointService.resolveDefaultForMetamodel(metamodelId);
+  const viewpoint = explicitContext.viewpoint || fallbackContext.viewpoint;
+  const representationDescription = explicitContext.representationDescription || fallbackContext.representationDescription;
   
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 1 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }} data-diagram-version={diagramVersion}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2, py: 1, borderBottom: '1px solid #e4e7ec' }}>
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Typography variant="subtitle1" noWrap>
+            {diagram?.name || 'View'}
+          </Typography>
+          <Typography variant="caption" color="textSecondary" noWrap>
+            {viewpoint?.name || 'Default'} / {representationDescription?.name || 'Default Diagram'}
+          </Typography>
+        </Box>
         <Button 
           variant={mode === '2D' ? 'contained' : 'outlined'} 
           onClick={() => setMode('2D')}
@@ -1406,11 +1794,11 @@ const DiagramEditorPage: React.FC = () => {
       
       <Box sx={{ flexGrow: 1 }}>
         {mode === '2D' ? (
-          <DiagramEditor diagramId={id} />
+          <DiagramEditor diagramId={diagramId} />
         ) : (
           <div style={{ height: '100%', width: '100%', position: 'relative' }} className="diagram3d-container">
             <React.Suspense fallback={<Typography>Loading 3D editor...</Typography>}>
-              <Diagram3DEditor diagramId={id} />
+              <Diagram3DEditor diagramId={diagramId} />
             </React.Suspense>
           </div>
         )}
@@ -1420,14 +1808,26 @@ const DiagramEditorPage: React.FC = () => {
 };
 
 // Code Generation Page
-const CodeGenerationPage: React.FC = () => {
+const ModelCodeGenerationPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   
   if (!id) {
-    return <Typography>Invalid diagram ID</Typography>;
+    return <Typography>Invalid model ID</Typography>;
   }
   
-  return <CodeGenerator diagramId={id} />;
+  return <CodeGenerator modelId={id} />;
+};
+
+// Compatibility only: old links resolve the view first, then code generation runs from the model route.
+const LegacyViewCodeGenerationRedirect: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const diagram = id ? diagramService.getDiagramById(id) : null;
+
+  if (!diagram) {
+    return <Typography>Invalid view ID</Typography>;
+  }
+
+  return <Navigate to={`/models/${diagram.modelId}/code`} replace />;
 };
 
 // Standalone Code Generation Page
@@ -1459,7 +1859,7 @@ const AboutPage: React.FC = () => {
         </Box>
         <Box component="li">
           <Typography>
-            Create diagrams based on those metamodels
+            Create model views based on those metamodels
           </Typography>
         </Box>
         <Box component="li">
@@ -1469,23 +1869,23 @@ const AboutPage: React.FC = () => {
         </Box>
         <Box component="li">
           <Typography fontWeight="bold">
-            View and manipulate diagrams in 3D space
+            View and manipulate model projections in 3D space
           </Typography>
         </Box>
       </Box>
       
       <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-        3D Diagram Editor
+        3D View Editor
       </Typography>
       
       <Typography paragraph>
-        The 3D diagram editor allows you to visualize and manipulate model elements in a three-dimensional space:
+        The 3D view editor allows you to visualize and manipulate model elements in a three-dimensional space:
       </Typography>
       
       <Box component="ul" sx={{ pl: 4 }}>
         <Box component="li">
           <Typography>
-            Toggle between 2D and 3D views using the buttons at the top of the diagram editor
+            Toggle between 2D and 3D views using the buttons at the top of the view editor
           </Typography>
         </Box>
         <Box component="li">
@@ -1517,10 +1917,10 @@ const AboutPage: React.FC = () => {
           <Typography>Material-UI for the user interface</Typography>
         </Box>
         <Box component="li">
-          <Typography>Konva.js for the 2D diagram editor</Typography>
+          <Typography>Konva.js for the 2D view editor</Typography>
         </Box>
         <Box component="li">
-          <Typography>Three.js / React Three Fiber for the 3D diagram editor</Typography>
+          <Typography>Three.js / React Three Fiber for the 3D view editor</Typography>
         </Box>
         <Box component="li">
           <Typography>Handlebars for code generation templates</Typography>
@@ -1531,6 +1931,7 @@ const AboutPage: React.FC = () => {
 };
 
 // Model-Based Testing Page
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ModelBasedTestingPage: React.FC = () => {
   return <ModelBasedTestingDashboard />;
 };

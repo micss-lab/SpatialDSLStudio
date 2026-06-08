@@ -1,8 +1,4 @@
-import {
-  TransformationPattern,
-  Model,
-  ModelElement
-} from '../../models/types';
+import { TransformationPattern, Model } from '../../models/types';
 import { transformationDebugService } from './transformation-debug.service';
 
 // VF2 Algorithm Types (Internal)

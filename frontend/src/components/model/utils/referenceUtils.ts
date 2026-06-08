@@ -1,5 +1,5 @@
 // Reference utility functions for handling references between model elements
-import { ModelElement, MetaReference } from '../../../models/types';
+import { ModelElement } from '../../../models/types';
 
 /**
  * Parse and validate bend points from reference data

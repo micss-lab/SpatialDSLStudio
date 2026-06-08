@@ -1,26 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Box, 
-  Button, 
-  Typography, 
-  TextField, 
-  List, 
-  ListItem, 
-  ListItemText, 
-  Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
-  ListItemButton,
-  Tooltip
-} from '@mui/material';
+import { Box, Button, Typography, TextField, List, ListItem, Paper, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, ListItemButton, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import ShareIcon from '@mui/icons-material/Share';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import { Metamodel } from '../../models/types';
 import { metamodelService } from '../../services/metamodel';
 import VisualMetamodelEditor from './VisualMetamodelEditor';
@@ -47,6 +32,7 @@ const MetamodelManager: React.FC = () => {
   useEffect(() => {
     // Load metamodels when component mounts
     refreshMetamodels();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const refreshMetamodels = () => {
@@ -142,31 +128,17 @@ const MetamodelManager: React.FC = () => {
 
   const handleImportMetamodel = () => {
     try {
-      if (importFileFormat === 'ecore' || importFileFormat === 'xmi') {
+      if (importFileFormat === 'ecore') {
         // Import as Ecore
         const metamodelId = ecoreService.importFromEcore(importData);
         if (!metamodelId) {
           throw new Error('Failed to import Ecore metamodel');
         }
       } else {
-        // Import as JSON
-      const metamodelData = JSON.parse(importData);
-      
-      // Validate that it's a proper metamodel
-      if (!metamodelData.name || !metamodelData.classes) {
-        throw new Error('Invalid metamodel format');
-      }
-      
-      // Create a new metamodel with the imported data
-      const newMetamodel = metamodelService.createMetamodel(metamodelData.name);
-      
-      // Update it with the imported data (preserving the new ID)
-      const updatedData = {
-        ...metamodelData,
-        id: newMetamodel.id
-      };
-      
-      metamodelService.updateMetamodel(newMetamodel.id, updatedData);
+        // Import as JSON, preserving the metamodel ID and nested class/reference IDs.
+        const metamodelData = JSON.parse(importData);
+        const importedMetamodel = metamodelService.importMetamodel(metamodelData);
+        navigate(`/metamodels/${importedMetamodel.id}`);
       }
       
       setIsImportDialogOpen(false);
@@ -213,7 +185,7 @@ const MetamodelManager: React.FC = () => {
             )}
             <input
               type="file"
-              accept=".json,.ecore,.xmi"
+              accept=".json,.ecore"
               ref={fileInputRef}
               style={{ display: 'none' }}
               onChange={handleFileChange}
@@ -274,6 +246,11 @@ const MetamodelManager: React.FC = () => {
                   <Tooltip title="Export Metamodel (JSON or Ecore)">
                     <IconButton size="small" onClick={() => handleExportMetamodel(metamodel)}>
                       <FileDownloadIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Manage Viewpoints">
+                    <IconButton size="small" onClick={() => navigate(`/metamodels/${metamodel.id}/viewpoints`)}>
+                      <AccountTreeIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
                   {canDelete && (
@@ -341,8 +318,8 @@ const MetamodelManager: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            {importFileFormat === 'ecore' || importFileFormat === 'xmi' 
-              ? 'Importing Ecore/XMI metamodel. Press Import to continue.' 
+            {importFileFormat === 'ecore'
+              ? 'Importing Ecore metamodel. Press Import to continue.'
               : 'Review the JSON metamodel data before importing:'}
           </Typography>
           <TextField
@@ -353,7 +330,7 @@ const MetamodelManager: React.FC = () => {
             onChange={(e) => setImportData(e.target.value)}
             variant="outlined"
             InputProps={{
-              readOnly: importFileFormat === 'ecore' || importFileFormat === 'xmi'
+              readOnly: importFileFormat === 'ecore'
             }}
           />
         </DialogContent>
@@ -380,4 +357,4 @@ const MetamodelManager: React.FC = () => {
   );
 };
 
-export default MetamodelManager; 
+export default MetamodelManager;

@@ -101,7 +101,7 @@ export function registerMetamodel(
       // Add attributes
       for (const attr of metaClass.attributes) {
         types[metaClass.name].properties[attr.name] = {
-          type: mapTypeToOCL(attr.type),
+          type: mapTypeToOCL(typeof attr.type === 'object' ? 'string' : attr.type),
           many: attr.many
         };
       }

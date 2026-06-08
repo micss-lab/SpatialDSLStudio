@@ -13,11 +13,12 @@ import {
   Tooltip,
   ListItemText
 } from '@mui/material';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore';
-import LinkIcon from '@mui/icons-material/Link';
 import { DiagramElement, Metamodel, MetaClass, MetaAttribute, Model } from '../../models/types';
 import { modelService } from '../../services/model';
 import { diagramService } from '../../services/diagram';
+import type { PinCreationOption } from '../../services/diagram/diagram.service';
 import ElementAppearanceSelector from './ElementAppearanceSelector';
 
 interface DiagramElementPropertiesProps {
@@ -26,6 +27,7 @@ interface DiagramElementPropertiesProps {
   onChange: (propertyName: string, value: any) => void;
   diagramId?: string;
   is3D?: boolean;
+  onCreatePin?: (option: PinCreationOption) => void | Promise<void>;
 }
 
 const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
@@ -33,13 +35,19 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
   metamodel,
   onChange,
   diagramId,
-  is3D = false
+  is3D = false,
+  onCreatePin
 }) => {
   const [model, setModel] = useState<Model | null>(null);
   const [modelElements, setModelElements] = useState<any[]>([]);
 
+  const activeModelElement = model?.elements.find(e => e.id === element.id || e.id === element.style.linkedModelElementId);
+  const pinCreationOptions = diagramId && activeModelElement && element.type === 'node' && onCreatePin
+    ? diagramService.getCompatiblePinCreationOptions(diagramId, activeModelElement.id)
+    : [];
+
   // Find the meta class for this element, handling edges specially
-  let metaClass = metamodel.classes.find(c => c.id === element.modelElementId);
+  let metaClass = metamodel.classes.find(c => c.id === (activeModelElement?.modelElementId || element.modelElementId));
 
   // For edges, we need special handling as they use reference IDs as modelElementId
   if (!metaClass && element.type === 'edge') {
@@ -263,12 +271,33 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
 
   // Render an appropriate input field based on attribute type
   const renderAttributeField = (attribute: MetaAttribute) => {
-    const value = element.style[attribute.name] !== undefined 
-      ? element.style[attribute.name] 
-      : attribute.defaultValue !== undefined 
-        ? attribute.defaultValue 
+    const sourceStyle = activeModelElement?.style || element.style;
+    const value = sourceStyle[attribute.name] !== undefined
+      ? sourceStyle[attribute.name]
+      : attribute.defaultValue !== undefined
+        ? attribute.defaultValue
         : '';
     
+    if (typeof attribute.type === 'object' && attribute.type?.enumId) {
+      const enumId = attribute.type.enumId;
+      const metaEnum = metamodel.enums?.find(candidate => candidate.id === enumId);
+      return (
+        <FormControl key={attribute.id} fullWidth margin="dense" size="small">
+          <InputLabel id={`${attribute.id}-label`}>{attribute.name}</InputLabel>
+          <Select
+            labelId={`${attribute.id}-label`}
+            value={value || ''}
+            label={attribute.name}
+            onChange={(e) => handleTextFieldChange(e as any, attribute.name)}
+          >
+            {(metaEnum?.literals || []).map(literal => (
+              <MenuItem key={literal.name} value={literal.name}>{literal.name}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      );
+    }
+
     switch (attribute.type) {
       case 'string':
         return (
@@ -305,7 +334,7 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
               labelId={`${attribute.id}-label`}
               value={value !== undefined ? String(value) : ''}
               label={attribute.name}
-              onChange={(e) => handleSelectChange(e, attribute.name, attribute.type)}
+              onChange={(e) => handleSelectChange(e, attribute.name, 'boolean')}
             >
               <MenuItem value="true">True</MenuItem>
               <MenuItem value="false">False</MenuItem>
@@ -357,10 +386,6 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
         diagramService.getElementById(diagramId || "", element.sourceId) : null;
       const targetElement = element.targetId ? 
         diagramService.getElementById(diagramId || "", element.targetId) : null;
-      
-      // Find their linked model elements
-      const sourceLinkedId = sourceElement?.style?.linkedModelElementId;
-      const targetLinkedId = targetElement?.style?.linkedModelElementId;
       
       // Get their metaclasses
       if (sourceElement) {
@@ -483,6 +508,9 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
   }
 
   const getDisplayName = () => {
+    if (activeModelElement) {
+      return activeModelElement.style?.name || activeModelElement.name || 'Unnamed';
+    }
     if (element.style.linkedModelElementId && model) {
       const linkedElement = model?.elements.find(e => e.id === element.style.linkedModelElementId);
       if (linkedElement && linkedElement.style.name) {
@@ -500,16 +528,15 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
       
       <Box sx={{ mb: 2 }}>
         <TextField
-          label="Name (In Diagram)"
+          label="Name"
           value={getDisplayName()}
           onChange={(e) => handleTextFieldChange(e, 'name')}
           fullWidth
           margin="dense"
           size="small"
-          helperText="This name is used only in this diagram"
-          disabled={!!element.style.linkedModelElementId}
+          helperText="Stored on the model element"
         />
-        {element.style.linkedModelElementId && (
+        {false && element.style.linkedModelElementId && (
           <Typography variant="caption" color="primary">
             This name is controlled by the linked model element
           </Typography>
@@ -517,13 +544,10 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
       </Box>
       
       {/* Model Element Selector */}
-      <Box sx={{ mb: 2 }}>
+      {false && <Box sx={{ mb: 2 }}>
         <FormControl fullWidth margin="dense" size="small">
           <InputLabel id="model-element-label">
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <LinkIcon fontSize="small" sx={{ mr: 0.5 }} />
-              Link to Model Element
-            </Box>
+            Model Element
           </InputLabel>
           <Select
             labelId="model-element-label"
@@ -563,15 +587,37 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
         <Typography variant="caption" color="textSecondary">
           Links this diagram element to a model element. The name from the model will be displayed in the diagram.
         </Typography>
-      </Box>
+      </Box>}
       
       {/* Add Element Appearance Selector */}
       {element.type === 'node' && (
         <ElementAppearanceSelector element={element} onChange={onChange} />
       )}
+
+      {pinCreationOptions.length > 0 && (
+        <Box sx={{ mt: 2 }}>
+          <Divider sx={{ my: 2 }} />
+          <Typography variant="subtitle2" gutterBottom>
+            Pins
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {pinCreationOptions.map(option => (
+              <Button
+                key={`${option.mappingId}-${option.pinMetaClassId}`}
+                variant="outlined"
+                size="small"
+                startIcon={<AddCircleOutlineIcon />}
+                onClick={() => { void onCreatePin?.(option); }}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </Box>
+        </Box>
+      )}
       
       {/* Model Properties Section (read-only) */}
-      {element.style.linkedModelElementId && (
+      {false && element.style.linkedModelElementId && (
         <Box sx={{ mb: 2 }}>
           <Divider sx={{ my: 2 }} />
           <Typography variant="subtitle2" gutterBottom>
@@ -613,16 +659,50 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
       )}
       
       <Box sx={{ mt: 2 }}>
-        <Typography variant="caption" color="textSecondary">
-          Position: x={element.x}, y={element.y}
+        <Typography variant="subtitle2" gutterBottom>
+          Layout
         </Typography>
-        <br />
-        <Typography variant="caption" color="textSecondary">
-          Size: width={element.width}, height={element.height}
-        </Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+          <TextField
+            label="X"
+            type="number"
+            value={element.x ?? 0}
+            onChange={(e) => onChange('x', Number(e.target.value))}
+            fullWidth
+            margin="dense"
+            size="small"
+          />
+          <TextField
+            label="Y"
+            type="number"
+            value={element.y ?? 0}
+            onChange={(e) => onChange('y', Number(e.target.value))}
+            fullWidth
+            margin="dense"
+            size="small"
+          />
+          <TextField
+            label="Width"
+            type="number"
+            value={element.width ?? 120}
+            onChange={(e) => onChange('width', Number(e.target.value))}
+            fullWidth
+            margin="dense"
+            size="small"
+          />
+          <TextField
+            label="Height"
+            type="number"
+            value={element.height ?? 80}
+            onChange={(e) => onChange('height', Number(e.target.value))}
+            fullWidth
+            margin="dense"
+            size="small"
+          />
+        </Box>
       </Box>
     </Box>
   );
 };
 
-export default DiagramElementProperties; 
+export default DiagramElementProperties;

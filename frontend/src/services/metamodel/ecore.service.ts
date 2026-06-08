@@ -1,14 +1,46 @@
-import { Metamodel, MetaClass, MetaAttribute, MetaReference } from '../../models/types';
+import {
+  Constraint,
+  MetaAttribute,
+  MetaAttributeType,
+  MetaClass,
+  MetaEnum,
+  MetaReference,
+  Metamodel,
+} from '../../models/types';
 import { metamodelService } from './metamodel.service';
 import { v4 as uuidv4 } from 'uuid';
 
+export interface EcoreExportWarning {
+  type: 'dropped-reference-attributes';
+  message: string;
+  details: string[];
+}
+
+export interface EcoreExportResult {
+  xml: string;
+  warnings: EcoreExportWarning[];
+}
+
+export interface EcoreImportWarning {
+  type: 'custom-datatype-fallback' | 'unresolved-reference' | 'unresolved-supertype' | 'unresolved-opposite' | 'skipped-annotation' | 'cross-package-reference';
+  message: string;
+  details?: string[];
+}
+
+export interface EcoreImportResult {
+  metamodelId: string | null;
+  warnings: EcoreImportWarning[];
+}
+
+const ECORE_NS = 'http://www.eclipse.org/emf/2002/Ecore';
+const OCL_SOURCE = 'http://www.eclipse.org/emf/2002/Ecore/OCL';
+
 class EcoreService {
-  /**
-   * Convert a metamodel to Ecore XMI format
-   * @param metamodelId The ID of the metamodel to convert
-   * @returns Ecore XMI content as string, or null if conversion failed
-   */
   metamodelToEcore(metamodelId: string): string | null {
+    return this.exportMetamodelToEcore(metamodelId)?.xml || null;
+  }
+
+  exportMetamodelToEcore(metamodelId: string): EcoreExportResult | null {
     const metamodel = metamodelService.getMetamodelById(metamodelId);
     if (!metamodel) {
       console.error(`Metamodel with ID ${metamodelId} not found`);
@@ -16,426 +48,314 @@ class EcoreService {
     }
 
     try {
-      // Create the XML header and ecore namespace declarations
+      const warnings = this.collectExportWarnings(metamodel);
       let ecoreContent = `<?xml version="1.0" encoding="UTF-8"?>
-<ecore:EPackage xmi:version="2.0" 
-  xmlns:xmi="http://www.omg.org/XMI" 
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-  xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" 
-  name="${this.escapeXml(metamodel.name)}" 
-  nsPrefix="${this.escapeXml(metamodel.prefix)}" 
+<ecore:EPackage xmi:version="2.0"
+  xmlns:xmi="http://www.omg.org/XMI"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:ecore="${ECORE_NS}"
+  name="${this.escapeXml(metamodel.name)}"
+  nsPrefix="${this.escapeXml(metamodel.prefix)}"
   nsURI="${this.escapeXml(metamodel.uri)}">`;
 
-      // Add EClasses
       for (const metaclass of metamodel.classes) {
         ecoreContent += this.generateEClassXml(metaclass, metamodel);
       }
 
-      // Close EPackage
-      ecoreContent += '\n</ecore:EPackage>';
+      for (const metaEnum of metamodel.enums || []) {
+        ecoreContent += this.generateEEnumXml(metaEnum);
+      }
 
-      return ecoreContent;
+      ecoreContent += '\n</ecore:EPackage>';
+      return { xml: ecoreContent, warnings };
     } catch (error) {
       console.error('Error converting metamodel to Ecore:', error);
       return null;
     }
   }
 
-  /**
-   * Generate XML for an EClass
-   */
   private generateEClassXml(metaclass: MetaClass, metamodel: Metamodel): string {
-    // Start EClass with basic attributes
-    let eClassXml = `\n  <eClassifiers xsi:type="ecore:EClass" name="${this.escapeXml(metaclass.name)}"${metaclass.abstract ? ' abstract="true"' : ''}>`;
+    const superTypes = (metaclass.superTypes || [])
+      .map(supertypeId => metamodel.classes.find(c => c.id === supertypeId))
+      .filter((cls): cls is MetaClass => Boolean(cls))
+      .map(cls => `#//${this.escapeXml(cls.name)}`)
+      .join(' ');
 
-    // Add supertype references if any
-    if (metaclass.superTypes && metaclass.superTypes.length > 0) {
-      const supertypeRefs = metaclass.superTypes
-        .map(supertypeId => {
-          const supertype = metamodel.classes.find(c => c.id === supertypeId);
-          if (supertype) {
-            return `\n    <eSuperTypes href="#//${this.escapeXml(supertype.name)}"/>`;
-          }
-          return '';
-        })
-        .join('');
-      eClassXml += supertypeRefs;
-    }
+    let eClassXml = `\n  <eClassifiers xsi:type="ecore:EClass" name="${this.escapeXml(metaclass.name)}"${metaclass.abstract ? ' abstract="true"' : ''}${superTypes ? ` eSuperTypes="${superTypes}"` : ''}>`;
 
-    // Add attributes (EAttributes)
-    for (const attribute of metaclass.attributes) {
-      // Skip 'name' attribute as it's already handled by Ecore
-      if (attribute.name !== 'name') {
-        eClassXml += this.generateEAttributeXml(attribute);
+    for (const constraint of metaclass.constraints || []) {
+      if (constraint.type === 'ocl') {
+        eClassXml += this.generateOclAnnotationXml(constraint);
       }
     }
 
-    // Add references (EReferences)
+    for (const attribute of metaclass.attributes) {
+      eClassXml += this.generateEAttributeXml(attribute, metamodel);
+    }
+
     for (const reference of metaclass.references) {
       eClassXml += this.generateEReferenceXml(reference, metamodel);
     }
 
-    // Close EClass
     eClassXml += '\n  </eClassifiers>';
-
     return eClassXml;
   }
 
-  /**
-   * Generate XML for an EAttribute
-   */
-  private generateEAttributeXml(attribute: MetaAttribute): string {
-    // Map internal types to Ecore types
-    const typeMap: Record<string, string> = {
-      'string': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString',
-      'number': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble',
-      'boolean': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean',
-      'date': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDate'
-    };
-
-    const ecoreType = typeMap[attribute.type] || typeMap['string'];
-    
-    // Generate attribute XML
-    return `\n    <eStructuralFeatures xsi:type="ecore:EAttribute" name="${this.escapeXml(attribute.name)}" 
-      eType="${ecoreType}"${attribute.many ? ' upperBound="-1"' : ''}${attribute.required ? ' lowerBound="1"' : ''}>
-    </eStructuralFeatures>`;
+  private generateOclAnnotationXml(constraint: Constraint): string {
+    return `\n    <eAnnotations source="${OCL_SOURCE}">
+      <details key="${this.escapeXml(constraint.name || 'invariant')}" value="${this.escapeXml(constraint.expression)}"/>
+    </eAnnotations>`;
   }
 
-  /**
-   * Generate XML for an EReference
-   */
+  private generateEAttributeXml(attribute: MetaAttribute, metamodel: Metamodel): string {
+    const ecoreType = this.getEcoreAttributeType(attribute.type, metamodel);
+    const many = attribute.many ? ' upperBound="-1"' : '';
+    const required = attribute.required ? ' lowerBound="1"' : '';
+    const defaultValue = attribute.defaultValue !== undefined && attribute.defaultValue !== ''
+      ? ` defaultValueLiteral="${this.escapeXml(String(attribute.defaultValue))}"`
+      : '';
+
+    return `\n    <eStructuralFeatures xsi:type="ecore:EAttribute" name="${this.escapeXml(attribute.name)}" eType="${ecoreType}"${many}${required}${defaultValue}/>`;
+  }
+
+  private getEcoreAttributeType(type: MetaAttributeType, metamodel: Metamodel): string {
+    if (typeof type === 'object' && type.enumId) {
+      const metaEnum = (metamodel.enums || []).find(en => en.id === type.enumId);
+      return metaEnum ? `#//${this.escapeXml(metaEnum.name)}` : `ecore:EDataType ${ECORE_NS}#//EString`;
+    }
+
+    const typeMap: Record<string, string> = {
+      string: `ecore:EDataType ${ECORE_NS}#//EString`,
+      number: `ecore:EDataType ${ECORE_NS}#//EDouble`,
+      boolean: `ecore:EDataType ${ECORE_NS}#//EBoolean`,
+      date: `ecore:EDataType ${ECORE_NS}#//EDate`
+    };
+
+    const primitiveType = typeof type === 'string' ? type : 'string';
+    return typeMap[primitiveType] || typeMap.string;
+  }
+
   private generateEReferenceXml(reference: MetaReference, metamodel: Metamodel): string {
-    // Find target class
     const targetClass = metamodel.classes.find(c => c.id === reference.target);
     if (!targetClass) {
       console.warn(`Target class with ID ${reference.target} not found for reference ${reference.name}`);
       return '';
     }
 
-    // Calculate upperBound and lowerBound
-    let upperBound = '';
-    let lowerBound = '';
-    
-    if (reference.cardinality) {
-      if (reference.cardinality.upperBound === '*') {
-        upperBound = ' upperBound="-1"';
-      } else if (typeof reference.cardinality.upperBound === 'number') {
-        upperBound = ` upperBound="${reference.cardinality.upperBound}"`;
-      }
-      
-      if (reference.cardinality.lowerBound > 0) {
-        lowerBound = ` lowerBound="${reference.cardinality.lowerBound}"`;
-      }
-    }
+    const upperBound = reference.cardinality?.upperBound === '*'
+      ? ' upperBound="-1"'
+      : typeof reference.cardinality?.upperBound === 'number'
+        ? ` upperBound="${reference.cardinality.upperBound}"`
+        : '';
+    const lowerBound = reference.cardinality?.lowerBound > 0
+      ? ` lowerBound="${reference.cardinality.lowerBound}"`
+      : '';
+    const opposite = reference.opposite
+      ? this.findReferenceFragment(metamodel, reference.opposite)
+      : '';
 
-    // Generate reference XML
-    return `\n    <eStructuralFeatures xsi:type="ecore:EReference" name="${this.escapeXml(reference.name)}" 
-      eType="#//${this.escapeXml(targetClass.name)}"${upperBound}${lowerBound} 
-      containment="${reference.containment}">
-    </eStructuralFeatures>`;
+    return `\n    <eStructuralFeatures xsi:type="ecore:EReference" name="${this.escapeXml(reference.name)}" eType="#//${this.escapeXml(targetClass.name)}"${upperBound}${lowerBound} containment="${reference.containment}"${opposite ? ` eOpposite="${opposite}"` : ''}/>`;
   }
 
-  /**
-   * Import a metamodel from Ecore XMI content
-   * @param ecoreContent Ecore XMI content
-   * @returns The ID of the created metamodel, or null if import failed
-   */
+  private generateEEnumXml(metaEnum: MetaEnum): string {
+    let enumXml = `\n  <eClassifiers xsi:type="ecore:EEnum" name="${this.escapeXml(metaEnum.name)}">`;
+    metaEnum.literals.forEach((literal, index) => {
+      const value = literal.value !== undefined ? literal.value : index;
+      const literalValue = literal.literal && literal.literal !== literal.name
+        ? ` literal="${this.escapeXml(literal.literal)}"`
+        : '';
+      enumXml += `\n    <eLiterals name="${this.escapeXml(literal.name)}"${value !== index ? ` value="${value}"` : ''}${literalValue}/>`;
+    });
+    enumXml += '\n  </eClassifiers>';
+    return enumXml;
+  }
+
   importFromEcore(ecoreContent: string): string | null {
+    return this.importFromEcoreWithReport(ecoreContent).metamodelId;
+  }
+
+  importFromEcoreWithReport(ecoreContent: string): EcoreImportResult {
+    const warnings: EcoreImportWarning[] = [];
     try {
-      // Create a DOMParser to parse the XML
       const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(ecoreContent, "text/xml");
-      
-      // Check for parse errors
+      const xmlDoc = parser.parseFromString(ecoreContent, 'text/xml');
       const parserError = xmlDoc.querySelector('parsererror');
       if (parserError) {
         console.error('Error parsing Ecore XML:', parserError.textContent);
-        return null;
+        return { metamodelId: null, warnings };
       }
-      
-      // Get the root EPackage
-      const ePackage = xmlDoc.querySelector('ecore\\:EPackage, EPackage');
+
+      const ePackage = this.findEPackage(xmlDoc);
       if (!ePackage) {
         console.error('No EPackage found in Ecore content');
-        return null;
+        return { metamodelId: null, warnings };
       }
-      
-      // Extract package attributes
+
       const packageName = ePackage.getAttribute('name') || 'ImportedMetamodel';
       const nsPrefix = ePackage.getAttribute('nsPrefix') || packageName.toLowerCase();
       const nsURI = ePackage.getAttribute('nsURI') || `http://www.modeling-tool.com/${packageName.toLowerCase()}`;
-      
-      // Create the metamodel
       const newMetamodel = metamodelService.createMetamodel(packageName);
-      if (!newMetamodel) {
-        console.error('Failed to create metamodel');
-        return null;
+
+      const eClassifiers = Array.from(ePackage.children).filter(child => child.localName === 'eClassifiers');
+      const eClasses = eClassifiers.filter(classifier => this.getXsiType(classifier).endsWith('EClass'));
+      const eEnums = eClassifiers.filter(classifier => this.getXsiType(classifier).endsWith('EEnum'));
+      const pathToClassId = new Map<string, string>();
+      const nameToClassId = new Map<string, string>();
+      const pathToEnumId = new Map<string, string>();
+      const enums: MetaEnum[] = [];
+
+      eClasses.forEach(eClass => {
+        const className = eClass.getAttribute('name');
+        if (!className) return;
+
+        const newClass = metamodelService.addMetaClass(newMetamodel.id, className, eClass.getAttribute('abstract') === 'true');
+        if (!newClass) return;
+
+        metamodelService.updateMetaClass(newMetamodel.id, newClass.id, { attributes: [], references: [], constraints: [] });
+        const path = `#//${className}`;
+        pathToClassId.set(path, newClass.id);
+        nameToClassId.set(className, newClass.id);
+      });
+
+      eEnums.forEach(eEnum => {
+        const enumName = eEnum.getAttribute('name');
+        if (!enumName) return;
+        const metaEnum: MetaEnum = {
+          id: uuidv4(),
+          name: enumName,
+          eClass: '',
+          literals: Array.from(eEnum.children)
+            .filter(child => child.localName === 'eLiterals')
+            .map((literal, index) => ({
+              name: literal.getAttribute('name') || `LITERAL_${index}`,
+              value: literal.hasAttribute('value') ? Number(literal.getAttribute('value')) : undefined,
+              literal: literal.getAttribute('literal') || undefined
+            }))
+        };
+        enums.push(metaEnum);
+        pathToEnumId.set(`#//${enumName}`, metaEnum.id);
+      });
+
+      const currentMetamodel = metamodelService.getMetamodelById(newMetamodel.id);
+      if (currentMetamodel) {
+        metamodelService.updateMetamodel(newMetamodel.id, {
+          ...currentMetamodel,
+          uri: nsURI,
+          prefix: nsPrefix,
+          enums
+        });
       }
-      
-      // Update URI and prefix
-      const updatedMetamodel = {
-        ...newMetamodel,
-        uri: nsURI,
-        prefix: nsPrefix
-      };
-      metamodelService.updateMetamodel(newMetamodel.id, updatedMetamodel);
-      
-      // First pass: Create all EClasses
-      const classMap: Record<string, string> = {}; // Map class names to IDs
-      
-      // Iterate through all EClass elements
-      const eClasses = xmlDoc.querySelectorAll('eClassifiers[xsi\\:type="ecore:EClass"], eClassifiers[xsi\\:type="ecore:EEnum"]');
+
       eClasses.forEach(eClass => {
         const className = eClass.getAttribute('name');
-        const isAbstract = eClass.getAttribute('abstract') === 'true';
-        
-        if (className) {
-          const newClass = metamodelService.addMetaClass(newMetamodel.id, className, isAbstract);
-          if (newClass) {
-            classMap[className] = newClass.id;
-          }
+        const classId = className ? nameToClassId.get(className) : undefined;
+        if (!className || !classId) return;
+
+        const constraints = this.parseOclConstraints(eClass, className, classId);
+        if (constraints.length > 0) {
+          metamodelService.updateMetaClass(newMetamodel.id, classId, { constraints });
         }
-      });
-      
-      // Second pass: Process attributes and references
-      eClasses.forEach(eClass => {
-        const className = eClass.getAttribute('name');
-        if (!className || !classMap[className]) return;
-        
-        const classId = classMap[className];
-        
-        // Process EAttributes
-        const eAttributes = eClass.querySelectorAll('eStructuralFeatures[xsi\\:type="ecore:EAttribute"]');
-        eAttributes.forEach(eAttribute => {
-          const attributeName = eAttribute.getAttribute('name');
-          if (!attributeName) return;
-          
-          // Determine type
-          let attributeType = 'string';
-          const eType = eAttribute.getAttribute('eType');
-          if (eType) {
-            if (eType.includes('EString')) attributeType = 'string';
-            else if (eType.includes('EInt') || eType.includes('EDouble')) attributeType = 'number';
-            else if (eType.includes('EBoolean')) attributeType = 'boolean';
-            else if (eType.includes('EDate')) attributeType = 'date';
-          }
-          
-          // Determine multiplicity
-          const upperBound = eAttribute.getAttribute('upperBound');
-          const lowerBound = eAttribute.getAttribute('lowerBound');
-          const isMany = upperBound === '-1';
-          const isRequired = lowerBound && parseInt(lowerBound) > 0 ? true : false;
-          
-          // Add the attribute
-          metamodelService.addMetaAttribute(
-            newMetamodel.id,
-            classId,
-            attributeName,
-            attributeType as 'string' | 'number' | 'boolean' | 'date',
-            undefined, // defaultValue
-            isRequired,
-            isMany
-          );
-        });
-        
-        // Process EReferences
-        const eReferences = eClass.querySelectorAll('eStructuralFeatures[xsi\\:type="ecore:EReference"]');
-        eReferences.forEach(eReference => {
-          const referenceName = eReference.getAttribute('name');
-          if (!referenceName) return;
-          
-          // Find target class
-          const eType = eReference.getAttribute('eType');
-          if (!eType) return;
-          
-          // Extract target class name from eType (usually in format "#//ClassName")
-          const targetClassName = eType.replace('#//', '');
-          if (!targetClassName || !classMap[targetClassName]) return;
-          
-          // Determine properties
-          const isContainment = eReference.getAttribute('containment') === 'true';
-          const upperBound = eReference.getAttribute('upperBound');
-          const lowerBound = eReference.getAttribute('lowerBound');
-          
-          // Add the reference
-          metamodelService.addMetaReference(
-            newMetamodel.id,
-            classId,
-            referenceName,
-            classMap[targetClassName],
-            isContainment,
-            lowerBound ? parseInt(lowerBound) : 0,
-            upperBound === '-1' ? '*' : (upperBound ? parseInt(upperBound) : 1)
-          );
-        });
-      });
-      
-      // Third pass: Process supertypes
-      eClasses.forEach(eClass => {
-        const className = eClass.getAttribute('name');
-        if (!className || !classMap[className]) return;
-        
-        const classId = classMap[className];
-        
-        // Process ESuperTypes
-        const eSuperTypes = eClass.querySelectorAll('eSuperTypes');
-        const superTypeIds: string[] = [];
-        
-        eSuperTypes.forEach(eSuperType => {
-          const href = eSuperType.getAttribute('href');
-          if (href) {
-            const superTypeName = href.replace('#//', '');
-            if (superTypeName && classMap[superTypeName]) {
-              superTypeIds.push(classMap[superTypeName]);
+        this.collectSkippedAnnotations(eClass, className, warnings);
+
+        Array.from(eClass.children)
+          .filter(child => child.localName === 'eStructuralFeatures' && this.getXsiType(child).endsWith('EAttribute'))
+          .forEach(eAttribute => {
+            const attributeName = eAttribute.getAttribute('name');
+            if (!attributeName) return;
+
+            metamodelService.addMetaAttribute(
+              newMetamodel.id,
+              classId,
+              attributeName,
+              this.parseAttributeType(eAttribute.getAttribute('eType'), pathToEnumId, warnings, `${className}.${attributeName}`),
+              eAttribute.getAttribute('defaultValueLiteral') ?? undefined,
+              this.parseLowerBound(eAttribute) > 0,
+              this.parseUpperBound(eAttribute) === '*'
+            );
+          });
+
+        Array.from(eClass.children)
+          .filter(child => child.localName === 'eStructuralFeatures' && this.getXsiType(child).endsWith('EReference'))
+          .forEach(eReference => {
+            const referenceName = eReference.getAttribute('name');
+            const eType = eReference.getAttribute('eType');
+            const targetClassId = eType ? this.resolveClassifierRef(eType, pathToClassId, nameToClassId) : undefined;
+            if (!referenceName) return;
+            if (!targetClassId) {
+              warnings.push({
+                type: eType && this.isCrossPackageReference(eType) ? 'cross-package-reference' : 'unresolved-reference',
+                message: `Skipped EReference ${className}.${referenceName}; target classifier could not be resolved.`,
+                details: eType ? [eType] : undefined
+              });
+              return;
             }
-          }
-        });
-        
-        // Update class with supertypes if any were found
+
+            const newReference = metamodelService.addMetaReference(
+              newMetamodel.id,
+              classId,
+              referenceName,
+              targetClassId,
+              eReference.getAttribute('containment') === 'true',
+              this.parseLowerBound(eReference),
+              this.parseUpperBound(eReference)
+            );
+
+            const opposite = eReference.getAttribute('eOpposite');
+            if (newReference && opposite) {
+              (newReference as any).__pendingEOpposite = opposite;
+            }
+          });
+      });
+
+      eClasses.forEach(eClass => {
+        const className = eClass.getAttribute('name');
+        const classId = className ? nameToClassId.get(className) : undefined;
+        if (!classId) return;
+
+        const superTypeIds = this.getSuperTypeRefs(eClass)
+          .map(ref => {
+            const resolved = this.resolveClassifierRef(ref, pathToClassId, nameToClassId);
+            if (!resolved) {
+              warnings.push({
+                type: this.isCrossPackageReference(ref) ? 'cross-package-reference' : 'unresolved-supertype',
+                message: `Skipped unresolved ESuperType for ${className}.`,
+                details: [ref]
+              });
+            }
+            return resolved;
+          })
+          .filter((id): id is string => Boolean(id));
+
         if (superTypeIds.length > 0) {
           metamodelService.updateMetaClass(newMetamodel.id, classId, { superTypes: superTypeIds });
         }
       });
-      
-      return newMetamodel.id;
+
+      this.resolveOpposites(newMetamodel.id, warnings);
+      return { metamodelId: newMetamodel.id, warnings };
     } catch (error) {
       console.error('Error importing Ecore:', error);
-      return null;
+      return { metamodelId: null, warnings };
     }
   }
 
-  /**
-   * Download metamodel as Ecore file
-   * @param metamodelId The ID of the metamodel to download
-   * @returns True if download was initiated, false otherwise
-   */
   downloadAsEcore(metamodelId: string): boolean {
-    const ecoreContent = this.metamodelToEcore(metamodelId);
-    if (!ecoreContent) return false;
-    
+    const result = this.exportMetamodelToEcore(metamodelId);
+    if (!result) return false;
+
     const metamodel = metamodelService.getMetamodelById(metamodelId);
     if (!metamodel) return false;
-    
-    // Create a blob and trigger download
-    const blob = new Blob([ecoreContent], { type: 'application/xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${metamodel.name.replace(/\s+/g, '_')}.ecore`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
+
+    if (result.warnings.length > 0) {
+      const details = result.warnings.flatMap(warning => warning.details).join('\n');
+      const proceed = window.confirm(`Ecore export will drop data that has no Ecore equivalent:\n\n${details}\n\nDownload anyway?`);
+      if (!proceed) return false;
+    }
+
+    this.download(`${metamodel.name.replace(/\s+/g, '_')}.ecore`, result.xml, 'application/xml');
     return true;
   }
 
-  /**
-   * Convert a metamodel to XMI format
-   * @param metamodelId The ID of the metamodel to convert
-   * @returns XMI content as string, or null if conversion failed
-   */
-  metamodelToXmi(metamodelId: string): string | null {
-    const metamodel = metamodelService.getMetamodelById(metamodelId);
-    if (!metamodel) {
-      console.error(`Metamodel with ID ${metamodelId} not found`);
-      return null;
-    }
-
-    try {
-      // Create the XML header with XMI namespace declarations
-      let xmiContent = `<?xml version="1.0" encoding="UTF-8"?>
-<xmi:XMI xmi:version="2.0" 
-  xmlns:xmi="http://www.omg.org/XMI" 
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <mm:Package 
-    xmlns:mm="http://www.modeling-tool.com/metamodel" 
-    name="${this.escapeXml(metamodel.name)}" 
-    uri="${this.escapeXml(metamodel.uri)}" 
-    prefix="${this.escapeXml(metamodel.prefix)}">`;
-
-      // Add all classes
-      for (const metaclass of metamodel.classes) {
-        xmiContent += `\n    <classes 
-      xmi:id="${metaclass.id}" 
-      name="${this.escapeXml(metaclass.name)}" 
-      abstract="${metaclass.abstract}">`;
-
-        // Add supertype references
-        if (metaclass.superTypes && metaclass.superTypes.length > 0) {
-          metaclass.superTypes.forEach(supertypeId => {
-            xmiContent += `\n      <superTypes href="#${supertypeId}"/>`;
-          });
-        }
-
-        // Add attributes
-        metaclass.attributes.forEach(attr => {
-          xmiContent += `\n      <attributes 
-        xmi:id="${attr.id}" 
-        name="${this.escapeXml(attr.name)}" 
-        type="${attr.type}" 
-        many="${attr.many}" 
-        required="${attr.required || false}"/>`;
-        });
-
-        // Add references
-        metaclass.references.forEach(ref => {
-          xmiContent += `\n      <references 
-        xmi:id="${ref.id}" 
-        name="${this.escapeXml(ref.name)}" 
-        containment="${ref.containment}" 
-        lowerBound="${ref.cardinality.lowerBound}" 
-        upperBound="${ref.cardinality.upperBound}">
-        <target href="#${ref.target}"/>
-      </references>`;
-        });
-
-        // Close class
-        xmiContent += `\n    </classes>`;
-      }
-
-      // Close package
-      xmiContent += `\n  </mm:Package>
-</xmi:XMI>`;
-
-      return xmiContent;
-    } catch (error) {
-      console.error('Error converting metamodel to XMI:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Download metamodel as XMI file
-   * @param metamodelId The ID of the metamodel to download
-   * @returns True if download was initiated, false otherwise
-   */
-  downloadAsXmi(metamodelId: string): boolean {
-    const xmiContent = this.metamodelToXmi(metamodelId);
-    if (!xmiContent) return false;
-    
-    const metamodel = metamodelService.getMetamodelById(metamodelId);
-    if (!metamodel) return false;
-    
-    // Create a blob and trigger download
-    const blob = new Blob([xmiContent], { type: 'application/xmi+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${metamodel.name.replace(/\s+/g, '_')}.xmi`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    return true;
-  }
-
-  /**
-   * Convert a metamodel to PlantUML format for UML Class diagram
-   * @param metamodelId The ID of the metamodel to convert
-   * @returns PlantUML content as string, or null if conversion failed
-   */
   metamodelToUmlClassDiagram(metamodelId: string): string | null {
     const metamodel = metamodelService.getMetamodelById(metamodelId);
     if (!metamodel) {
@@ -444,7 +364,6 @@ class EcoreService {
     }
 
     try {
-      // Start PlantUML content
       let plantUml = `@startuml
 skinparam classAttributeIconSize 0
 skinparam classFontStyle bold
@@ -460,57 +379,47 @@ title ${metamodel.name} - Class Diagram
 package "${metamodel.name}" #DDDDFF {
 `;
 
-      // Add classes
       for (const metaclass of metamodel.classes) {
-        // Class definition with abstract marker if needed
-        plantUml += metaclass.abstract 
-          ? `  abstract class "${metaclass.name}" {\n` 
+        plantUml += metaclass.abstract
+          ? `  abstract class "${metaclass.name}" {\n`
           : `  class "${metaclass.name}" {\n`;
-        
-        // Add attributes
+
         for (const attr of metaclass.attributes) {
           const required = attr.required ? ' <b>required</b>' : '';
           const many = attr.many ? '[]' : '';
-          plantUml += `    ${attr.name} : ${attr.type}${many}${required}\n`;
+          plantUml += `    ${attr.name} : ${this.formatAttributeType(attr.type, metamodel)}${many}${required}\n`;
         }
-        
+
         plantUml += `  }\n\n`;
       }
-      
-      // Add inheritance relationships (supertype)
+
+      for (const metaEnum of metamodel.enums || []) {
+        plantUml += `  enum "${metaEnum.name}" {\n`;
+        for (const literal of metaEnum.literals) {
+          plantUml += `    ${literal.name}\n`;
+        }
+        plantUml += `  }\n\n`;
+      }
+
       for (const metaclass of metamodel.classes) {
-        if (metaclass.superTypes && metaclass.superTypes.length > 0) {
-          for (const supertypeId of metaclass.superTypes) {
-            const supertype = metamodel.classes.find(c => c.id === supertypeId);
-            if (supertype) {
-              plantUml += `  "${supertype.name}" <|-- "${metaclass.name}"\n`;
-            }
-          }
+        for (const supertypeId of metaclass.superTypes || []) {
+          const supertype = metamodel.classes.find(c => c.id === supertypeId);
+          if (supertype) plantUml += `  "${supertype.name}" <|-- "${metaclass.name}"\n`;
         }
       }
-      
-      // Add reference relationships
+
       for (const metaclass of metamodel.classes) {
         for (const ref of metaclass.references) {
           const targetClass = metamodel.classes.find(c => c.id === ref.target);
           if (!targetClass) continue;
-          
-          // Format cardinality
-          const srcCard = "1";
-          let targetCard = ref.cardinality.upperBound === "*" 
-            ? ref.cardinality.lowerBound + "..*" 
-            : ref.cardinality.lowerBound + ".." + ref.cardinality.upperBound;
-          
-          // Use appropriate arrow based on containment
-          const arrow = ref.containment ? "*--" : "-->";
-          
-          plantUml += `  "${metaclass.name}" ${arrow} "${targetClass.name}" : ${ref.name} ${srcCard}:${targetCard}\n`;
+          const targetCard = ref.cardinality.upperBound === '*'
+            ? `${ref.cardinality.lowerBound}..*`
+            : `${ref.cardinality.lowerBound}..${ref.cardinality.upperBound}`;
+          plantUml += `  "${metaclass.name}" ${ref.containment ? '*--' : '-->'} "${targetClass.name}" : ${ref.name} 1:${targetCard}\n`;
         }
       }
-      
-      // Close package and PlantUML
+
       plantUml += `}\n@enduml`;
-      
       return plantUml;
     } catch (error) {
       console.error('Error converting metamodel to UML Class diagram:', error);
@@ -518,35 +427,183 @@ package "${metamodel.name}" #DDDDFF {
     }
   }
 
-  /**
-   * Download metamodel as UML Class diagram
-   * @param metamodelId The ID of the metamodel to download
-   * @returns True if download was initiated, false otherwise
-   */
   downloadAsUmlClassDiagram(metamodelId: string): boolean {
     const plantUmlContent = this.metamodelToUmlClassDiagram(metamodelId);
-    if (!plantUmlContent) return false;
-    
     const metamodel = metamodelService.getMetamodelById(metamodelId);
-    if (!metamodel) return false;
-    
-    // Create a blob and trigger download
-    const blob = new Blob([plantUmlContent], { type: 'text/plain' });
+    if (!plantUmlContent || !metamodel) return false;
+
+    this.download(`${metamodel.name.replace(/\s+/g, '_')}_class_diagram.puml`, plantUmlContent, 'text/plain');
+    return true;
+  }
+
+  private collectExportWarnings(metamodel: Metamodel): EcoreExportWarning[] {
+    const dropped = metamodel.classes.flatMap(cls =>
+      cls.references.flatMap(ref =>
+        (ref.attributes || []).map(attr => `${cls.name}.${ref.name}.${attr.name}`)
+      )
+    );
+
+    return dropped.length > 0
+      ? [{
+        type: 'dropped-reference-attributes',
+        message: `Dropped ${dropped.length} reference attribute(s); Ecore EReference has no direct attribute slot.`,
+        details: dropped
+      }]
+      : [];
+  }
+
+  private findReferenceFragment(metamodel: Metamodel, referenceId: string): string {
+    for (const cls of metamodel.classes) {
+      const ref = cls.references.find(candidate => candidate.id === referenceId);
+      if (ref) return `#//${this.escapeXml(cls.name)}/${this.escapeXml(ref.name)}`;
+    }
+    return '';
+  }
+
+  private resolveOpposites(metamodelId: string, warnings: EcoreImportWarning[]): void {
+    const metamodel = metamodelService.getMetamodelById(metamodelId);
+    if (!metamodel) return;
+
+    const refByFragment = new Map<string, { classId: string; reference: MetaReference }>();
+    metamodel.classes.forEach(cls => {
+      cls.references.forEach(ref => {
+        refByFragment.set(`#//${cls.name}/${ref.name}`, { classId: cls.id, reference: ref });
+      });
+    });
+
+    metamodel.classes.forEach(cls => {
+      cls.references.forEach(ref => {
+        const pending = (ref as any).__pendingEOpposite;
+        if (!pending) return;
+        const target = refByFragment.get(pending);
+        if (target) {
+          metamodelService.updateMetaReference(metamodel.id, cls.id, ref.id, { opposite: target.reference.id });
+        } else {
+          warnings.push({
+            type: 'unresolved-opposite',
+            message: `Skipped unresolved eOpposite for ${cls.name}.${ref.name}.`,
+            details: [pending]
+          });
+        }
+      });
+    });
+  }
+
+  private parseOclConstraints(eClass: Element, className: string, classId: string): Constraint[] {
+    return Array.from(eClass.children)
+      .filter(child => child.localName === 'eAnnotations' && child.getAttribute('source') === OCL_SOURCE)
+      .flatMap(annotation => Array.from(annotation.children)
+        .filter(child => child.localName === 'details')
+        .map((detail, index) => ({
+          id: uuidv4(),
+          name: detail.getAttribute('key') || `invariant_${index + 1}`,
+          contextClassName: className,
+          contextClassId: classId,
+          expression: detail.getAttribute('value') || '',
+          isValid: true,
+          severity: 'error' as const,
+          type: 'ocl' as const
+        }))
+      );
+  }
+
+  private findEPackage(xmlDoc: XMLDocument): Element | null {
+    return Array.from(xmlDoc.getElementsByTagName('*'))
+      .find(element => element.localName === 'EPackage') || null;
+  }
+
+  private getXsiType(element: Element): string {
+    return element.getAttribute('xsi:type') || element.getAttributeNS('http://www.w3.org/2001/XMLSchema-instance', 'type') || '';
+  }
+
+  private collectSkippedAnnotations(eClass: Element, className: string, warnings: EcoreImportWarning[]): void {
+    Array.from(eClass.children)
+      .filter(child => child.localName === 'eAnnotations' && child.getAttribute('source') !== OCL_SOURCE)
+      .forEach(annotation => {
+        warnings.push({
+          type: 'skipped-annotation',
+          message: `Skipped unsupported EAnnotation on ${className}.`,
+          details: [annotation.getAttribute('source') || 'unknown']
+        });
+      });
+  }
+
+  private parseAttributeType(
+    eType: string | null,
+    pathToEnumId: Map<string, string>,
+    warnings: EcoreImportWarning[],
+    context: string
+  ): MetaAttributeType {
+    if (!eType) return 'string';
+    const enumId = pathToEnumId.get(this.normalizeClassifierRef(eType));
+    if (enumId) return { enumId };
+    if (eType.includes('EInt') || eType.includes('ELong') || eType.includes('EDouble') || eType.includes('EFloat')) return 'number';
+    if (eType.includes('EBoolean')) return 'boolean';
+    if (eType.includes('EDate')) return 'date';
+    if (!eType.includes('EString')) {
+      warnings.push({
+        type: this.isCrossPackageReference(eType) ? 'cross-package-reference' : 'custom-datatype-fallback',
+        message: `Imported ${context} as string because datatype "${eType}" is not supported directly.`,
+        details: [eType]
+      });
+    }
+    return 'string';
+  }
+
+  private parseLowerBound(element: Element): number {
+    return Number(element.getAttribute('lowerBound') || 0);
+  }
+
+  private parseUpperBound(element: Element): number | '*' {
+    const value = element.getAttribute('upperBound');
+    if (value === '-1') return '*';
+    return value ? Number(value) : 1;
+  }
+
+  private getSuperTypeRefs(eClass: Element): string[] {
+    const inlineRefs = (eClass.getAttribute('eSuperTypes') || '').split(/\s+/).filter(Boolean);
+    const childRefs = Array.from(eClass.children)
+      .filter(child => child.localName === 'eSuperTypes')
+      .map(child => child.getAttribute('href') || child.getAttribute('eType') || '')
+      .filter(Boolean);
+    return [...inlineRefs, ...childRefs];
+  }
+
+  private resolveClassifierRef(ref: string, pathToId: Map<string, string>, nameToId: Map<string, string>): string | undefined {
+    const normalized = this.normalizeClassifierRef(ref);
+    return pathToId.get(normalized) || nameToId.get(normalized.replace(/^#\/\//, '').split('/')[0]);
+  }
+
+  private normalizeClassifierRef(ref: string): string {
+    const fragment = ref.includes('#') ? ref.substring(ref.indexOf('#')) : ref;
+    if (fragment.startsWith('#//')) return fragment;
+    if (fragment.startsWith('//')) return `#${fragment}`;
+    return fragment;
+  }
+
+  private isCrossPackageReference(ref: string): boolean {
+    return ref.includes('#') && !ref.startsWith('#');
+  }
+
+  private formatAttributeType(type: MetaAttributeType, metamodel: Metamodel): string {
+    if (typeof type === 'object') {
+      return (metamodel.enums || []).find(metaEnum => metaEnum.id === type.enumId)?.name || 'enum';
+    }
+    return type;
+  }
+
+  private download(filename: string, content: string, type: string): void {
+    const blob = new Blob([content], { type });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${metamodel.name.replace(/\s+/g, '_')}_class_diagram.puml`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
-    return true;
   }
 
-  /**
-   * Escape XML special characters
-   */
   private escapeXml(unsafe: string): string {
     return unsafe
       .replace(/&/g, '&amp;')
@@ -557,4 +614,4 @@ package "${metamodel.name}" #DDDDFF {
   }
 }
 
-export const ecoreService = new EcoreService(); 
+export const ecoreService = new EcoreService();

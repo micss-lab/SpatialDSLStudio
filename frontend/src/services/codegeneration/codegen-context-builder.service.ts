@@ -22,8 +22,9 @@ export class CodegenContextBuilderService {
     // Start with basic properties
     const context: any = {
       id: element.id,
-      name: element.style?.name || element.id,
+      name: element.style?.name || element.name || element.id,
       type: element.modelElementId || element.type,
+      metaClassId: element.modelElementId || element.type,
     };
 
     // Try to resolve the corresponding model element to merge attribute values
@@ -31,14 +32,14 @@ export class CodegenContextBuilderService {
     let resolvedModelElement: ModelElement | undefined;
     try {
       const allModels = modelService.getAllModels();
-      outer: for (const m of allModels) {
+      for (const m of allModels) {
         // For diagram elements, use linkedModelElementId to find the actual model element
         if (element.style?.linkedModelElementId) {
           const found = m.elements.find(e => e.id === element.style.linkedModelElementId);
           if (found) {
             resolvedModel = m;
             resolvedModelElement = found;
-            break outer;
+            break;
           }
         }
         // Fallback: direct id match (model element case - when iterating model elements directly)
@@ -47,7 +48,7 @@ export class CodegenContextBuilderService {
           if (foundById) {
             resolvedModel = m;
             resolvedModelElement = foundById;
-            break outer;
+            break;
           }
         }
       }
@@ -61,6 +62,12 @@ export class CodegenContextBuilderService {
       } catch (e) {
         console.error('Error parsing appearance:', e);
       }
+    }
+    if (element.presentation?.appearance) {
+      appearance = {
+        ...appearance,
+        ...element.presentation.appearance
+      };
     }
 
     // Add all attributes from style (diagram or model element style)
@@ -94,6 +101,42 @@ export class CodegenContextBuilderService {
           context[capitalizedKey] = element.style[key];
         }
       });
+    }
+
+    // Model-only code generation reads projection-neutral presentation data from the model.
+    // Views may override how an element is displayed, but these values are the model's
+    // default concrete placement/dimensions used when no view is involved.
+    if (element.presentation) {
+      context.presentation = element.presentation;
+
+      if (element.presentation.position3D) {
+        context.position3D = element.presentation.position3D;
+        if (context.X === undefined) context.X = element.presentation.position3D.x;
+        if (context.Y === undefined) context.Y = element.presentation.position3D.y;
+      } else if (element.presentation.position2D) {
+        context.position2D = element.presentation.position2D;
+        if (context.X === undefined) context.X = element.presentation.position2D.x;
+        if (context.Y === undefined) context.Y = element.presentation.position2D.y;
+      }
+
+      if (element.presentation.rotationZ !== undefined && context.RZ === undefined) {
+        context.RZ = element.presentation.rotationZ;
+      }
+
+      if (element.presentation.size2D) {
+        context.size2D = element.presentation.size2D;
+      }
+
+      if (element.presentation.size3D) {
+        context.size3D = element.presentation.size3D;
+        context.widthMm = context.widthMm ?? element.presentation.size3D.widthMm;
+        context.heightMm = context.heightMm ?? element.presentation.size3D.heightMm;
+        context.depthMm = context.depthMm ?? element.presentation.size3D.depthMm;
+
+        if (context.Length === undefined) context.Length = element.presentation.size3D.widthMm;
+        if (context.Width === undefined) context.Width = element.presentation.size3D.heightMm;
+        if (context.Height === undefined) context.Height = element.presentation.size3D.depthMm;
+      }
     }
 
     // If we resolved a model element, merge its style (attribute values) so inherited attributes are accessible
@@ -169,7 +212,7 @@ export class CodegenContextBuilderService {
   /**
    * Prepares a multi-element context for template generation
    */
-  prepareMultiElementContext(elements: DiagramElement[], diagram: Diagram, metamodel: Metamodel): any {
+  prepareMultiElementContext(elements: Array<DiagramElement | ModelElement>, diagram: Diagram, metamodel: Metamodel): any {
     const context: any = {};
     
     // Group elements by metamodel class ID

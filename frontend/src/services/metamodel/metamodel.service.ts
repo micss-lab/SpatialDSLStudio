@@ -1,4 +1,4 @@
-import { MetaClass, Metamodel, MetaAttribute, MetaReference } from '../../models/types';
+import { MetaClass, Metamodel, MetaAttribute, MetaAttributeType, MetaReference } from '../../models/types';
 import { v4 as uuidv4 } from 'uuid';
 import { metaMetamodelService } from '../metametamodel';
 import { exampleDataService } from './exampleData.service';
@@ -140,6 +140,31 @@ class MetamodelService {
     return newMetamodel;
   }
 
+  importMetamodel(metamodelData: Metamodel): Metamodel {
+    if (!metamodelData.id || !metamodelData.name || !Array.isArray(metamodelData.classes)) {
+      throw new Error('Invalid metamodel format');
+    }
+
+    const corePackage = metaMetamodelService.getCoreEPackage();
+    const importedMetamodel: Metamodel = {
+      ...metamodelData,
+      conformsTo: metamodelData.conformsTo && metamodelData.conformsTo !== 'core-ecore'
+        ? metamodelData.conformsTo
+        : corePackage.id,
+      constraints: metamodelData.constraints || []
+    };
+
+    const existingIndex = this.metamodels.findIndex(m => m.id === importedMetamodel.id);
+    if (existingIndex >= 0) {
+      this.metamodels[existingIndex] = importedMetamodel;
+    } else {
+      this.metamodels.push(importedMetamodel);
+    }
+
+    this.saveToStorage(importedMetamodel.id);
+    return importedMetamodel;
+  }
+
   deleteMetamodel(id: string): boolean {
     const initialLength = this.metamodels.length;
     this.metamodels = this.metamodels.filter(mm => mm.id !== id);
@@ -171,10 +196,10 @@ class MetamodelService {
   }
 
   addMetaAttribute(
-    metamodelId: string, 
-    classId: string, 
-    name: string, 
-    type: 'string' | 'number' | 'boolean' | 'date', 
+    metamodelId: string,
+    classId: string,
+    name: string,
+    type: MetaAttributeType,
     defaultValue?: any,
     required?: boolean,
     many: boolean = false
@@ -242,7 +267,7 @@ class MetamodelService {
     classId: string,
     referenceId: string,
     name: string,
-    type: 'string' | 'number' | 'boolean' | 'date',
+    type: MetaAttributeType,
     defaultValue?: any,
     required?: boolean,
     many: boolean = false

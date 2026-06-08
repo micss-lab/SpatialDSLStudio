@@ -8,7 +8,6 @@ export { codegenInheritanceUtilsService } from './codegen-inheritance-utils.serv
 export { codegenContextBuilderService } from './codegen-context-builder.service';
 export { codegenTemplateCrudService } from './codegen-template-crud.service';
 export { codegenProjectCrudService } from './codegen-project-crud.service';
-export { codegenGenerationEngineService } from './codegen-generation-engine.service';
 export { codegenModelGenerationService } from './codegen-model-generation.service';
 export { codegenExampleDataService } from './codegen-example-data.service';
 export { createHandlebarsCompletions } from './templateAutocomplete.service';

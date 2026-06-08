@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -69,16 +69,35 @@ const ModelElementAppearanceSelector: React.FC<ModelElementAppearanceSelectorPro
   const [color, setColor] = useState<string>('#ffffff');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  const getElementAppearance = useCallback((): Partial<AppearanceConfig> => {
+    const presentationAppearance = element.presentation?.appearance;
+    if (presentationAppearance) {
+      return presentationAppearance as Partial<AppearanceConfig>;
+    }
+
+    if (!element.style.appearance) return {};
+
+    if (typeof element.style.appearance === 'object') {
+      return element.style.appearance as Partial<AppearanceConfig>;
+    }
+
+    try {
+      return JSON.parse(element.style.appearance);
+    } catch {
+      return {};
+    }
+  }, [element.presentation?.appearance, element.style.appearance]);
+
   // Initialize from element style
   useEffect(() => {
     const loadAppearanceData = async () => {
-      if (element.style.appearance) {
+      const appearance = getElementAppearance();
+      if (Object.keys(appearance).length > 0) {
         try {
-          const appearance = JSON.parse(element.style.appearance);
-          setAppearanceType(appearance.type || 'default');
+          setAppearanceType((appearance.shape || appearance.type || 'default') as AppearanceOption);
           setImageUrl(appearance.imageUrl || '');
           setModelUrl(appearance.modelUrl || '');
-          setColor(appearance.color || '#ffffff');
+          setColor(appearance.fillColor || appearance.color || '#ffffff');
           
           // Load stored files if file IDs are present
           if (appearance.imageFileId) {
@@ -122,7 +141,7 @@ const ModelElementAppearanceSelector: React.FC<ModelElementAppearanceSelectorPro
     };
 
     loadAppearanceData();
-  }, [element.style.appearance]);
+  }, [element.style.appearance, element.presentation?.appearance, getElementAppearance]);
 
   // Handle appearance type change
   const handleAppearanceTypeChange = (event: SelectChangeEvent<AppearanceOption>) => {
@@ -248,14 +267,16 @@ const ModelElementAppearanceSelector: React.FC<ModelElementAppearanceSelectorPro
   ) => {
     // Create a shape property based on the type to ensure compatibility
     const shape = type;
+    const existingAppearance = getElementAppearance();
     
     const appearance: AppearanceConfig = { 
+      ...existingAppearance,
       type, 
       shape,
       color,
       fillColor: color,
-      strokeColor: 'black',
-      strokeWidth: 1
+      strokeColor: existingAppearance.strokeColor || 'black',
+      strokeWidth: existingAppearance.strokeWidth || 1
     };
     
     // Only include imageUrl or imageSrc if they're defined
@@ -669,4 +690,4 @@ const ModelElementAppearanceSelector: React.FC<ModelElementAppearanceSelectorPro
   );
 };
 
-export default ModelElementAppearanceSelector; 
+export default ModelElementAppearanceSelector;

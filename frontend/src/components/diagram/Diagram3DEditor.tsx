@@ -1,36 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Grid, Text } from '@react-three/drei';
-import { 
-  Box, 
-  Paper, 
-  Typography, 
-  Drawer,
-  Button,
-  TextField,
-  Alert,
-  Switch,
-  FormControlLabel,
-  Popover,
-  IconButton,
-  Checkbox,
-  Stack,
-  Divider,
-  Slider
-} from '@mui/material';
+import { Canvas, useThree } from '@react-three/fiber';
+import { OrbitControls, Grid } from '@react-three/drei';
+import { Box, Typography, Drawer, Button, TextField, Alert, Switch, FormControlLabel } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import GridOnIcon from '@mui/icons-material/GridOn';
 import * as THREE from 'three';
-import { Diagram, DiagramElement, MetaClass, Metamodel, Model } from '../../models/types';
-import { diagramService } from '../../services/diagram';
+import { Diagram, Metamodel, Model, ModelElement } from '../../models/types';
+import { concreteSyntaxResolver, diagramService } from '../../services/diagram';
 import { metamodelService } from '../../services/metamodel';
-import DiagramPalette from '../palette/DiagramPalette';
+import DiagramPalette, { DiagramPaletteDragItem } from '../palette/DiagramPalette';
 import DiagramElementProperties from './DiagramElementProperties';
 import { modelService } from '../../services/model';
 import Node3D, { Element3D } from './Node3D';
-import { appearanceService } from '../../services/diagram';
 import { useElementSelection } from './shared/hooks';
-import { pixelToMm, mmToPixel } from './3d/utils/coordinateConversion';
 import { StatusOverlay3D, GridControls } from './3d/components';
 
 interface Diagram3DEditorProps {
@@ -358,10 +340,11 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
   const { selectedElement, setSelectedElement } = useElementSelection<Element3D>();
   
   const [isDraggingPaletteItem, setIsDraggingPaletteItem] = useState(false);
-  const [draggingMetaClass, setDraggingMetaClass] = useState<MetaClass | null>(null);
+  const [draggingPaletteItem, setDraggingPaletteItem] = useState<DiagramPaletteDragItem | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [webGLError, setWebGLError] = useState<string | null>(null);
   const [lowPerformanceMode, setLowPerformanceMode] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [gridSize, setGridSize] = useState(20000); // Initial grid size in mm (9m) - increased to show more cells
   const defaultGridSize = 20000; // Store the default grid size
   const [gridSizeX, setGridSizeX] = useState(20000); // X-axis specific grid size
@@ -478,6 +461,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
         }
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [diagram, diagramId, selectedElement]);
   
   // Listen for element-moved events from direct dragging
@@ -520,9 +504,11 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
     return () => {
       document.removeEventListener('element-moved', handleElementMoved as EventListener);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [diagram, diagramId, selectedElement, checkAndExpandGrid]);
   
   // Use our custom element movement hook (replaces transform controls)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { isDragging, movementMode, setMovementMode, handleDragStart, handleDragMove, handleDragEnd, setCameraRef, setCanvasRef } = 
     useElementMovement(diagramId, selectedElement, saveChanges);
   
@@ -629,6 +615,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
       
       setElementZIndexes(newZIndexes);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [diagram?.elements.length]);
 
   // Function to bring an element to the front
@@ -679,6 +666,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
     
     // Set the selected element directly
     setSelectedElement(element);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bringToFront, selectedElement]);
   
   // Sort elements by z-index for rendering so elements with higher z-index appear "on top"
@@ -742,56 +730,81 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
     setTimeout(processPlaneClick, 100);
     
     // If dragging a palette item, create a new element at this position
-    if (isDraggingPaletteItem && draggingMetaClass && diagram) {
-      // Create the element with 3D coordinates - fix coordinate system
-      const newElement = diagramService.addElement(
-        diagramId,
-        draggingMetaClass.id,
-        'node',
-        position.x, // Use same coordinate for initial 2D x
-        position.y, // Use Y coordinate for 2D y (fixed from position.z)
-        80, // Default width
-        50, // Default height
-        undefined, // sourceId
-        undefined, // targetId
-        { 
-          name: draggingMetaClass.name,
-          rotationZ: 0, // Initial rotation is 0 degrees
-          widthMm: 500, // Default length in mm (Z-axis)
-          heightMm: 800, // Default width in mm (X-axis)
-          depthMm: 200, // Default height in mm (Y-axis)
-          // Store 3D position in style with corrected coordinates
-          position3D: { x: position.x, y: position.y },
-          // Initialize with default appearance that matches metamodel's color/shape if available
-          appearance: JSON.stringify(appearanceService.getAppearanceSettings({
-            id: '',
-            modelElementId: draggingMetaClass.id,
-            type: 'node',
-            style: { name: draggingMetaClass.name }
-          }, model))
+    if (isDraggingPaletteItem && draggingPaletteItem && diagram) {
+      const createOrAddElement = async () => {
+        try {
+          let newElement = null;
+          let resolved3D = { widthMm: 500, heightMm: 800, depthMm: 200 };
+
+          if (draggingPaletteItem.kind === 'existing-model-element') {
+            const modelElement = draggingPaletteItem.modelElement;
+            resolved3D = concreteSyntaxResolver.resolve3D(modelElement, metamodel);
+            newElement = diagramService.addElement(
+              diagramId,
+              modelElement.id,
+              'node',
+              position.x,
+              position.y,
+              modelElement.presentation?.size2D?.width || 80,
+              modelElement.presentation?.size2D?.height || 50,
+              undefined,
+              undefined,
+              {
+                ...(modelElement.style || {}),
+                rotationZ: 0,
+                widthMm: resolved3D.widthMm,
+                heightMm: resolved3D.heightMm,
+                depthMm: resolved3D.depthMm,
+                position3D: { x: position.x, y: position.y },
+              }
+            );
+          } else {
+            const previewElement: ModelElement = {
+              id: 'preview',
+              modelElementId: draggingPaletteItem.metaClass.id,
+              style: {},
+              references: {},
+            };
+            const resolved2D = concreteSyntaxResolver.resolve2D(previewElement, metamodel);
+            resolved3D = concreteSyntaxResolver.resolve3D(previewElement, metamodel);
+            newElement = await diagramService.createModelElementInView(
+              diagramId,
+              draggingPaletteItem.metaClass.id,
+              {
+                position2D: { x: position.x, y: position.y },
+                size2D: resolved2D.defaultSize || { width: 120, height: 80 },
+                position3D: { x: position.x, y: position.y },
+                size3D: {
+                  widthMm: resolved3D.widthMm,
+                  heightMm: resolved3D.heightMm,
+                  depthMm: resolved3D.depthMm,
+                },
+                rotationZ: 0,
+              },
+              { name: `${draggingPaletteItem.metaClass.name} 1` }
+            );
+          }
+
+          if (newElement) {
+            setSelectedElement({
+              ...newElement,
+              rotationZ: 0,
+              widthMm: resolved3D.widthMm,
+              heightMm: resolved3D.heightMm,
+              depthMm: resolved3D.depthMm,
+              position3D: { x: position.x, y: position.y }
+            });
+
+            checkAndExpandGrid(position.x, position.y);
+            saveChanges();
+          }
+        } finally {
+          setIsDraggingPaletteItem(false);
+          setDraggingPaletteItem(null);
         }
-      );
-      
-      if (newElement) {
-        // Add the rotationZ property to the new element and select it
-        setSelectedElement({
-          ...newElement,
-          rotationZ: 0,
-          widthMm: 500, // Default length in mm (Z-axis)
-          heightMm: 800, // Default width in mm (X-axis)
-          depthMm: 200, // Default height in mm (Y-axis)
-          position3D: { x: position.x, y: position.y }
-        });
-        
-        // Reset dragging state
-        setIsDraggingPaletteItem(false);
-        setDraggingMetaClass(null);
-        
-        // Check if grid needs to be expanded for the new element
-        checkAndExpandGrid(position.x, position.y);
-        
-        saveChanges();
-      }
+      };
+
+      createOrAddElement();
     }
   };
   
@@ -874,6 +887,20 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
     setSelectedElement(null);
     saveChanges();
   };
+
+  const handleDeleteFromModel = () => {
+    if (!selectedElement || !diagram) return;
+
+    const confirmed = window.confirm(
+      'Delete this element from the model? It will disappear from every view and references to it may be removed.'
+    );
+    if (!confirmed) return;
+
+    modelService.deleteModelElement(diagram.modelId, selectedElement.id);
+    diagramService.removeElementsForModelElement(diagram.modelId, selectedElement.id);
+    setSelectedElement(null);
+    saveChanges();
+  };
   
   // Grid control functions
   const handleGridControlOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -932,9 +959,9 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
     }));
   };
   
-  const handlePaletteItemDragStart = (metaClass: MetaClass) => {
+  const handlePaletteItemDragStart = (item: DiagramPaletteDragItem) => {
     setIsDraggingPaletteItem(true);
-    setDraggingMetaClass(metaClass);
+    setDraggingPaletteItem(item);
   };
   
   if (!diagram || !metamodel) {
@@ -951,15 +978,23 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
       sx={{ 
         display: 'flex', 
         width: '100%', 
-        height: 'calc(100vh - 64px)',
+        height: '100%',
         overflow: 'hidden'
       }}
     >
       {/* Palette */}
-      <DiagramPalette 
-        metamodel={metamodel} 
-        onDragStart={handlePaletteItemDragStart} 
-      />
+      {model && (
+        <DiagramPalette
+          metamodel={metamodel}
+          model={model}
+          diagram={diagram}
+          onDragStart={handlePaletteItemDragStart}
+          onAddAll={() => {
+            diagramService.addAllModelElementsToView(diagramId);
+            saveChanges();
+          }}
+        />
+      )}
       
       {/* 3D Canvas */}
       <Box 
@@ -1399,7 +1434,18 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
               startIcon={<DeleteIcon />}
               size="small"
             >
-              Delete
+              Remove from view
+            </Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleDeleteFromModel}
+              sx={{ mt: 1 }}
+              startIcon={<DeleteIcon />}
+              size="small"
+              fullWidth
+            >
+              Delete from model
             </Button>
           </Box>
         ) : (
@@ -1414,4 +1460,4 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
   );
 };
 
-export default Diagram3DEditor; 
+export default Diagram3DEditor;

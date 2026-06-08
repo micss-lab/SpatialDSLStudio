@@ -66,7 +66,7 @@ Shareable resource types include:
 
 - METAMODEL
 - MODEL
-- DIAGRAM
+- DIAGRAM (compatibility resource type for Views)
 - TRANSFORMATION_RULE
 - CODEGEN_PROJECT
 - TEST_CASE
@@ -99,8 +99,8 @@ Sharing can cascade to dependencies to keep resources usable.
 Examples:
 
 - sharing a model can also share its metamodel
-- sharing a diagram can also share its model and metamodel
-- sharing a code generation project can also share target metamodel and related owned models/diagrams
+- sharing a view can also share its model and metamodel
+- sharing a code generation project can also share target metamodel and related owned models/views
 
 If dependency ownership belongs to another user, sharing may return warnings so recipient can request access from the actual owner.
 
@@ -141,7 +141,7 @@ Likely reason:
 
 - you are not owner, or your role does not allow sharing.
 
-### “Shared diagram opens but related data is missing”
+### “Shared view opens but related data is missing”
 
 Likely reason:
 

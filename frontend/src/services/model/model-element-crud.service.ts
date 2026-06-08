@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Model, ModelElement } from '../../models/types';
+import { Model, ModelElement, ModelElementPresentation } from '../../models/types';
 import { metamodelService } from '../metamodel';
 import { modelInheritanceUtilsService } from './model-inheritance-utils.service';
 import { modelReferenceService } from './model-reference.service';
@@ -39,7 +39,11 @@ export class ModelElementCrudService {
       id: uuidv4(),
       modelElementId: metaClassId,
       style: {},
-      references: {}
+      references: {},
+      presentation: {
+        position2D: { x: 0, y: 0 },
+        size2D: { width: 120, height: 80 },
+      }
     };
 
     // Get all attributes including inherited ones
@@ -54,7 +58,8 @@ export class ModelElementCrudService {
         newElement.style[attr.name] = attr.defaultValue;
       } else {
         // Initialize with appropriate empty value
-        switch (attr.type) {
+        const attributeType = typeof attr.type === 'object' ? 'string' : attr.type;
+        switch (attributeType) {
           case 'string':
             // For name attribute specifically, use a more descriptive default
             if (attr.name === 'name') {
@@ -189,10 +194,39 @@ export class ModelElementCrudService {
     const element = model.elements.find(e => e.id === elementId);
     if (!element) return false;
 
-    // Update the position in the style property
-    element.style = {
-      ...element.style,
-      position
+    element.presentation = {
+      ...(element.presentation || {}),
+      position2D: position
+    };
+
+    saveCallback(model.id);
+    return true;
+  }
+
+  /**
+   * Update canonical presentation metadata for a model element
+   */
+  updateModelElementPresentation(
+    model: Model,
+    elementId: string,
+    presentation: ModelElementPresentation,
+    saveCallback: (modelId: string) => void
+  ): boolean {
+    if (!model) return false;
+
+    const element = model.elements.find(e => e.id === elementId);
+    if (!element) return false;
+
+    element.presentation = {
+      ...(element.presentation || {}),
+      ...presentation,
+      position2D: presentation.position2D || element.presentation?.position2D,
+      position3D: presentation.position3D || element.presentation?.position3D,
+      size2D: presentation.size2D || element.presentation?.size2D,
+      size3D: presentation.size3D || element.presentation?.size3D,
+      appearance: Object.prototype.hasOwnProperty.call(presentation, 'appearance')
+        ? presentation.appearance
+        : element.presentation?.appearance,
     };
 
     saveCallback(model.id);

@@ -30,8 +30,8 @@ const config: Config = {
   },
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      isolatedModules: true,
       tsconfig: {
+        isolatedModules: true,
         strict: false,
         esModuleInterop: true,
       },

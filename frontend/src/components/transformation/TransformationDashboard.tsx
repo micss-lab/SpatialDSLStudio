@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Box, 
-  Tabs, 
-  Tab, 
-  Typography, 
-  Paper,
-  Divider
-} from '@mui/material';
+import { Box, Tabs, Tab, Paper } from '@mui/material';
 import TransformationRuleEditor from './TransformationRuleEditor';
 import TransformationExecutionPanel from './TransformationExecutionPanel';
 
@@ -46,6 +39,7 @@ function a11yProps(index: number) {
 
 const TransformationDashboard: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedModelId, setSelectedModelId] = useState<string>('');
   const [selectedRuleId, setSelectedRuleId] = useState<string>('');
 

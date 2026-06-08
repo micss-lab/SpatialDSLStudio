@@ -23,6 +23,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ConstraintTypeSelector from '../../ConstraintTypeSelector';
+import MetaClassNotationEditor from '../../MetaClassNotationEditor';
 import { metamodelService } from '../../../../services/metamodel';
 import { MetaClass, Metamodel } from '../../../../models/types';
 
@@ -109,6 +110,13 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
   isConstraintHighlighted,
   getHighlightColor
 }) => {
+  const formatAttributeType = (type: any): string => {
+    if (typeof type === 'object' && type?.enumId) {
+      return metamodel.enums?.find(metaEnum => metaEnum.id === type.enumId)?.name || 'enum';
+    }
+    return String(type);
+  };
+
   return (
     <Drawer
       variant="permanent"
@@ -131,6 +139,7 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
         >
           <Tab label="Properties" id="metamodel-tab-0" aria-controls="metamodel-tabpanel-0" />
           <Tab label="Constraints" id="metamodel-tab-1" aria-controls="metamodel-tabpanel-1" />
+          <Tab label="Fallback" id="metamodel-tab-2" aria-controls="metamodel-tabpanel-2" />
         </Tabs>
       </Box>
       
@@ -267,7 +276,7 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
                         </Typography>
                         {supertype.attributes.map((attr: any) => (
                           <Typography key={attr.id} variant="caption" display="block" sx={{ ml: 1, color: 'text.secondary' }}>
-                            • {attr.name}: {attr.type}
+                            • {attr.name}: {formatAttributeType(attr.type)}
                           </Typography>
                         ))}
                       </Box>
@@ -310,7 +319,7 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
                 >
                   <ListItemText
                     primary={attr.name}
-                    secondary={`${attr.type}${attr.required ? ' (required)' : ''}`}
+                    secondary={`${formatAttributeType(attr.type)}${attr.required ? ' (required)' : ''}`}
                   />
                 </ListItem>
               ))}
@@ -368,7 +377,7 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
                   <ListItem key={attr.id}>
                     <ListItemText
                       primary={attr.name}
-                      secondary={`${attr.type}${attr.required ? ' (required)' : ''}`}
+                      secondary={`${formatAttributeType(attr.type)}${attr.required ? ' (required)' : ''}`}
                     />
                   </ListItem>
                 ))}
@@ -506,7 +515,7 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
                     >
                       <ListItemText
                         primary={attr.name}
-                        secondary={`${attr.type}${attr.required ? ' (required)' : ''}`}
+                        secondary={`${formatAttributeType(attr.type)}${attr.required ? ' (required)' : ''}`}
                       />
                     </ListItem>
                   ))
@@ -571,6 +580,17 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
             </Typography>
           </Box>
         )}
+      </TabPanel>
+      <TabPanel value={tabValue} index={2}>
+        <MetaClassNotationEditor
+          metamodel={metamodel}
+          selectedClass={selectedClass}
+          selectedReference={selectedReference}
+          readOnly={readOnly}
+          onUpdateMetamodel={onUpdateMetamodel}
+          onUpdateSelectedClass={onUpdateSelectedClass}
+          onUpdateSelectedReference={onUpdateSelectedReference}
+        />
       </TabPanel>
     </Drawer>
   );

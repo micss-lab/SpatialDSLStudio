@@ -14,6 +14,7 @@ const diagramServiceMock = {
   update: jest.fn(),
   delete: jest.fn(),
   addElement: jest.fn(),
+  createModelElementInView: jest.fn(),
   updateElement: jest.fn(),
   deleteElement: jest.fn(),
   updateGridSettings: jest.fn(),
@@ -224,6 +225,61 @@ describe('POST /api/diagrams/:id/elements', () => {
       .send({ id: 'elem-1', type: 'invalid', modelElementId: 'cls-1' });
 
     expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /api/diagrams/:id/model-elements/create', () => {
+  it('creates a model element in a view', async () => {
+    diagramServiceMock.createModelElementInView.mockResolvedValue({
+      diagram: mockDiagram,
+      modelElement: { id: 'elem-1', modelElementId: 'cls-1', style: {}, references: {} },
+    });
+
+    const res = await request(buildApp())
+      .post('/api/diagrams/a1b2c3d4-e5f6-7890-abcd-ef1234567890/model-elements/create')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({
+        metaClassId: 'cls-1',
+        presentation: { position2D: { x: 100, y: 120 } },
+        style: { name: 'Robot 1' },
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.modelElement.id).toBe('elem-1');
+    expect(diagramServiceMock.createModelElementInView).toHaveBeenCalledWith(
+      'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+      'cls-1',
+      'user-uuid-1',
+      'DSL_DESIGNER',
+      { position2D: { x: 100, y: 120 } },
+      { name: 'Robot 1' }
+    );
+  });
+
+  it('returns 400 when metaClassId is missing', async () => {
+    const res = await request(buildApp())
+      .post('/api/diagrams/a1b2c3d4-e5f6-7890-abcd-ef1234567890/model-elements/create')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({});
+
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when pin attachment side is invalid', async () => {
+    const res = await request(buildApp())
+      .post('/api/diagrams/a1b2c3d4-e5f6-7890-abcd-ef1234567890/model-elements/create')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({
+        metaClassId: 'pin-cls',
+        presentation: {
+          attachedToElementId: 'owner-1',
+          attachmentSide: 'diagonal',
+        },
+      });
+
+    expect(res.status).toBe(400);
+    expect(diagramServiceMock.createModelElementInView).not.toHaveBeenCalled();
   });
 });
 

@@ -26,7 +26,7 @@ import {
   PlayArrow as PlayArrowIcon,
   BugReport as BugReportIcon
 } from '@mui/icons-material';
-import { TestCase, TestValue } from '../../services/testing';
+import { TestCase } from '../../services/testing';
 
 // Add type guard to check if a test case is of reference_attribute type
 function isReferenceAttributeType(type: string): boolean {

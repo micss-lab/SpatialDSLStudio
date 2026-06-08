@@ -1,5 +1,5 @@
 import { CompletionContext, CompletionResult, Completion } from '@codemirror/autocomplete';
-import { Metamodel, Model, Diagram, MetaClass } from '../../models/types';
+import { Metamodel, Model, Diagram } from '../../models/types';
 import Handlebars from 'handlebars';
 
 export function createHandlebarsCompletions(
@@ -9,6 +9,7 @@ export function createHandlebarsCompletions(
   targetMetamodelId?: string
 ) {
   return (context: CompletionContext): CompletionResult | null => {
+    // eslint-disable-next-line no-useless-escape
     const word = context.matchBefore(/\{\{[#\/]?[\w.]*$/);
     if (!word) return null;
 

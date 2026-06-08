@@ -1,25 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  Divider,
-  Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Card,
-  CardContent,
-  Stack,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Alert,
-  Button
-} from '@mui/material';
+import { Box, Paper, Typography, Divider, Chip, Card, CardContent, Stack, Accordion, AccordionSummary, AccordionDetails, Alert } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
@@ -27,7 +7,6 @@ import {
   ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 import { TestCase, TestValue } from '../../services/testing';
-import { metamodelService } from '../../services/metamodel';
 
 // Extended interfaces for additional optional properties we want to display
 interface ExtendedTestCase extends TestCase {

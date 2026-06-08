@@ -53,15 +53,19 @@ export const useDiagramData = (diagramId: string): UseDiagramDataResult => {
     loadDiagram();
     
     // Add storage event listener to refresh when linked elements change
-    const handleStorageEvent = () => {
-      console.log("Storage event detected, refreshing diagram");
+    const handleDataChanged = () => {
+      console.log("Data change detected, refreshing view");
       loadDiagram();
     };
     
-    window.addEventListener('storage', handleStorageEvent);
+    window.addEventListener('storage', handleDataChanged);
+    window.addEventListener('model:changed', handleDataChanged);
+    window.addEventListener('view:changed', handleDataChanged);
     
     return () => {
-      window.removeEventListener('storage', handleStorageEvent);
+      window.removeEventListener('storage', handleDataChanged);
+      window.removeEventListener('model:changed', handleDataChanged);
+      window.removeEventListener('view:changed', handleDataChanged);
     };
   }, [diagramId]);
 

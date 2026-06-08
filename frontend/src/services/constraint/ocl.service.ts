@@ -1,8 +1,4 @@
-import { 
-  OCLConstraint, 
-  OCLValidationResult,
-  Model
-} from '../../models/types';
+import { OCLConstraint, OCLValidationResult } from '../../models/types';
 import { metamodelService } from '../metamodel';
 import { OclEngine } from '@stekoe/ocl.js';
 

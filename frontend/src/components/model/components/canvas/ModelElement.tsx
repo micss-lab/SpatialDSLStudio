@@ -1,6 +1,5 @@
 // Model element canvas component
 import React from 'react';
-import { Group, Rect, Text } from 'react-konva';
 import { ModelElement as ModelElementType, Metamodel } from '../../../../models/types';
 
 interface ModelElementProps {

@@ -1,76 +1,91 @@
-import { Metamodel, Model, Diagram, CodeGenerationProject } from '../../models/types';
-import warehouseMetamodelData from '../../examples/data/warehouse-metamodel.json';
-import warehouseModelData from '../../examples/data/warehouse-model.json';
-import warehouseDiagramData from '../../examples/data/warehouse-diagram.json';
-import warehouseProjectData from '../../examples/data/warehouse-project.json';
+import { Metamodel, Model, Diagram, CodeGenerationProject, Viewpoint } from '../../models/types';
+import smartWarehouseMetamodelData from '../../examples/data/smart-warehouse-metamodel.json';
+import smartWarehouseModelData from '../../examples/data/smart-warehouse-model.json';
+import smartWarehouseViewsData from '../../examples/data/smart-warehouse-views.json';
+import smartWarehouseViewpointsData from '../../examples/data/smart-warehouse-viewpoints.json';
+import smartWarehouseProjectData from '../../examples/data/smart-warehouse-project.json';
+import activityDiagramMetamodelData from '../../examples/data/activity-diagram-metamodel.json';
+import activityDiagramModelData from '../../examples/data/activity-diagram-model.json';
+import activityDiagramViewsData from '../../examples/data/activity-diagram-views.json';
+import activityDiagramViewpointsData from '../../examples/data/activity-diagram-viewpoints.json';
 
 /**
- * Service for loading example data (metamodels, models, diagrams, projects)
- * This provides default examples that appear when users first open the application
+ * Service for loading example data (metamodels, models, views, projects)
+ * This provides default examples that appear when users first open the application.
+ *
+ * Views are projections of the model — they do not own element instances,
+ * only `includedElementIds` referencing model elements.
  */
 class ExampleDataService {
-  /**
-   * Get example metamodels
-   */
   getExampleMetamodels(): Metamodel[] {
     return [
-      warehouseMetamodelData as Metamodel
+      smartWarehouseMetamodelData as unknown as Metamodel,
+      activityDiagramMetamodelData as unknown as Metamodel,
     ];
   }
 
-  /**
-   * Get example models
-   */
   getExampleModels(): Model[] {
     return [
-      warehouseModelData as Model
+      smartWarehouseModelData as unknown as Model,
+      activityDiagramModelData as unknown as Model,
     ];
   }
 
   /**
-   * Get example diagrams (both 2D and 3D)
+   * Returns example views (Diagram type — diagrams are the storage shape for views
+   * under the view-projection model).
    */
+  getExampleViews(): Diagram[] {
+    return [
+      ...(smartWarehouseViewsData as unknown as Diagram[]),
+      ...(activityDiagramViewsData as unknown as Diagram[]),
+    ];
+  }
+
+  getExampleViewpoints(): Viewpoint[] {
+    return [
+      ...(smartWarehouseViewpointsData as unknown as Viewpoint[]),
+      ...(activityDiagramViewpointsData as unknown as Viewpoint[]),
+    ];
+  }
+
+  /** @deprecated Use getExampleViews() — kept for transitional callers. */
   getExampleDiagrams(): Diagram[] {
-    return [
-      warehouseDiagramData as Diagram
-    ];
+    return this.getExampleViews();
   }
 
-  /**
-   * Get example code generation projects
-   */
   getExampleProjects(): CodeGenerationProject[] {
-    return [
-      warehouseProjectData as CodeGenerationProject
-    ];
+    return [smartWarehouseProjectData as unknown as CodeGenerationProject];
   }
 
-  /**
-   * Check if a metamodel is an example (read-only)
-   */
   isExampleMetamodel(metamodelId: string): boolean {
-    return metamodelId === warehouseMetamodelData.id;
+    return (
+      metamodelId === smartWarehouseMetamodelData.id ||
+      metamodelId === activityDiagramMetamodelData.id
+    );
   }
 
-  /**
-   * Check if a model is an example (read-only)
-   */
   isExampleModel(modelId: string): boolean {
-    return modelId === warehouseModelData.id;
+    return (
+      modelId === smartWarehouseModelData.id ||
+      modelId === activityDiagramModelData.id
+    );
   }
 
-  /**
-   * Check if a diagram is an example (read-only)
-   */
+  isExampleView(viewId: string): boolean {
+    return (
+      (smartWarehouseViewsData as Array<{ id: string }>).some(v => v.id === viewId) ||
+      (activityDiagramViewsData as Array<{ id: string }>).some(v => v.id === viewId)
+    );
+  }
+
+  /** @deprecated Use isExampleView — kept for transitional callers. */
   isExampleDiagram(diagramId: string): boolean {
-    return diagramId === warehouseDiagramData.id;
+    return this.isExampleView(diagramId);
   }
 
-  /**
-   * Check if a project is an example (read-only)
-   */
   isExampleProject(projectId: string): boolean {
-    return projectId === warehouseProjectData.id;
+    return projectId === smartWarehouseProjectData.id;
   }
 }
 

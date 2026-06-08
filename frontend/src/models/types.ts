@@ -105,10 +105,23 @@ export interface MetaClass extends MetamodelElement {
   references: MetaReference[];
   position?: { x: number, y: number }; // For visual editor positioning
   constraints?: Constraint[]; // Both OCL and JavaScript constraints for this metaclass
+  concreteSyntax?: ConcreteSyntax;
 }
 
+export interface MetaEnumLiteral {
+  name: string;
+  value?: number;
+  literal?: string;
+}
+
+export interface MetaEnum extends MetamodelElement {
+  literals: MetaEnumLiteral[];
+}
+
+export type MetaAttributeType = 'string' | 'number' | 'boolean' | 'date' | { enumId: string };
+
 export interface MetaAttribute extends MetamodelElement {
-  type: 'string' | 'number' | 'boolean' | 'date';
+  type: MetaAttributeType;
   defaultValue?: any;
   required?: boolean;
   many: boolean;
@@ -127,6 +140,7 @@ export interface MetaReference extends MetamodelElement {
   };
   allowSelfReference?: boolean; // Whether this reference can target its own source
   attributes?: MetaAttribute[]; // Reference can have attributes (new)
+  concreteSyntax?: ConcreteSyntaxEdge;
   isMultiValued?: boolean; // Whether this reference can have multiple targets
   // Inheritance tracking properties
   isInherited?: boolean;
@@ -137,8 +151,162 @@ export interface Metamodel extends MetamodelElement {
   uri: string;
   prefix: string;
   classes: MetaClass[];
+  enums?: MetaEnum[];
   conformsTo: string; // ID of the meta-metamodel package it conforms to
   constraints?: Constraint[]; // Global OCL and JavaScript constraints for the metamodel
+}
+
+export interface ConcreteSyntax2D {
+  shape?: 'default' | 'square' | 'rectangle' | 'circle' | 'ellipse' | 'diamond' | 'triangle' | 'star' | 'cylinder' | 'sphere' | 'cone' | 'custom-image' | 'custom-3d-model';
+  fillColor?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+  imageFileId?: string;
+  imageUrl?: string;
+  imageSrc?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  fontColor?: string;
+  defaultSize?: { width: number; height: number };
+}
+
+export interface ConcreteSyntax3D {
+  modelFileId?: string;
+  modelUrl?: string;
+  modelSrc?: string;
+  fallbackShape?: 'box' | 'sphere' | 'cylinder';
+  fallbackColor?: string;
+  defaultSizeMm?: { widthMm: number; heightMm: number; depthMm: number };
+}
+
+export interface ConcreteSyntaxEdge {
+  lineColor?: string;
+  lineWidth?: number;
+  lineDash?: number[];
+  arrowHead?: 'none' | 'open' | 'filled' | 'diamond';
+  labelFormat?: string;
+}
+
+export interface ConcreteSyntax {
+  two_d?: ConcreteSyntax2D;
+  three_d?: ConcreteSyntax3D;
+}
+
+// Viewpoint and representation specification types
+
+export type RepresentationKind = 'diagram' | 'table' | 'tree';
+
+export interface ToolDefinition {
+  id: string;
+  name: string;
+  type?: string;
+  metaClassId?: string;
+  referenceId?: string;
+  payload?: Record<string, any>;
+}
+
+export interface RepresentationEdgeMapping {
+  id: string;
+  referenceId?: string;
+  referenceName?: string;
+  sourceMetaClassIds?: string[];
+  targetMetaClassIds?: string[];
+  concreteSyntax?: ConcreteSyntaxEdge;
+}
+
+export interface RepresentationPinMapping {
+  id: string;
+  pinMetaClassIds: string[];
+  ownerMetaClassIds: string[];
+  attachmentReferenceName?: string;
+  direction?: 'input' | 'output' | 'inout';
+  allowedSides?: Array<'top' | 'right' | 'bottom' | 'left'>;
+  defaultSide?: 'top' | 'right' | 'bottom' | 'left';
+  defaultOffsetRatio?: number;
+}
+
+export interface RepresentationDescription {
+  id: string;
+  name: string;
+  viewpointId: string;
+  kind: RepresentationKind;
+  visibleMetaClassIds: string[];
+  creatableMetaClassIds: string[];
+  concreteSyntaxByMetaClassId?: Record<string, ConcreteSyntax>;
+  concreteSyntaxByReferenceId?: Record<string, ConcreteSyntaxEdge>;
+  edgeMappings?: RepresentationEdgeMapping[];
+  pinMappings?: RepresentationPinMapping[];
+  toolDefinitions?: ToolDefinition[];
+  isDefault?: boolean;
+}
+
+export interface Viewpoint {
+  id: string;
+  name: string;
+  description?: string;
+  metamodelId: string;
+  representationDescriptions: RepresentationDescription[];
+  sharedConcreteSyntaxByMetaClassId?: Record<string, ConcreteSyntax>;
+  isDefault?: boolean;
+}
+
+// Sirius Desktop interoperability types
+
+export type SiriusSourceFormat = 'ecore' | 'xmi' | 'odesign' | 'aird' | 'project-zip';
+
+export type SiriusTargetFormat = 'spatialdsl' | 'sirius-project';
+
+export interface SiriusInteropWarning {
+  severity: 'info' | 'warning' | 'error';
+  code: string;
+  message: string;
+  sourcePath?: string;
+  sourceElementId?: string;
+  spatialElementId?: string;
+}
+
+export interface SiriusCompatibilityReport {
+  sourceFormat: SiriusSourceFormat;
+  targetFormat: SiriusTargetFormat;
+  supported: boolean;
+  warnings: SiriusInteropWarning[];
+  droppedFeatures: SiriusInteropWarning[];
+  unresolvedReferences: SiriusInteropWarning[];
+}
+
+export interface SiriusImportOptions {
+  importEcore: boolean;
+  importXmi: boolean;
+  importOdesign: boolean;
+  importAird: boolean;
+  failOnUnsupportedFeatures: boolean;
+  preserveSiriusIds: boolean;
+}
+
+export interface SiriusExportOptions {
+  includeEcore: boolean;
+  includeXmi: boolean;
+  includeOdesign: boolean;
+  includeAird: boolean;
+  includeSpatialDslSidecar: boolean;
+  failOnUnsupportedFeatures: boolean;
+}
+
+export interface SiriusOdesignPreview {
+  groupName?: string;
+  viewpoints: Viewpoint[];
+  report: SiriusCompatibilityReport;
+}
+
+export interface SiriusImportResult {
+  viewpoints: Viewpoint[];
+  report: SiriusCompatibilityReport;
+}
+
+export interface SiriusExportResult {
+  filename: string;
+  content: string;
+  report: SiriusCompatibilityReport;
 }
 
 // Types for Model (instances of metamodel elements)
@@ -150,6 +318,19 @@ export interface ModelElement {
   modelElementId: string; // ID of the metaclass this element is an instance of
   style: Record<string, any>; // Values for attributes
   references: Record<string, string | string[] | null>; // References to other model elements (null for unset single refs)
+  presentation?: ModelElementPresentation;
+}
+
+export interface ModelElementPresentation {
+  position2D?: { x: number; y: number };
+  position3D?: { x: number; y: number };
+  size2D?: { width: number; height: number };
+  size3D?: { widthMm: number; heightMm: number; depthMm: number };
+  rotationZ?: number;
+  appearance?: Record<string, any>;
+  attachedToElementId?: string;
+  attachmentSide?: 'top' | 'right' | 'bottom' | 'left';
+  attachmentOffsetRatio?: number;
 }
 
 export interface Model {
@@ -157,13 +338,19 @@ export interface Model {
   name: string;
   metamodelId: string;
   elements: ModelElement[];
-  connections?: Array<{
-    id: string;
-    sourceId: string;
-    targetId: string;
-    type?: string;
-  }>;
+  connections?: ModelConnection[];
   conformsTo: string; // ID of the metamodel it conforms to
+}
+
+export interface ModelConnection {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  referenceId?: string;
+  referenceName?: string;
+  type?: string;
+  attributes?: Record<string, any>;
+  bendPoints2D?: Array<{ x: number; y: number }>;
 }
 
 // Types for Transformation System
@@ -251,12 +438,17 @@ export interface Diagram {
   id: string;
   name: string;
   modelId: string; // References a Model
+  viewpointId?: string;
+  representationDescriptionId?: string;
   elements: DiagramElement[];
+  includedElementIds?: string[];
   // 3D-specific settings
   gridSettings?: {
     sizeX: number; // Grid size on X axis in mm
     sizeY: number; // Grid size on Y axis in mm
   };
+  schemaVersion?: number;
+  migrationWarnings?: string[];
 }
 
 // Types for Code Generation
@@ -380,4 +572,4 @@ export enum ExpressionOperator {
 export interface ElementReference {
   elementName: string;          // Name of the referenced element (e.g., "arc")
   attributeName: string;        // Name of the referenced attribute (e.g., "weight")
-} 
+}

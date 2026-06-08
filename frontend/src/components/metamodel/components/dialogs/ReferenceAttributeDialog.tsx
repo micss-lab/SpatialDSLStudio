@@ -14,6 +14,7 @@ import {
   MenuItem,
   SelectChangeEvent
 } from '@mui/material';
+import { MetaEnum } from '../../../../models/types';
 
 interface ReferenceAttributeDialogProps {
   open: boolean;
@@ -21,6 +22,7 @@ interface ReferenceAttributeDialogProps {
   attributeType: string;
   defaultValue: string;
   required: boolean;
+  enums?: MetaEnum[];
   onClose: () => void;
   onAttributeNameChange: (name: string) => void;
   onAttributeTypeChange: (type: string) => void;
@@ -38,6 +40,7 @@ export const ReferenceAttributeDialog: React.FC<ReferenceAttributeDialogProps> =
   attributeType,
   defaultValue,
   required,
+  enums = [],
   onClose,
   onAttributeNameChange,
   onAttributeTypeChange,
@@ -67,6 +70,11 @@ export const ReferenceAttributeDialog: React.FC<ReferenceAttributeDialogProps> =
             <MenuItem value="number">Number</MenuItem>
             <MenuItem value="boolean">Boolean</MenuItem>
             <MenuItem value="date">Date</MenuItem>
+            {enums.map(metaEnum => (
+              <MenuItem key={metaEnum.id} value={`enum:${metaEnum.id}`}>
+                {metaEnum.name}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
         <TextField

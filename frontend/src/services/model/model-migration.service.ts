@@ -48,7 +48,8 @@ export class ModelMigrationService {
             if (attr.defaultValue !== undefined) {
               (element.style as any)[attr.name] = attr.defaultValue;
             } else {
-              switch (attr.type) {
+              const attributeType = typeof attr.type === 'object' ? 'string' : attr.type;
+              switch (attributeType) {
                 case 'string': (element.style as any)[attr.name] = ''; break;
                 case 'number': (element.style as any)[attr.name] = 0; break;
                 case 'boolean': (element.style as any)[attr.name] = false; break;

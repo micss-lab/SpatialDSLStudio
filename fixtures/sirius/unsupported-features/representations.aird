@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<viewpoint:DAnalysis
+    xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:viewpoint="http://www.eclipse.org/sirius/1.1.0"
+    xmi:id="analysis-unsupported"
+    selectedViews="//@ownedViews.0">
+  <semanticResources>model/sample.xmi</semanticResources>
+  <ownedViews
+      xmi:id="view-unsupported"
+      viewpoint="description/unsupported.odesign#viewpoint-unsupported"/>
+</viewpoint:DAnalysis>

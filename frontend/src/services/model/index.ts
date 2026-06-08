@@ -7,3 +7,5 @@ export { modelValidationService } from './model-validation.service';
 export { modelMigrationService } from './model-migration.service';
 export { modelApiSyncService } from './model-api-sync.service';
 export { modelInheritanceUtilsService } from './model-inheritance-utils.service';
+export { modelXmiExportService } from './model-xmi-export.service';
+export { modelXmiImportService } from './model-xmi-import.service';

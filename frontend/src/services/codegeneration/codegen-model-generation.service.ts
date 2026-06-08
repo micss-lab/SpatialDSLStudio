@@ -1,8 +1,4 @@
-import {
-  Diagram,
-  DiagramElement,
-  CodeGenerationResult
-} from '../../models/types';
+import { Diagram, CodeGenerationResult } from '../../models/types';
 import Handlebars from 'handlebars';
 import { metamodelService } from '../metamodel';
 import { modelService } from '../model';
@@ -98,6 +94,7 @@ export class CodegenModelGenerationService {
    * Build context for model-based generation
    */
   private buildModelContext(model: any, metamodel: any): any {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const emptyDiagram: Diagram = {
       id: 'virtual-diagram',
       name: 'Virtual Diagram',
@@ -105,7 +102,11 @@ export class CodegenModelGenerationService {
       elements: []
     };
     
-    const allElementsContext = {};
+    const allElementsContext = codegenContextBuilderService.prepareMultiElementContext(
+      model.elements,
+      emptyDiagram,
+      metamodel
+    );
     const elementContext = {};
 
     // Prepare metamodels context
@@ -152,14 +153,6 @@ export class CodegenModelGenerationService {
             const elemName = elem.style?.name;
             if (elemName) {
                 const elemContext = codegenContextBuilderService.prepareSingleElementContext(elem);
-                
-                // Add default spatial properties (no diagram)
-                elemContext.X = 0;
-                elemContext.Y = 0;
-                elemContext.RZ = 0;
-                elemContext.Width = 100;
-                elemContext.Height = 100;
-                elemContext.Length = 100;
                 
                 modelsContext[m.name].elements.push(elemContext);
                 modelsContext[m.name][elemName] = elemContext;

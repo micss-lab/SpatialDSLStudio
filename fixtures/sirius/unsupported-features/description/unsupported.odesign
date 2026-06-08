@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<description:Group
+    xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:description="http://www.eclipse.org/sirius/description/1.1.0"
+    xmlns:diagramDescription="http://www.eclipse.org/sirius/diagram/description/1.1.0"
+    xmlns:diagramStyle="http://www.eclipse.org/sirius/diagram/description/style/1.1.0"
+    xmlns:tableDescription="http://www.eclipse.org/sirius/table/description/1.1.0"
+    xmlns:treeDescription="http://www.eclipse.org/sirius/tree/description/1.0.0"
+    name="unsupported">
+  <ownedViewpoints xmi:id="viewpoint-unsupported" name="UnsupportedViewpoint" label="Unsupported Viewpoint" modelFileExtension="xmi">
+    <ownedJavaExtensions xmi:id="java-extension" qualifiedClassName="com.example.sirius.Services"/>
+    <ownedRepresentations
+        xsi:type="diagramDescription:DiagramDescription"
+        xmi:id="diagram-unsupported"
+        name="UnsupportedDiagram"
+        label="Unsupported Diagram"
+        domainClass="unsupported::Root"
+        preconditionExpression="aql:self.children->exists(c | c.flag)">
+      <filters xmi:id="filter-flagged" name="Only Flagged" semanticConditionExpression="service:isVisible(self)"/>
+      <defaultLayer xmi:id="layer-default" name="Default">
+        <nodeMappings
+            xmi:id="mapping-child"
+            name="ChildNode"
+            domainClass="unsupported::Child"
+            semanticCandidatesExpression="service:children(self)">
+          <style
+              xsi:type="diagramStyle:SquareDescription"
+              xmi:id="style-child"
+              labelExpression="aql:self.name"
+              color="SystemColor:white"/>
+          <conditionnalStyles
+              xmi:id="style-child-conditional"
+              predicateExpression="aql:self.flag">
+            <style
+                xsi:type="diagramStyle:SquareDescription"
+                xmi:id="style-child-warning"
+                labelExpression="aql:self.name"
+                color="SystemColor:red"/>
+          </conditionnalStyles>
+        </nodeMappings>
+      </defaultLayer>
+      <additionalLayers xmi:id="layer-review" name="Review">
+        <nodeMappings
+            xmi:id="mapping-review-note"
+            name="ReviewNote"
+            domainClass="unsupported::ReviewNote"
+            semanticCandidatesExpression="aql:self.notes"/>
+      </additionalLayers>
+    </ownedRepresentations>
+    <ownedRepresentations
+        xsi:type="tableDescription:EditionTableDescription"
+        xmi:id="table-unsupported"
+        name="UnsupportedTable"
+        domainClass="unsupported::Root"/>
+    <ownedRepresentations
+        xsi:type="treeDescription:TreeDescription"
+        xmi:id="tree-unsupported"
+        name="UnsupportedTree"
+        domainClass="unsupported::Root"/>
+  </ownedViewpoints>
+</description:Group>

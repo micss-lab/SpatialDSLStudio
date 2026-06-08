@@ -1,0 +1,248 @@
+{
+  "id": "a1100000-0000-4000-8000-000000000001",
+  "name": "UMLActivityDiagramMM",
+  "eClass": "e7d0d970-9abd-4218-9ef9-9789e7b8862c",
+  "uri": "http://www.spatialdsl.studio/examples/uml/activity",
+  "prefix": "uml_activity",
+  "conformsTo": "8b8a9170-bd78-4e15-80dd-e018f295e8cc",
+  "classes": [
+    {
+      "id": "a1100000-0000-4000-8000-000000000101",
+      "name": "Activity",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "a1100000-0000-4000-8000-000000001101",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "defaultValue": "",
+          "required": true,
+          "many": false
+        },
+        {
+          "id": "a1100000-0000-4000-8000-000000001102",
+          "name": "description",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "defaultValue": "",
+          "required": false,
+          "many": false
+        }
+      ],
+      "references": [
+        {
+          "id": "a1100000-0000-4000-8000-000000002101",
+          "name": "containsNodes",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "a1100000-0000-4000-8000-000000000102",
+          "containment": true,
+          "cardinality": { "lowerBound": 0, "upperBound": "*" },
+          "allowSelfReference": false,
+          "isMultiValued": true,
+          "attributes": []
+        }
+      ],
+      "constraints": [],
+      "position": { "x": 60, "y": 60 }
+    },
+    {
+      "id": "a1100000-0000-4000-8000-000000000102",
+      "name": "FlowNode",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": true,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "a1100000-0000-4000-8000-000000001201",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "defaultValue": "",
+          "required": true,
+          "many": false
+        }
+      ],
+      "references": [
+        {
+          "id": "a1100000-0000-4000-8000-000000002201",
+          "name": "flowsTo",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "a1100000-0000-4000-8000-000000000102",
+          "containment": false,
+          "cardinality": { "lowerBound": 0, "upperBound": "*" },
+          "allowSelfReference": false,
+          "isMultiValued": true,
+          "attributes": [
+            {
+              "id": "a1100000-0000-4000-8000-000000001202",
+              "name": "guard",
+              "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+              "type": "string",
+              "defaultValue": "",
+              "required": false,
+              "many": false
+            }
+          ]
+        },
+        {
+          "id": "a1100000-0000-4000-8000-000000002202",
+          "name": "objectFlow",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "a1100000-0000-4000-8000-000000000102",
+          "containment": false,
+          "cardinality": { "lowerBound": 0, "upperBound": "*" },
+          "allowSelfReference": false,
+          "isMultiValued": true,
+          "attributes": []
+        }
+      ],
+      "constraints": [],
+      "position": { "x": 320, "y": 60 }
+    },
+    {
+      "id": "a1100000-0000-4000-8000-000000000103",
+      "name": "InitialNode",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "attributes": [],
+      "references": [],
+      "constraints": [],
+      "position": { "x": 60, "y": 240 }
+    },
+    {
+      "id": "a1100000-0000-4000-8000-000000000104",
+      "name": "ActivityFinalNode",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "attributes": [],
+      "references": [],
+      "constraints": [],
+      "position": { "x": 220, "y": 240 }
+    },
+    {
+      "id": "a1100000-0000-4000-8000-000000000105",
+      "name": "Action",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "attributes": [
+        {
+          "id": "a1100000-0000-4000-8000-000000001501",
+          "name": "description",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "defaultValue": "",
+          "required": false,
+          "many": false
+        },
+        {
+          "id": "a1100000-0000-4000-8000-000000001502",
+          "name": "isLocallyReentrant",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "boolean",
+          "defaultValue": false,
+          "required": false,
+          "many": false
+        }
+      ],
+      "references": [],
+      "constraints": [],
+      "position": { "x": 380, "y": 240 }
+    },
+    {
+      "id": "a1100000-0000-4000-8000-000000000106",
+      "name": "DecisionNode",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "attributes": [],
+      "references": [],
+      "constraints": [],
+      "position": { "x": 60, "y": 400 }
+    },
+    {
+      "id": "a1100000-0000-4000-8000-000000000107",
+      "name": "MergeNode",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "attributes": [],
+      "references": [],
+      "constraints": [],
+      "position": { "x": 220, "y": 400 }
+    },
+    {
+      "id": "a1100000-0000-4000-8000-000000000108",
+      "name": "ForkNode",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "attributes": [],
+      "references": [],
+      "constraints": [],
+      "position": { "x": 380, "y": 400 }
+    },
+    {
+      "id": "a1100000-0000-4000-8000-000000000109",
+      "name": "JoinNode",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "attributes": [],
+      "references": [],
+      "constraints": [],
+      "position": { "x": 540, "y": 400 }
+    },
+    {
+      "id": "a1100000-0000-4000-8000-000000000110",
+      "name": "Pin",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": true,
+      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "attributes": [],
+      "references": [
+        {
+          "id": "a1100000-0000-4000-8000-000000002301",
+          "name": "owner",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "a1100000-0000-4000-8000-000000000105",
+          "containment": false,
+          "cardinality": { "lowerBound": 1, "upperBound": 1 },
+          "allowSelfReference": false,
+          "isMultiValued": false,
+          "attributes": []
+        }
+      ],
+      "constraints": [],
+      "position": { "x": 720, "y": 240 }
+    },
+    {
+      "id": "a1100000-0000-4000-8000-000000000111",
+      "name": "InputPin",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": ["a1100000-0000-4000-8000-000000000110"],
+      "attributes": [],
+      "references": [],
+      "constraints": [],
+      "position": { "x": 900, "y": 300 }
+    },
+    {
+      "id": "a1100000-0000-4000-8000-000000000112",
+      "name": "OutputPin",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": ["a1100000-0000-4000-8000-000000000110"],
+      "attributes": [],
+      "references": [],
+      "constraints": [],
+      "position": { "x": 1080, "y": 300 }
+    }
+  ],
+  "constraints": []
+}

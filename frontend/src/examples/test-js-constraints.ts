@@ -3,14 +3,7 @@ import { modelService } from '../services/model';
 import { metamodelService } from '../services/metamodel';
 import { createAllExampleConstraints } from './js-constraint-examples';
 import { v4 as uuidv4 } from 'uuid';
-import {
-  Metamodel,
-  MetaClass,
-  JSConstraint,
-  Model,
-  MetaReference,
-  ModelElement
-} from '../models/types';
+import { Metamodel, MetaClass, Model, MetaReference, ModelElement } from '../models/types';
 
 /**
  * Test script demonstrating JavaScript constraint validation

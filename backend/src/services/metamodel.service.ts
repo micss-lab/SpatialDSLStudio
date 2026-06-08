@@ -3,6 +3,7 @@ import { ApiError } from '../middleware';
 import { 
   Metamodel, 
   MetaClass, 
+  MetaEnum,
   Constraint,
   CreateMetamodelRequest,
   UpdateMetamodelRequest,
@@ -115,6 +116,7 @@ class MetamodelService {
         prefix: data.prefix,
         eClass: data.conformsTo,
         classes: (data.classes || []) as any,
+        enums: (data.enums || []) as any,
         constraints: (data.constraints || []) as any,
         conformsToId: data.conformsTo,
         userId,
@@ -150,6 +152,7 @@ class MetamodelService {
         ...(data.uri !== undefined && { uri: data.uri }),
         ...(data.prefix !== undefined && { prefix: data.prefix }),
         ...(data.classes !== undefined && { classes: data.classes as any }),
+        ...(data.enums !== undefined && { enums: data.enums as any }),
         ...(data.constraints !== undefined && { constraints: data.constraints as any }),
       },
     });
@@ -390,6 +393,7 @@ class MetamodelService {
       uri: mm.uri,
       prefix: mm.prefix,
       classes: (mm.classes as unknown as MetaClass[]) || [],
+      enums: (mm.enums as unknown as MetaEnum[]) || [],
       constraints: (mm.constraints as unknown as Constraint[]) || [],
       conformsTo: mm.conformsToId,
     };

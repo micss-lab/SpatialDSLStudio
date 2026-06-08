@@ -217,6 +217,7 @@ export function evaluateInSandbox(expression: string, sandbox: Record<string, an
     
     try {
       // Create a function using the sandbox as context
+      // eslint-disable-next-line no-new-func
       const constraintFunction = new Function(...Object.keys(sandbox), functionBody);
       
       // Call the function with the sandbox variables

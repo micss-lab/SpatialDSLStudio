@@ -1,14 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import {
-  TransformationPattern,
-  PatternElement,
-  TransformationRule,
-  PatternMatch,
-  Model,
-  ModelElement,
-  Metamodel,
-  TransformationStep
-} from '../../models/types';
+import { PatternElement, PatternMatch, ModelElement, Metamodel, TransformationStep } from '../../models/types';
 import { modelService } from '../model';
 import { metamodelService } from '../metamodel';
 import { expressionService } from '../constraint';

@@ -1,17 +1,5 @@
 // Add Element Dialog Component
 import React from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-} from '@mui/material';
 import { MetaClass, Model } from '../../../../models/types';
 
 interface AddElementDialogProps {

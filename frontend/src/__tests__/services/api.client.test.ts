@@ -1,4 +1,4 @@
-import { ApiClient, authApi, API_ENDPOINTS } from '../../services/core/api.client';
+import { ApiClient, authApi } from '../../services/core/api.client';
 
 // Mock fetch globally
 const mockFetch = jest.fn();
@@ -101,6 +101,7 @@ describe('ApiClient', () => {
         json: async () => ({ success: true, data: { created: true } }),
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const result = await client.post('/test', { name: 'value' });
 
       expect(mockFetch).toHaveBeenCalledWith(

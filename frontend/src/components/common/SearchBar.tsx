@@ -1,26 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  Box,
-  TextField,
-  Paper,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  Typography,
-  Chip,
-  InputAdornment,
-  IconButton,
-  Tooltip,
-  Divider,
-  Popover,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  SelectChangeEvent
-} from '@mui/material';
+import { Box, TextField, Paper, List, ListItem, ListItemButton, Typography, Chip, InputAdornment, IconButton, Tooltip, Divider, Popover, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -30,7 +9,6 @@ import AttributionIcon from '@mui/icons-material/Attribution';
 import LinkIcon from '@mui/icons-material/Link';
 import RuleIcon from '@mui/icons-material/Rule';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
-import KeyboardIcon from '@mui/icons-material/Keyboard';
 import { SearchResult, SearchEntityType } from '../../services/common';
 
 // Filter interface for visual query builder

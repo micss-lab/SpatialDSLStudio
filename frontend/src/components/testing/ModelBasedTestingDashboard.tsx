@@ -1,47 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Container, 
-  Paper, 
-  Grid, 
-  Button, 
-  FormControl, 
-  InputLabel, 
-  Select, 
-  MenuItem, 
-  FormGroup, 
-  FormControlLabel, 
-  Checkbox, 
-  TextField,
-  Tabs,
-  Tab,
-  CircularProgress,
-  Snackbar,
-  Alert,
-  Card,
-  CardContent,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemButton,
-  IconButton
-} from '@mui/material';
+import { Box, Typography, Container, Paper, Button, Tabs, Tab, CircularProgress, Snackbar, Alert, Divider, List, ListItem, ListItemText, ListItemButton, IconButton } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import ReplayIcon from '@mui/icons-material/Replay';
 import BugReportIcon from '@mui/icons-material/BugReport';
-import AssessmentIcon from '@mui/icons-material/Assessment';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { modelService } from '../../services/model';
 import { metamodelService } from '../../services/metamodel';
 import { testGenerationService, TestCase, TestGenerationOptions, testRunnerService, testCoverageService, CoverageReport } from '../../services/testing';
 import TestCaseTable from './TestCaseTable';
 import TestCoverageReport from './TestCoverageReport';
-import { Model, Metamodel } from '../../models/types';
+import { Metamodel } from '../../models/types';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -71,7 +40,9 @@ function TabPanel(props: TabPanelProps) {
 
 const ModelBasedTestingDashboard: React.FC = () => {
   const { metamodelId } = useParams<{ metamodelId: string }>();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const navigate = useNavigate();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { canCreate, canDelete } = useAuth();
   const [metamodels, setMetamodels] = useState<Metamodel[]>([]);
   const [metamodel, setMetamodel] = useState<Metamodel | null>(null);
@@ -92,6 +63,7 @@ const ModelBasedTestingDashboard: React.FC = () => {
   });
 
   // Test generation options
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [options, setOptions] = useState<TestGenerationOptions>({
     includeAttributeTests: true,
     includeReferenceTests: true,

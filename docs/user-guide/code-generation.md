@@ -30,9 +30,9 @@ Each template contains:
 You can open code generation in two ways:
 
 - from navigation (standalone page)
-- from a diagram card (`Generate Code`)
+- from a view card (`Generate Code`)
 
-When opened from a diagram context, generation prioritizes that diagram/model context where applicable.
+When opened from a view context, generation prioritizes that view's model context where applicable.
 
 ## Select or create a project
 
@@ -81,8 +81,8 @@ Generation flow:
 Model selection behavior:
 
 - service resolves models conforming to project target metamodel
-- when diagram context exists, it prioritizes that diagram model
-- generation can run diagram-based or model-based paths
+- when view context exists, it prioritizes that view's model
+- generation can run view-based or model-based paths
 
 ## Template syntax and helpers
 

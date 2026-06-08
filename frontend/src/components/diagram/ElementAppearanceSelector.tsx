@@ -7,6 +7,7 @@ import {
   Tooltip,
   Grid,
   SelectChangeEvent,
+  Button,
 } from '@mui/material';
 import LinkIcon from '@mui/icons-material/Link';
 import { DiagramElement } from '../../models/types';
@@ -31,6 +32,7 @@ const ElementAppearanceSelector: React.FC<ElementAppearanceSelectorProps> = ({
   onChange
 }) => {
   const appearanceState = useAppearanceState({ element, onChange });
+  const [overrideEnabled, setOverrideEnabled] = React.useState(false);
   
   const fileUpload = useFileUpload({
     setImageFileId: appearanceState.setImageFileId,
@@ -49,6 +51,7 @@ const ElementAppearanceSelector: React.FC<ElementAppearanceSelectorProps> = ({
   });
 
   const isLinked = !!element.style.linkedModelElementId;
+  const controlsDisabled = isLinked && !overrideEnabled;
 
   // Handle appearance type change
   const handleAppearanceTypeChange = (event: SelectChangeEvent<AppearanceOption>) => {
@@ -130,9 +133,24 @@ const ElementAppearanceSelector: React.FC<ElementAppearanceSelectorProps> = ({
       {isLinked && (
         <Box sx={{ mb: 2, p: 1, bgcolor: 'rgba(25, 118, 210, 0.08)', borderRadius: 1 }}>
           <Typography variant="caption" color="primary">
-            This element inherits its appearance from the linked model element.
-            The appearance settings below reflect the model element appearance but cannot be edited directly.
+            Inherited from metaclass default.
           </Typography>
+          {!overrideEnabled ? (
+            <Button size="small" sx={{ ml: 1 }} onClick={() => setOverrideEnabled(true)}>
+              Override notation
+            </Button>
+          ) : (
+            <Button
+              size="small"
+              sx={{ ml: 1 }}
+              onClick={() => {
+                onChange('appearance', undefined);
+                setOverrideEnabled(false);
+              }}
+            >
+              Reset to metaclass default
+            </Button>
+          )}
         </Box>
       )}
 
@@ -141,7 +159,7 @@ const ElementAppearanceSelector: React.FC<ElementAppearanceSelectorProps> = ({
           <AppearanceTypeSelector
             value={appearanceState.appearanceType}
             onChange={handleAppearanceTypeChange}
-            disabled={isLinked}
+            disabled={controlsDisabled}
           />
         </Grid>
 
@@ -155,7 +173,7 @@ const ElementAppearanceSelector: React.FC<ElementAppearanceSelectorProps> = ({
             size="small"
             InputLabelProps={{ shrink: true }}
             disabled={
-              isLinked ||
+              controlsDisabled ||
               appearanceState.appearanceType === 'custom-image' ||
               appearanceState.appearanceType === 'custom-3d-model'
             }
@@ -170,7 +188,7 @@ const ElementAppearanceSelector: React.FC<ElementAppearanceSelectorProps> = ({
             onUrlChange={handleImageUrlChange}
             onFileUpload={fileUpload.handleFileUpload}
             onClear={appearanceState.clearImage}
-            disabled={isLinked}
+            disabled={controlsDisabled}
           />
         )}
 
@@ -182,12 +200,12 @@ const ElementAppearanceSelector: React.FC<ElementAppearanceSelectorProps> = ({
             onUrlChange={handleModelUrlChange}
             onFileUpload={fileUpload.handleFileUpload}
             onClear={appearanceState.clearModel}
-            disabled={isLinked}
+            disabled={controlsDisabled}
           />
         )}
       </Grid>
 
-      {isLinked && (
+      {isLinked && !overrideEnabled && (
         <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
           <Tooltip title="This element inherits appearance from its model element">
             <IconButton size="small" color="primary" sx={{ mr: 1 }}>

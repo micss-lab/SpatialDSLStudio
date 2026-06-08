@@ -1,8 +1,6 @@
-import { v4 as uuidv4 } from 'uuid';
-import { Metamodel, Model, ModelElement, JSConstraint } from '../models/types';
+
+import { JSConstraint } from '../models/types';
 import { jsService } from '../services/constraint';
-import { metamodelService } from '../services/metamodel';
-import { modelService } from '../services/model';
 
 /**
  * This file contains example JavaScript constraints that showcase

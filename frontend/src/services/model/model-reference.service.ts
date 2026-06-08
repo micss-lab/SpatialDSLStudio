@@ -1,6 +1,5 @@
-import { Model, ModelElement, MetaReference, Metamodel, MetaClass } from '../../models/types';
+import { Model, ModelElement } from '../../models/types';
 import { metamodelService } from '../metamodel';
-import { modelInheritanceUtilsService } from './model-inheritance-utils.service';
 
 /**
  * Service for managing references between model elements

@@ -26,6 +26,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   // Ref to store current editor content without causing re-renders
   const contentRef = useRef(value);
   // Ref to track if this is a new template being loaded (external change)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const templateIdRef = useRef(value);
   // Local state only for forcing editor reset on template switch
   const [editorValue, setEditorValue] = useState(value);

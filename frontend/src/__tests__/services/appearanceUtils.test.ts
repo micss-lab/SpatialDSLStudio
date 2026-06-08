@@ -5,6 +5,8 @@ import {
   getFillColor,
   getStrokeColor,
   getStrokeWidth,
+  getEdgeEndpointPair,
+  getNearestAttachmentOnBoundary,
   AppearanceSettings,
 } from '../../components/diagram/2d/utils/appearanceUtils';
 
@@ -214,5 +216,53 @@ describe('getStrokeWidth', () => {
     const appWithoutWidth = { ...appearance, strokeWidth: undefined } as any;
     const result = getStrokeWidth(appWithoutWidth, false, false);
     expect(result).toBe(1);
+  });
+});
+
+describe('getNearestAttachmentOnBoundary', () => {
+  const ownerBounds = { x: 100, y: 100, width: 200, height: 80 };
+
+  it('returns the nearest side and clamped offset ratio', () => {
+    const result = getNearestAttachmentOnBoundary(ownerBounds, { x: 305, y: 130 });
+
+    expect(result.side).toBe('right');
+    expect(result.attachmentOffsetRatio).toBe(0.375);
+  });
+
+  it('respects allowed sides', () => {
+    const result = getNearestAttachmentOnBoundary(ownerBounds, { x: 305, y: 130 }, ['top', 'bottom']);
+
+    expect(result.side).toBe('top');
+    expect(result.attachmentOffsetRatio).toBe(1);
+  });
+});
+
+describe('getEdgeEndpointPair', () => {
+  it('uses a pin center when requested', () => {
+    const source = {
+      id: 'pin-1',
+      type: 'node',
+      modelElementId: 'pin',
+      x: 10,
+      y: 20,
+      width: 16,
+      height: 16,
+      style: {},
+    } as any;
+    const target = {
+      id: 'node-1',
+      type: 'node',
+      modelElementId: 'action',
+      x: 100,
+      y: 20,
+      width: 100,
+      height: 60,
+      style: {},
+    } as any;
+
+    const result = getEdgeEndpointPair(source, target, true, false);
+
+    expect(result.source).toEqual({ x: 18, y: 28 });
+    expect(result.target.x).toBeLessThan(150);
   });
 });

@@ -2,44 +2,33 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Stage, Layer, Rect, Text, Group, Line, Circle, Image, Label, Tag, Arrow } from 'react-konva';
 import { 
   Box, 
-  Paper, 
   Typography, 
   Drawer, 
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Button,
-  TextField,
-  Tooltip
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import ZoomInIcon from '@mui/icons-material/ZoomIn';
-import ZoomOutIcon from '@mui/icons-material/ZoomOut';
-import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
-import { diagramService } from '../../services/diagram';
-import { metamodelService } from '../../services/metamodel';
+import { concreteSyntaxResolver, diagramService } from '../../services/diagram';
 import { modelService } from '../../services/model';
-import { DiagramElement, Diagram, MetaClass, Metamodel, Model } from '../../models/types';
-import DiagramPalette from '../palette/DiagramPalette';
+import { viewpointService } from '../../services/viewpoint.service';
+import { DiagramElement, ModelElement } from '../../models/types';
+import DiagramPalette, { DiagramPaletteDragItem } from '../palette/DiagramPalette';
 import DiagramElementProperties from './DiagramElementProperties';
 import RuleVisualizationPanel from './RuleVisualizationPanel';
 import { useDiagramData, useElementSelection } from './shared/hooks';
 import { 
   getAppearanceSettings, 
   getElementDisplayName,
+  getAttachedNodePosition,
+  getEdgeEndpointPair,
+  getElementBounds,
+  getElementCenter,
   getFillColor,
+  getNearestAttachmentOnBoundary,
   getStrokeColor,
   getStrokeWidth
 } from './2d/utils/appearanceUtils';
 import { ToolBar2D, ReferenceSelectionDialog } from './2d/components';
+import type { PinCreationOption } from '../../services/diagram/diagram.service';
 
 interface DiagramEditorProps {
   diagramId: string;
@@ -55,8 +44,9 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
   // Component state
   const [isDrawingEdge, setIsDrawingEdge] = useState(false);
   const [edgeStartElement, setEdgeStartElement] = useState<DiagramElement | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [draggingElement, setDraggingElement] = useState<DiagramElement | null>(null);
-  const [draggingMetaClass, setDraggingMetaClass] = useState<MetaClass | null>(null);
+  const [draggingPaletteItem, setDraggingPaletteItem] = useState<DiagramPaletteDragItem | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [isDraggingPaletteItem, setIsDraggingPaletteItem] = useState(false);
@@ -78,6 +68,9 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
 
   // Cache for loaded images to prevent flickering
   const imageCache = useMemo(() => new Map<string, HTMLImageElement>(), []);
+  const activeRepresentationDescription = useMemo(() => (
+    diagram ? viewpointService.resolveRepresentationDescription(diagram).representationDescription : undefined
+  ), [diagram]);
 
   // Stage size handler
   useEffect(() => {
@@ -147,9 +140,45 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
     }
   };
 
+  const getLinkedModelElementId = useCallback((element: DiagramElement): string => {
+    return element.style?.linkedModelElementId || element.style?.modelElementRefId || element.id;
+  }, []);
+
+  const getPinBoundaryAttachment = useCallback((element: DiagramElement, x: number, y: number) => {
+    if (!diagram) return null;
+
+    const modelElementId = getLinkedModelElementId(element);
+    const pinDetails = diagramService.getPinAttachmentDetails(diagramId, modelElementId);
+    if (!pinDetails.isPin || !pinDetails.ownerElementId) return null;
+
+    const ownerElement = diagram.elements.find(candidate => candidate.id === pinDetails.ownerElementId);
+    if (!ownerElement || ownerElement.type !== 'node') return null;
+
+    const width = element.width || 16;
+    const height = element.height || 16;
+    const ownerBounds = getElementBounds(ownerElement);
+    const attachment = getNearestAttachmentOnBoundary(
+      ownerBounds,
+      { x: x + width / 2, y: y + height / 2 },
+      pinDetails.allowedSides
+    );
+    const position = getAttachedNodePosition(
+      ownerBounds,
+      { width, height },
+      attachment.side,
+      attachment.attachmentOffsetRatio
+    );
+
+    return {
+      ...attachment,
+      ownerElementId: ownerElement.id,
+      position,
+    };
+  }, [diagram, diagramId, getLinkedModelElementId]);
+
   const handleStageClick = (e: any) => {
     // If we're drawing an edge and already have a start element
-    if (isDrawingEdge && edgeStartElement && metamodel) {
+    if (isDrawingEdge && edgeStartElement && metamodel && diagram) {
       const { x, y } = e.target.getStage().getPointerPosition();
       
       // Check if we clicked on an empty area (to create a bend point) or on another element
@@ -190,36 +219,23 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
                   { x: edgeStartElement.x! + edgeStartElement.width! / 2, y: edgeStartElement.y! + edgeStartElement.height! + offsetY }
                 ];
                 
-                // Create the self-reference edge
-                diagramService.addElement(
-                  diagramId,
-                  reference.id, // Use the reference as the metaclass ID for the edge
-                  'edge',
-                  undefined,
-                  undefined,
-                  undefined,
-                  undefined,
+                modelService.setModelElementReference(
+                  diagram.modelId,
                   edgeStartElement.id,
+                  reference.name,
                   targetElement.id,
-                  { name: reference.name },
-                  undefined, // referenceAttributes will be initialized empty
-                  bendPoints // Add the bend points for self-reference
+                  bendPoints,
+                  {}
                 );
               } else {
-                // Regular edge
-            diagramService.addElement(
-              diagramId,
-              reference.id, // Use the reference as the metaclass ID for the edge
-              'edge',
-              undefined,
-              undefined,
-              undefined,
-              undefined,
-              edgeStartElement.id,
-              targetElement.id,
-              { name: reference.name }
-            );
+                modelService.setModelElementReference(
+                  diagram.modelId,
+                  edgeStartElement.id,
+                  reference.name,
+                  targetElement.id
+                );
               }
+              saveChanges();
             } else {
               // Multiple references, show dialog
               setAvailableReferences(validReferences);
@@ -227,7 +243,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
               setShowReferenceDialog(true);
             }
             
-            // Note: saveChanges() is called within diagramService.addElement, so no need to call it here
+            // Model reference changes are persisted through the model service.
           }
         }
       } else if (e.target === e.currentTarget) {
@@ -298,21 +314,16 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
       }
     }
     
-    // Create the edge
-    const newEdge = diagramService.addElement(
-      diagramId,
-      referenceTypeId,
-      'edge',
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      sourceId,
-      targetId,
-      { name: reference.name },
-      {}, // Initialize empty reference attributes
-      bendPoints // Add bend points for self-references
-    );
+    const newEdge = diagram && model
+      ? modelService.setModelElementReference(
+        diagram.modelId,
+        sourceId,
+        reference.name,
+        targetId,
+        bendPoints,
+        {}
+      )
+      : false;
     
     if (newEdge) {
       saveChanges();
@@ -378,17 +389,37 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
     setDraggingElement(element);
   };
 
-  const handleDragEnd = (e: any, element: DiagramElement) => {
+  const handleDragEnd = async (e: any, element: DiagramElement) => {
     if (diagram && element.id) {
       // Get the current position from the dragged shape
       const { x, y } = e.target.position();
+      const linkedModelElementId = getLinkedModelElementId(element);
+      const pinAttachment = getPinBoundaryAttachment(element, x, y);
       
       // Allow elements to be placed anywhere on the canvas without constraints
       // This enables placing elements outside the current viewport
-      diagramService.updateElement(diagramId, element.id, {
-        x: x,
-        y: y
-      });
+      if (pinAttachment) {
+        await diagramService.updateModelElementPresentationInView(
+          diagramId,
+          linkedModelElementId,
+          {
+            attachedToElementId: pinAttachment.ownerElementId,
+            attachmentSide: pinAttachment.side,
+            attachmentOffsetRatio: pinAttachment.attachmentOffsetRatio,
+          }
+        );
+      } else if (element.style?.linkedModelElementId) {
+        await diagramService.updateModelElementPresentationInView(
+          diagramId,
+          element.style.linkedModelElementId,
+          { position2D: { x, y } }
+        );
+      } else {
+        diagramService.updateElement(diagramId, element.id, {
+          x: x,
+          y: y
+        });
+      }
       
       saveChanges();
     }
@@ -396,58 +427,78 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
     setDraggingElement(null);
   };
 
-  const handlePaletteItemDragStart = (metaClass: MetaClass) => {
+  const handlePaletteItemDragStart = (item: DiagramPaletteDragItem) => {
     setIsDraggingPaletteItem(true);
-    setDraggingMetaClass(metaClass);
+    setDraggingPaletteItem(item);
   };
 
-  const handlePaletteItemDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handlePaletteItemDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault(); // Prevent default to ensure drop is handled
 
     // Log to help with debugging
     console.log('Palette item dropped', {
       isDraggingPaletteItem,
-      draggingMetaClass: draggingMetaClass?.name,
+      draggingPaletteItem: draggingPaletteItem?.kind,
       diagramId,
       clientX: e.clientX,
       clientY: e.clientY
     });
 
-    if (isDraggingPaletteItem && draggingMetaClass && stageRef.current && diagram) {
+    if (isDraggingPaletteItem && draggingPaletteItem && stageRef.current && diagram) {
       try {
         // Get stage coordinates
         const stageRect = stageRef.current.container().getBoundingClientRect();
         console.log('Stage rect:', stageRect);
         
         // Calculate position relative to the stage
-        let x = Math.max(0, e.clientX - stageRect.left);
-        let y = Math.max(0, e.clientY - stageRect.top);
-        
-        // Default dimensions for new elements
-        const width = 120;
-        const height = 80;
+        let x = Math.max(0, (e.clientX - stageRect.left - stagePosition.x) / scale);
+        let y = Math.max(0, (e.clientY - stageRect.top - stagePosition.y) / scale);
         
         // Allow elements to be placed anywhere on the canvas
         // Remove boundary constraints to enable placing elements outside viewport
         
         console.log('Calculated position for new element:', { x, y });
-        
-        // Create a default name based on metaclass
-        const defaultName = `New ${draggingMetaClass.name}`;
-        
-        // Add new element to diagram with explicit dimensions
-        const newElement = diagramService.addElement(
-          diagramId,
-          draggingMetaClass.id,
-          'node',
-          x,
-          y,
-          width,
-          height,
-          undefined,
-          undefined,
-          { name: defaultName }
-        );
+
+        let newElement: DiagramElement | null = null;
+        if (draggingPaletteItem.kind === 'existing-model-element') {
+          const modelElement = draggingPaletteItem.modelElement;
+          newElement = diagramService.addElement(
+            diagramId,
+            modelElement.id,
+            'node',
+            x,
+            y,
+            modelElement.presentation?.size2D?.width || 120,
+            modelElement.presentation?.size2D?.height || 80,
+            undefined,
+            undefined,
+            modelElement.style || {}
+          );
+        } else {
+          const exemplar = model?.elements.find(element => element.modelElementId === draggingPaletteItem.metaClass.id);
+          const previewElement: ModelElement = {
+            id: 'preview',
+            modelElementId: draggingPaletteItem.metaClass.id,
+            style: {},
+            presentation: exemplar?.presentation,
+            references: {},
+          };
+          const resolved2D = concreteSyntaxResolver.resolve2D(previewElement, metamodel);
+          const size2D = exemplar?.presentation?.size2D || resolved2D.defaultSize || { width: 120, height: 80 };
+          const presentation = {
+            ...(exemplar?.presentation?.appearance ? { appearance: exemplar.presentation.appearance } : {}),
+            ...(exemplar?.presentation?.size3D ? { size3D: exemplar.presentation.size3D } : {}),
+            ...(typeof exemplar?.presentation?.rotationZ === 'number' ? { rotationZ: exemplar.presentation.rotationZ } : {}),
+            position2D: { x, y },
+            size2D,
+          };
+          newElement = await diagramService.createModelElementInView(
+            diagramId,
+            draggingPaletteItem.metaClass.id,
+            presentation,
+            { name: `${draggingPaletteItem.metaClass.name} 1` }
+          );
+        }
         
         console.log('New element created:', newElement);
         
@@ -457,6 +508,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
           if (updatedDiagram) {
             console.log('Updated diagram elements:', updatedDiagram.elements);
             setDiagram(updatedDiagram);
+            setSelectedElement(updatedDiagram.elements.find(element => element.id === newElement?.id) || newElement);
           }
         } else {
           console.error('Failed to create new element');
@@ -467,14 +519,14 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
     } else {
       console.warn('Drop failed - missing required data', { 
         isDraggingPaletteItem, 
-        hasDraggingMetaClass: !!draggingMetaClass,
+        hasDraggingPaletteItem: !!draggingPaletteItem,
         hasStageRef: !!stageRef.current,
         hasDiagram: !!diagram
       });
     }
     
     setIsDraggingPaletteItem(false);
-    setDraggingMetaClass(null);
+    setDraggingPaletteItem(null);
   };
 
   const handleMouseMove = (e: any) => {
@@ -488,8 +540,68 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
     }
   };
 
-  const handlePropertyChange = (propertyName: string, value: any) => {
+  const handlePropertyChange = async (propertyName: string, value: any) => {
     if (selectedElement && diagram) {
+      const linkedModelElementId = selectedElement.style?.linkedModelElementId;
+      const isProjectionNode = selectedElement.type === 'node' && !!linkedModelElementId;
+
+      if (isProjectionNode && ['x', 'y'].includes(propertyName)) {
+        const nextX = propertyName === 'x' ? Number(value) : selectedElement.x || 0;
+        const nextY = propertyName === 'y' ? Number(value) : selectedElement.y || 0;
+        const pinAttachment = getPinBoundaryAttachment(selectedElement, nextX, nextY);
+
+        if (pinAttachment) {
+          await diagramService.updateModelElementPresentationInView(
+            diagramId,
+            linkedModelElementId,
+            {
+              attachedToElementId: pinAttachment.ownerElementId,
+              attachmentSide: pinAttachment.side,
+              attachmentOffsetRatio: pinAttachment.attachmentOffsetRatio,
+            }
+          );
+          saveChanges();
+          return;
+        }
+      }
+
+      if (isProjectionNode && ['x', 'y', 'width', 'height'].includes(propertyName)) {
+        const nextX = propertyName === 'x' ? Number(value) : selectedElement.x || 0;
+        const nextY = propertyName === 'y' ? Number(value) : selectedElement.y || 0;
+        const nextWidth = propertyName === 'width' ? Number(value) : selectedElement.width || 120;
+        const nextHeight = propertyName === 'height' ? Number(value) : selectedElement.height || 80;
+
+        await diagramService.updateModelElementPresentationInView(
+          diagramId,
+          linkedModelElementId,
+          {
+            position2D: { x: nextX, y: nextY },
+            size2D: { width: nextWidth, height: nextHeight },
+          }
+        );
+        saveChanges();
+        return;
+      }
+
+      if (isProjectionNode && propertyName === 'appearance') {
+        let appearance = value;
+        if (typeof value === 'string') {
+          try {
+            appearance = JSON.parse(value);
+          } catch {
+            appearance = { value };
+          }
+        }
+
+        await diagramService.updateModelElementPresentationInView(
+          diagramId,
+          linkedModelElementId,
+          { appearance }
+        );
+        saveChanges();
+        return;
+      }
+
       // Special case for modelElementId - needs to update the element directly
       if (propertyName === '_modelElementId') {
         diagramService.updateElement(diagramId, selectedElement.id, {
@@ -542,6 +654,14 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
         saveChanges();
         return;
       }
+
+      if (isProjectionNode && model) {
+        modelService.updateModelElementProperties(model.id, linkedModelElementId, {
+          [propertyName]: value
+        });
+        saveChanges();
+        return;
+      }
       
       // Regular style property update
       diagramService.updateElement(diagramId, selectedElement.id, {
@@ -562,6 +682,43 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
       saveChanges();
     }
   };
+
+  const handleDeleteFromModel = () => {
+    if (!selectedElement || !diagram) return;
+
+    const confirmed = window.confirm(
+      'Delete this element from the model? It will disappear from every view and references to it may be removed.'
+    );
+    if (!confirmed) return;
+
+    modelService.deleteModelElement(diagram.modelId, selectedElement.id);
+    diagramService.removeElementsForModelElement(diagram.modelId, selectedElement.id);
+    setSelectedElement(null);
+    saveChanges();
+  };
+
+  const handleCreatePin = useCallback(async (option: PinCreationOption) => {
+    if (!selectedElement) return;
+
+    const createdPin = await diagramService.createPinForOwnerInView(
+      diagramId,
+      getLinkedModelElementId(selectedElement),
+      option.pinMetaClassId,
+      option.mappingId
+    );
+
+    const updatedDiagram = diagramService.getDiagramById(diagramId);
+    if (updatedDiagram) {
+      setDiagram(updatedDiagram);
+      setSelectedElement(createdPin
+        ? updatedDiagram.elements.find(element => element.id === createdPin.id) || createdPin
+        : updatedDiagram.elements.find(element => element.id === selectedElement.id) || selectedElement
+      );
+      if (stageRef.current) {
+        stageRef.current.batchDraw();
+      }
+    }
+  }, [diagramId, getLinkedModelElementId, selectedElement, setDiagram, setSelectedElement]);
 
   // Helper function to find an element at a specific position
   const findElementAtPosition = (x: number, y: number): DiagramElement | null => {
@@ -718,12 +875,16 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
       // Force Konva stage to redraw
       stageRef.current.batchDraw();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [diagram?.elements.length]);
 
   // Allow free movement during drag operation without boundary constraints
-  const handleDragMove = (e: any) => {
-    // Remove boundary checking to allow elements to be dragged anywhere
-    // This enables placing elements outside the current viewport
+  const handleDragMove = (e: any, element: DiagramElement) => {
+    const { x, y } = e.target.position();
+    const pinAttachment = getPinBoundaryAttachment(element, x, y);
+    if (pinAttachment) {
+      e.target.position(pinAttachment.position);
+    }
   };
 
   // Render custom shapes based on appearance type
@@ -917,6 +1078,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
       } else if (imageUrl) {
         img.src = imageUrl;
       }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [imageKey]);
     
     if (!image) return null;
@@ -956,9 +1118,10 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
     const height = element.height || 50;
     
     // Get appearance settings
-    const appearance = getAppearanceSettings(element);
+    const appearance = getAppearanceSettings(element, model);
     
     // Create highlight effect styles
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const highlightStyles = isHighlighted ? {
       shadowColor: '#FFA500',
       shadowBlur: 10,
@@ -978,7 +1141,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
         draggable={!isDrawingEdge}
         onDragStart={(e) => handleDragStart(e, element)}
         onDragEnd={(e) => handleDragEnd(e, element)}
-        onDragMove={handleDragMove}
+        onDragMove={(e) => handleDragMove(e, element)}
         onClick={(e) => handleElementClick(element, e)}
         onTap={(e) => handleElementClick(element, e)}
       >
@@ -1029,33 +1192,29 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
       return null;
     }
     
-    // Get source and target positions
-    const sourceX = (sourceElement.x || 0) + (sourceElement.width || 100) / 2;
-    const sourceY = (sourceElement.y || 0) + (sourceElement.height || 50) / 2;
-    const targetX = (targetElement.x || 0) + (targetElement.width || 100) / 2;
-    const targetY = (targetElement.y || 0) + (targetElement.height || 50) / 2;
-    
-    // Add slight offset to source/target points to avoid overlap with element borders
-    const angle = Math.atan2(targetY - sourceY, targetX - sourceX);
-    const sourceRadius = Math.min(sourceElement.width || 100, sourceElement.height || 50) / 2;
-    const targetRadius = Math.min(targetElement.width || 100, targetElement.height || 50) / 2;
-    
-    const correctedSourceX = sourceX + Math.cos(angle) * sourceRadius;
-    const correctedSourceY = sourceY + Math.sin(angle) * sourceRadius;
-    const correctedTargetX = targetX - Math.cos(angle) * targetRadius;
-    const correctedTargetY = targetY - Math.sin(angle) * targetRadius;
+    const sourceModelElementId = getLinkedModelElementId(sourceElement);
+    const targetModelElementId = getLinkedModelElementId(targetElement);
+    const sourceIsPin = diagramService.isPinElementInView(diagramId, sourceModelElementId);
+    const targetIsPin = diagramService.isPinElementInView(diagramId, targetModelElementId);
+    const endpoints = getEdgeEndpointPair(sourceElement, targetElement, sourceIsPin, targetIsPin);
     
     // Use provided edge points or calculate defaults
-    const points = element.points || [
-      { x: correctedSourceX, y: correctedSourceY },
-      { x: correctedTargetX, y: correctedTargetY }
-    ];
+    const points = (Array.isArray(element.points) && element.points.length >= 2)
+      ? [
+          endpoints.source,
+          ...element.points.slice(1, -1),
+          endpoints.target
+        ]
+      : [
+          endpoints.source,
+          endpoints.target
+        ];
     
     // Flatten points for Konva Line
     const flattenedPoints = points.flatMap(point => [point.x, point.y]);
     
     // Get appearance settings
-    const appearance = getAppearanceSettings(element);
+    const appearance = concreteSyntaxResolver.resolveEdge(element, metamodel, activeRepresentationDescription);
     const lineWidth = isSelected ? 3 : (appearance.lineWidth || 2);
     const lineColor = isHighlighted ? '#FFA500' : (appearance.lineColor || 'black');
     
@@ -1118,11 +1277,10 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
   const renderTempEdge = () => {
     if (!isDrawingEdge || !edgeStartElement) return null;
     
-    const startX = edgeStartElement.x! + (edgeStartElement.width! / 2);
-    const startY = edgeStartElement.y! + (edgeStartElement.height! / 2);
+    const edgeStartCenter = getElementCenter(edgeStartElement);
     
     // Create points array starting with the source element
-    const points = [startX, startY];
+    const points = [edgeStartCenter.x, edgeStartCenter.y];
     
     // Add any temporary bend points
     if (tempEdgePoints && tempEdgePoints.length > 0) {
@@ -1159,12 +1317,20 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
   }
 
   return (
-    <Box sx={{ display: 'flex', height: 'calc(100vh - 64px)' }}>
+    <Box sx={{ display: 'flex', height: '100%' }}>
       {/* Palette */}
-      <DiagramPalette 
-        metamodel={metamodel} 
-        onDragStart={handlePaletteItemDragStart}
-      />
+      {model && (
+        <DiagramPalette
+          metamodel={metamodel}
+          model={model}
+          diagram={diagram}
+          onDragStart={handlePaletteItemDragStart}
+          onAddAll={() => {
+            diagramService.addAllModelElementsToView(diagramId);
+            saveChanges();
+          }}
+        />
+      )}
       
       {/* Drawing Area */}
       <Box 
@@ -1174,7 +1340,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
           position: 'relative',
           overflow: 'hidden',
           backgroundColor: '#f5f5f5',
-          minHeight: 'calc(100vh - 64px)',
+          minHeight: '100%',
           display: 'flex',
           flexDirection: 'column'
         }}
@@ -1292,6 +1458,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
               metamodel={metamodel}
               onChange={handlePropertyChange}
               diagramId={diagramId}
+              onCreatePin={handleCreatePin}
             />
             
             <Button
@@ -1301,7 +1468,18 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
               sx={{ mt: 2 }}
               startIcon={<DeleteIcon />}
             >
-              Delete Element
+              Remove from view
+            </Button>
+
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleDeleteFromModel}
+              sx={{ mt: 1 }}
+              startIcon={<DeleteIcon />}
+              fullWidth
+            >
+              Delete from model
             </Button>
           </Box>
         ) : (
@@ -1316,4 +1494,4 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
   );
 };
 
-export default DiagramEditor; 
+export default DiagramEditor;

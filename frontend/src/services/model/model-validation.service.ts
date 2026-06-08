@@ -112,7 +112,8 @@ export class ModelValidationService {
       if (value !== undefined && value !== null) {
         let typeError = false;
         
-        switch (attr.type) {
+        const attributeType = typeof attr.type === 'object' ? 'string' : attr.type;
+        switch (attributeType) {
           case 'string':
             // Special handling for string values that might look like JSON objects
             if (typeof value === 'string') {

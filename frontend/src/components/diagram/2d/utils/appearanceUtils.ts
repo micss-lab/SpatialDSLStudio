@@ -1,17 +1,10 @@
 import { DiagramElement, Model } from '../../../../models/types';
+import { concreteSyntaxResolver, defaultResolvedAppearance2D } from '../../../../services/diagram/concrete-syntax.resolver';
+import { metamodelService } from '../../../../services/metamodel';
 
 /**
  * Default appearance settings for diagram elements
  */
-export const defaultAppearance = {
-  type: 'rectangle',
-  shape: 'rectangle',
-  color: '#4287f5',
-  fillColor: '#4287f5',
-  strokeColor: 'black',
-  strokeWidth: 1
-};
-
 export interface AppearanceSettings {
   type: string;
   shape: string;
@@ -33,6 +26,20 @@ export interface AppearanceSettings {
   lineDash?: number[];
 }
 
+export type AttachmentSide = 'top' | 'right' | 'bottom' | 'left';
+
+export interface Point2D {
+  x: number;
+  y: number;
+}
+
+export interface Bounds2D extends Point2D {
+  width: number;
+  height: number;
+}
+
+export const defaultAppearance = defaultResolvedAppearance2D;
+
 /**
  * Parse appearance settings from element style
  * @param element - The diagram element
@@ -43,39 +50,8 @@ export const getAppearanceSettings = (
   element: DiagramElement,
   model?: Model | null
 ): AppearanceSettings => {
-  // Try to parse the appearance from the element
-  if (element.style.appearance) {
-    try {
-      const parsedAppearance = JSON.parse(element.style.appearance);
-      // Ensure shape property is set, default to type if missing
-      if (!parsedAppearance.shape && parsedAppearance.type) {
-        parsedAppearance.shape = parsedAppearance.type;
-      }
-      return { ...defaultAppearance, ...parsedAppearance };
-    } catch (e) {
-      console.error('Error parsing appearance JSON:', e);
-    }
-  }
-
-  // Check if this element is linked to a model element
-  if (element.style.linkedModelElementId && model) {
-    const linkedElement = model.elements.find(e => e.id === element.style.linkedModelElementId);
-    if (linkedElement && linkedElement.style.appearance) {
-      try {
-        const parsedAppearance = JSON.parse(linkedElement.style.appearance);
-        // Ensure shape property is set, default to type if missing
-        if (!parsedAppearance.shape && parsedAppearance.type) {
-          parsedAppearance.shape = parsedAppearance.type;
-        }
-        return { ...defaultAppearance, ...parsedAppearance };
-      } catch (e) {
-        console.error('Error parsing linked element appearance JSON:', e);
-      }
-    }
-  }
-
-  // If we get here, no valid appearance was found, so use defaults
-  return defaultAppearance;
+  const metamodel = model ? metamodelService.getMetamodelById(model.conformsTo || model.metamodelId) : undefined;
+  return concreteSyntaxResolver.resolveDiagramElementAppearance(element, model, metamodel) as AppearanceSettings;
 };
 
 /**
@@ -147,4 +123,123 @@ export const getStrokeWidth = (
 ): number => {
   const baseWidth = appearance.strokeWidth || 1;
   return (isHighlighted || isSelected) ? baseWidth + 1 : baseWidth;
+};
+
+export const getElementBounds = (element: DiagramElement): Bounds2D => ({
+  x: element.x || 0,
+  y: element.y || 0,
+  width: element.width || 100,
+  height: element.height || 50,
+});
+
+export const getElementCenter = (element: DiagramElement): Point2D => {
+  const bounds = getElementBounds(element);
+  return {
+    x: bounds.x + bounds.width / 2,
+    y: bounds.y + bounds.height / 2,
+  };
+};
+
+const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
+
+const normalizeAllowedSides = (allowedSides?: AttachmentSide[]): AttachmentSide[] => {
+  const uniqueSides = Array.from(new Set(allowedSides || []));
+  return uniqueSides.length > 0 ? uniqueSides : ['top', 'right', 'bottom', 'left'];
+};
+
+export const getNearestAttachmentOnBoundary = (
+  ownerBounds: Bounds2D,
+  point: Point2D,
+  allowedSides?: AttachmentSide[]
+): { side: AttachmentSide; attachmentOffsetRatio: number } => {
+  const candidates = normalizeAllowedSides(allowedSides).map(side => {
+    const distance = side === 'top'
+      ? Math.abs(point.y - ownerBounds.y)
+      : side === 'right'
+        ? Math.abs(point.x - (ownerBounds.x + ownerBounds.width))
+        : side === 'bottom'
+          ? Math.abs(point.y - (ownerBounds.y + ownerBounds.height))
+          : Math.abs(point.x - ownerBounds.x);
+
+    const attachmentOffsetRatio = side === 'top' || side === 'bottom'
+      ? clamp01((point.x - ownerBounds.x) / ownerBounds.width)
+      : clamp01((point.y - ownerBounds.y) / ownerBounds.height);
+
+    return { side, distance, attachmentOffsetRatio };
+  });
+
+  const closest = candidates.reduce((best, candidate) => (
+    candidate.distance < best.distance ? candidate : best
+  ));
+
+  return {
+    side: closest.side,
+    attachmentOffsetRatio: closest.attachmentOffsetRatio,
+  };
+};
+
+export const getAttachedNodePosition = (
+  ownerBounds: Bounds2D,
+  nodeSize: { width: number; height: number },
+  side: AttachmentSide,
+  attachmentOffsetRatio: number
+): Point2D => {
+  const offsetRatio = clamp01(attachmentOffsetRatio);
+
+  if (side === 'top') {
+    return {
+      x: ownerBounds.x + ownerBounds.width * offsetRatio - nodeSize.width / 2,
+      y: ownerBounds.y - nodeSize.height / 2,
+    };
+  }
+
+  if (side === 'right') {
+    return {
+      x: ownerBounds.x + ownerBounds.width - nodeSize.width / 2,
+      y: ownerBounds.y + ownerBounds.height * offsetRatio - nodeSize.height / 2,
+    };
+  }
+
+  if (side === 'bottom') {
+    return {
+      x: ownerBounds.x + ownerBounds.width * offsetRatio - nodeSize.width / 2,
+      y: ownerBounds.y + ownerBounds.height - nodeSize.height / 2,
+    };
+  }
+
+  return {
+    x: ownerBounds.x - nodeSize.width / 2,
+    y: ownerBounds.y + ownerBounds.height * offsetRatio - nodeSize.height / 2,
+  };
+};
+
+export const getEdgeEndpointPair = (
+  sourceElement: DiagramElement,
+  targetElement: DiagramElement,
+  sourceUsesCenter: boolean = false,
+  targetUsesCenter: boolean = false
+): { source: Point2D; target: Point2D } => {
+  const sourceBounds = getElementBounds(sourceElement);
+  const targetBounds = getElementBounds(targetElement);
+  const sourceCenter = getElementCenter(sourceElement);
+  const targetCenter = getElementCenter(targetElement);
+  const angle = Math.atan2(targetCenter.y - sourceCenter.y, targetCenter.x - sourceCenter.x);
+
+  const sourceRadius = Math.min(sourceBounds.width, sourceBounds.height) / 2;
+  const targetRadius = Math.min(targetBounds.width, targetBounds.height) / 2;
+
+  return {
+    source: sourceUsesCenter
+      ? sourceCenter
+      : {
+        x: sourceCenter.x + Math.cos(angle) * sourceRadius,
+        y: sourceCenter.y + Math.sin(angle) * sourceRadius,
+      },
+    target: targetUsesCenter
+      ? targetCenter
+      : {
+        x: targetCenter.x - Math.cos(angle) * targetRadius,
+        y: targetCenter.y - Math.sin(angle) * targetRadius,
+      },
+  };
 };

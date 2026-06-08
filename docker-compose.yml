@@ -33,8 +33,18 @@ services:
       LOG_LEVEL: debug
       JWT_SECRET: ${JWT_SECRET:-replace-this-with-a-strong-secret-of-at-least-32-characters}
       JWT_EXPIRES_IN: 7d
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SEED_DATABASE: ${SEED_DATABASE:-true}
+    command: ["sh", "-c", "npm run prisma:migrate:prod && if [ \"$$SEED_DATABASE\" = \"true\" ]; then npm run prisma:seed; fi && npm start"]
     ports:
       - "3002:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3001/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   frontend:
     build:
@@ -43,9 +53,16 @@ services:
     container_name: modeling-tool-frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "3000:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
 
 volumes:
   db_data:

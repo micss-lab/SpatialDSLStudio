@@ -30,11 +30,16 @@ A full-stack model-driven engineering platform for designing domain-specific lan
 You can:
 
 - Define metamodels (classes, attributes, references, constraints)
+- Import and export common EMF Ecore metamodels and XMI instance models
 - Create models that conform to those metamodels
-- Visualize and edit diagrams in 2D and 3D
+- Define Sirius-style viewpoints and diagram representation descriptions
+- Project models into 2D and 3D views
+- Define metaclass-level fallback notation and representation-specific notation overrides
 - Define transformation rules (LHS/RHS/NAC)
 - Build code generation projects with templates
 - Manage access with roles and resource sharing
+
+SpatialDSL Studio is Sirius-inspired, not currently file-compatible with Sirius Desktop projects. Ecore/XMI semantic interchange is supported with limits; Sirius `.odesign` and `.aird` import/export are not implemented yet. See [Sirius Desktop Compatibility](docs/reference/sirius-compatibility.md).
 
 ## Multi-Layer Architecture
 
@@ -44,7 +49,7 @@ The tool follows a four-layer architecture:
 - Meta-Metamodel Level (M3): Core language definition. Metamodels must conform to meta-metamodels
 - Metamodel Level (M2): Domain-specific languages defined as instances of the meta-metamodel
 - Model Level (M1): Concrete models conforming to their metamodels
-- Visualization Level (M1): 2D and 3D representations of models
+- View Level (M1): 2D and 3D projections of model content
 - Code Generation Level (M0): Auto code generation from the designed models(Template-based)
 
 ## Tech Stack
@@ -69,6 +74,8 @@ The tool follows a four-layer architecture:
 ```bash
 docker compose up --build
 ```
+
+The Docker backend applies Prisma migrations before it starts. Development Docker also runs the seed script by default; set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the root `.env` if you want that seed to create or promote an admin account.
 
 Then open:
 
@@ -109,7 +116,8 @@ For complete setup requirements (database, env vars, migrations), see the gettin
 
 - [Metamodels](docs/user-guide/metamodels.md)
 - [Models](docs/user-guide/models.md)
-- [Diagrams (2D and 3D)](docs/user-guide/diagrams.md)
+- [Views (2D and 3D)](docs/user-guide/diagrams.md)
+- [Viewpoints and Representation Descriptions](docs/user-guide/viewpoints.md)
 - [Transformations](docs/user-guide/transformations.md)
 - [Code Generation](docs/user-guide/code-generation.md)
 - [Roles and Sharing](docs/user-guide/roles-and-sharing.md)
@@ -119,3 +127,4 @@ For complete setup requirements (database, env vars, migrations), see the gettin
 - [API Reference](docs/reference/api.md)
 - [Data Model](docs/reference/data-model.md)
 - [Architecture](docs/reference/architecture.md)
+- [Sirius Desktop Compatibility](docs/reference/sirius-compatibility.md)

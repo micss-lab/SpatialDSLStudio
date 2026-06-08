@@ -1,6 +1,7 @@
 import { 
   Model, 
   ModelElement, 
+  ModelElementPresentation,
   ValidationResult,
   OCLValidationIssue
 } from '../../models/types';
@@ -63,6 +64,8 @@ class ModelService {
       const model = this.getModelById(changedModelId);
       if (model) {
         modelApiSyncService.syncModelToAPI(model);
+        window.dispatchEvent(new CustomEvent('model:changed', { detail: { modelId: changedModelId } }));
+        window.dispatchEvent(new Event('storage'));
       }
     }
   }
@@ -85,6 +88,36 @@ class ModelService {
       this.saveToStorage();
       modelApiSyncService.saveModelToAPI(model);
     });
+  }
+
+  importModel(modelData: Model): Model {
+    if (!modelData.id || !modelData.name || !Array.isArray(modelData.elements)) {
+      throw new Error('Invalid model format');
+    }
+
+    const metamodelId = modelData.conformsTo || modelData.metamodelId;
+    if (!metamodelId) {
+      throw new Error('Imported model is missing conformsTo/metamodelId');
+    }
+
+    const importedModel: Model = {
+      ...modelData,
+      metamodelId,
+      conformsTo: metamodelId,
+      elements: modelData.elements || [],
+      connections: modelData.connections || []
+    };
+
+    const models = modelCrudService.getModelsRef();
+    const existingIndex = models.findIndex(model => model.id === importedModel.id);
+    if (existingIndex >= 0) {
+      models[existingIndex] = importedModel;
+    } else {
+      models.push(importedModel);
+    }
+
+    this.saveToStorage(importedModel.id);
+    return importedModel;
   }
 
   updateModel(modelId: string, updatedModel: Partial<Model>): Model | undefined {
@@ -170,6 +203,22 @@ class ModelService {
       model,
       elementId,
       position,
+      (id) => this.saveToStorage(id)
+    );
+  }
+
+  updateModelElementPresentation(
+    modelId: string,
+    elementId: string,
+    presentation: ModelElementPresentation
+  ): boolean {
+    const model = this.getModelById(modelId);
+    if (!model) return false;
+
+    return modelElementCrudService.updateModelElementPresentation(
+      model,
+      elementId,
+      presentation,
       (id) => this.saveToStorage(id)
     );
   }

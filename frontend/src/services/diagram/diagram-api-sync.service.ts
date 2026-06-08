@@ -1,4 +1,4 @@
-import { Diagram } from '../../models/types';
+import { Diagram, ModelElement, ModelElementPresentation } from '../../models/types';
 import { apiClient, API_ENDPOINTS } from '../core';
 
 /**
@@ -29,7 +29,10 @@ export class DiagramApiSyncService {
       id: diagram.id,
       name: diagram.name,
       modelId: diagram.modelId,
+      viewpointId: diagram.viewpointId,
+      representationDescriptionId: diagram.representationDescriptionId,
       elements: diagram.elements,
+      includedElementIds: diagram.includedElementIds || [],
       gridSettings: diagram.gridSettings,
     };
 
@@ -48,8 +51,13 @@ export class DiagramApiSyncService {
             `${API_ENDPOINTS.DIAGRAMS}/${diagram.id}`,
             {
               name: diagram.name,
+              viewpointId: diagram.viewpointId,
+              representationDescriptionId: diagram.representationDescriptionId,
               elements: diagram.elements,
+              includedElementIds: diagram.includedElementIds || [],
               gridSettings: diagram.gridSettings,
+              schemaVersion: diagram.schemaVersion || 2,
+              migrationWarnings: diagram.migrationWarnings || [],
             }
           );
         } else {
@@ -86,8 +94,13 @@ export class DiagramApiSyncService {
       id: diagram.id,
       name: diagram.name,
       modelId: diagram.modelId,
+      viewpointId: diagram.viewpointId,
+      representationDescriptionId: diagram.representationDescriptionId,
       elements: diagram.elements,
+      includedElementIds: diagram.includedElementIds || [],
       gridSettings: diagram.gridSettings,
+      schemaVersion: diagram.schemaVersion || 2,
+      migrationWarnings: diagram.migrationWarnings || [],
     };
 
     const savePromise = (async () => {
@@ -109,6 +122,37 @@ export class DiagramApiSyncService {
    */
   updateDiagramInAPI(diagram: Diagram): void {
     this.syncDiagramToAPI(diagram);
+  }
+
+  async createModelElementInView(
+    diagramId: string,
+    metaClassId: string,
+    presentation?: ModelElementPresentation,
+    style?: Record<string, any>
+  ): Promise<{ diagram: Diagram; modelElement: ModelElement }> {
+    const result = await apiClient.post<{ diagram: Diagram; modelElement: ModelElement }>(
+      `${API_ENDPOINTS.DIAGRAMS}/${diagramId}/model-elements/create`,
+      {
+        metaClassId,
+        ...(presentation ? { presentation } : {}),
+        ...(style ? { style } : {}),
+      }
+    );
+    this.syncedToDb.add(result.diagram.id);
+    return result;
+  }
+
+  async updateModelElementPresentation(
+    diagramId: string,
+    modelElementId: string,
+    presentation: ModelElementPresentation
+  ): Promise<Diagram> {
+    const diagram = await apiClient.put<Diagram>(
+      `${API_ENDPOINTS.DIAGRAMS}/${diagramId}/model-elements/${modelElementId}/presentation`,
+      presentation
+    );
+    this.syncedToDb.add(diagram.id);
+    return diagram;
   }
 
   /**

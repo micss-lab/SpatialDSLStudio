@@ -53,6 +53,7 @@ export const usePlaybackControls = ({
         timerRef.current = null;
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, executionSpeed, currentStepIndex, executionSteps]);
 
   const startPlayback = useCallback(() => {

@@ -119,7 +119,7 @@ export const ClassNode: React.FC<ClassNodeProps> = ({
               />
             )}
             <Text
-              text={`${attr.name}: ${attr.type}${attr.required ? ' *' : ''}`}
+              text={`${attr.name}: ${typeof attr.type === 'object' ? 'enum' : attr.type}${attr.required ? ' *' : ''}`}
               x={10}
               y={headerHeight + padding + index * attributeHeight}
               fontSize={12}

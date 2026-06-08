@@ -1,16 +1,7 @@
-import { 
-  Model, 
-  ModelElement, 
-  Metamodel, 
-  MetaClass, 
-  ValidationResult, 
-  ValidationIssue 
-} from '../../models/types';
+import { Model, ModelElement, Metamodel, MetaClass, ValidationResult } from '../../models/types';
 import { TestCase, TestValue } from './testing-types';
 import { modelService } from '../model';
 import { metamodelService } from '../metamodel';
-import { oclService } from '../constraint';
-import { jsService } from '../constraint';
 
 // Clone a model to run tests on without affecting the original
 interface TestContext {

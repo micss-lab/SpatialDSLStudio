@@ -2,22 +2,12 @@ import { DiagramElement, Model } from '../../models/types';
 import * as THREE from 'three';
 import { fileStorageService } from '../core';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { metamodelService } from '../metamodel';
+import { concreteSyntaxResolver, defaultResolvedAppearance2D } from './concrete-syntax.resolver';
 
 // Default appearance settings
 export const defaultAppearance = {
-  type: 'rectangle',
-  shape: 'rectangle',
-  color: '#4287f5', 
-  fillColor: '#4287f5',
-  strokeColor: 'black',
-  strokeWidth: 1,
-  fontSize: 12,
-  fontFamily: 'Arial',
-  fontColor: 'black',
-  // 3D specific properties
-      widthMm: 500, // Default length in mm (Z-axis)
-    heightMm: 800, // Default width in mm (X-axis)
-  depthMm: 200
+  ...defaultResolvedAppearance2D
 };
 
 // Cache for loaded resources to prevent flickering and redundant loading
@@ -48,44 +38,8 @@ class AppearanceService {
    * @returns The parsed appearance settings with defaults applied
    */
   getAppearanceSettings(element: DiagramElement, model?: Model | null) {
-    // Try to parse the appearance from the element
-    if (element.style.appearance) {
-      try {
-        const parsedAppearance = JSON.parse(element.style.appearance);
-        // Ensure shape property is set, default to type if missing
-        if (!parsedAppearance.shape && parsedAppearance.type) {
-          parsedAppearance.shape = parsedAppearance.type;
-        }
-        console.log('[Appearance] Direct appearance found for element:', element.id, 'shape:', parsedAppearance.shape);
-        return { ...defaultAppearance, ...parsedAppearance };
-      } catch (e) {
-        console.error('Error parsing appearance JSON:', e);
-      }
-    }
-    
-    // Check if this element is linked to a model element
-    if (element.style.linkedModelElementId && model) {
-      const linkedElement = model.elements.find(e => e.id === element.style.linkedModelElementId);
-      if (linkedElement && linkedElement.style.appearance) {
-        try {
-          const parsedAppearance = JSON.parse(linkedElement.style.appearance);
-          // Ensure shape property is set, default to type if missing
-          if (!parsedAppearance.shape && parsedAppearance.type) {
-            parsedAppearance.shape = parsedAppearance.type;
-          }
-          console.log('[Appearance] Linked appearance found for element:', element.id, 'modelElementId:', element.modelElementId, 'shape:', parsedAppearance.shape);
-          return { ...defaultAppearance, ...parsedAppearance };
-        } catch (e) {
-          console.error('Error parsing linked element appearance JSON:', e);
-        }
-      } else {
-        console.warn('[Appearance] Linked model element not found or has no appearance:', element.style.linkedModelElementId);
-      }
-    }
-    
-    // If we get here, no valid appearance was found, so return defaults
-    console.log('[Appearance] Using default appearance for element:', element.id, 'modelElementId:', element.modelElementId);
-    return { ...defaultAppearance };
+    const metamodel = model ? metamodelService.getMetamodelById(model.conformsTo || model.metamodelId) : undefined;
+    return concreteSyntaxResolver.resolveDiagramElementAppearance(element, model, metamodel);
   }
 
   /**
@@ -153,7 +107,12 @@ class AppearanceService {
       '7065b3fd-5399-48db-9494-7a9101e5d2da': `${publicUrl}/models/conveyor_1.glb`,        // Conveyor
       'e6484299-0c36-40f3-b5c9-0558eede369d': `${publicUrl}/models/charging_station.glb`,  // Idle Location
       '5570868f-e935-4a1e-acc5-dcdac65ca6f9': `${publicUrl}/models/conveyor_2.glb`,        // Output Location
-      '145adc45-dd1b-4fb8-8416-e1cfc70afef0': `${publicUrl}/models/pathway_area.glb`       // Pathway Area
+      '145adc45-dd1b-4fb8-8416-e1cfc70afef0': `${publicUrl}/models/pathway_area.glb`,      // Pathway Area
+      '10000000-0000-4000-8000-000000000102': `${publicUrl}/models/mobile_robot.glb`,      // SmartWarehouse MobileRobot
+      '10000000-0000-4000-8000-000000000103': `${publicUrl}/models/conveyor_1.glb`,        // SmartWarehouse Conveyor
+      '10000000-0000-4000-8000-000000000104': `${publicUrl}/models/conveyor_2.glb`,        // SmartWarehouse OutputLocation
+      '10000000-0000-4000-8000-000000000105': `${publicUrl}/models/charging_station.glb`,  // SmartWarehouse ChargingStation
+      '10000000-0000-4000-8000-000000000106': `${publicUrl}/models/pathway_area.glb`       // SmartWarehouse PathwayArea
     };
     
     const path = bundledModels[metaClassId] || null;
@@ -434,7 +393,7 @@ class AppearanceService {
    */
   hasCustomModel(element: DiagramElement, model?: Model | null): boolean {
     const appearance = this.getAppearanceSettings(element, model);
-    return appearance.shape === 'custom-3d-model' && (appearance.modelUrl || appearance.modelSrc || appearance.modelFileId);
+    return appearance.shape === 'custom-3d-model' && Boolean(appearance.modelUrl || appearance.modelSrc || appearance.modelFileId);
   }
 
   /**

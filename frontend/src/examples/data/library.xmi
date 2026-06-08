@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<library:Library xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:library="http://example.org/library"
+    name="City Library">
+  <books title="Hamlet" pages="200" genre="FICTION" author="//@persons.0"/>
+  <books title="Poetics" pages="120" genre="NONFICTION" author="//@persons.1"/>
+  <persons name="William Shakespeare" books="//@books.0"/>
+  <persons name="Aristotle" books="//@books.1"/>
+</library:Library>

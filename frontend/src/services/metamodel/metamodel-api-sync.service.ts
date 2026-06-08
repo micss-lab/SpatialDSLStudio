@@ -22,6 +22,7 @@ export function syncMetamodelToAPI(
     eClass: metamodel.eClass,
     conformsTo: metamodel.conformsTo,
     classes: metamodel.classes,
+    enums: metamodel.enums || [],
     constraints: metamodel.constraints,
   };
 
@@ -86,6 +87,7 @@ export function saveMetamodelToAPI(
     eClass: metamodel.eClass,
     conformsTo: metamodel.conformsTo,
     classes: metamodel.classes,
+    enums: metamodel.enums || [],
     constraints: metamodel.constraints,
   };
 

@@ -27,6 +27,7 @@ const mockMetamodelRow = {
   prefix: 'tm',
   eClass: 'pkg-uuid-1',
   classes: [],
+  enums: [],
   constraints: [],
   conformsToId: 'pkg-uuid-1',
   userId: 'user-uuid-1',

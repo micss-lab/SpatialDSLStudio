@@ -3,6 +3,7 @@ import { ApiError } from '../middleware';
 import { 
   Model, 
   ModelElement, 
+  ModelElementPresentation,
   ModelConnection,
   CreateModelRequest,
   UpdateModelRequest,
@@ -179,7 +180,7 @@ class ModelService {
     }
 
     const access = await sharingService.checkAccess('MODEL', modelId, userId);
-    
+
     if (!access.hasAccess) {
       throw new ApiError(404, 'Model not found');
     }
@@ -221,7 +222,7 @@ class ModelService {
     }
 
     const access = await sharingService.checkAccess('MODEL', modelId, userId);
-    
+
     if (!access.hasAccess) {
       throw new ApiError(404, 'Model not found');
     }
@@ -246,6 +247,65 @@ class ModelService {
     }
 
     elements[elementIndex] = { ...elements[elementIndex], ...updates };
+
+    const updated = await prisma.model.update({
+      where: { id: modelId },
+      data: { elements: elements as any },
+    });
+
+    return this.mapToModel(updated);
+  }
+
+  /**
+   * Update canonical presentation data for a model element.
+   */
+  async updateElementPresentation(
+    modelId: string,
+    elementId: string,
+    presentation: ModelElementPresentation,
+    userId: string,
+    userRole: UserRole
+  ): Promise<Model> {
+    if (!canPerformOperation(userRole, 'model', 'editInstance')) {
+      throw new ApiError(403, 'Your role does not allow editing instances');
+    }
+
+    const access = await sharingService.checkAccess('MODEL', modelId, userId);
+    if (!access.hasAccess) {
+      throw new ApiError(404, 'Model not found');
+    }
+
+    if (!access.isOwner && access.permission !== 'EDITOR') {
+      throw new ApiError(403, 'You do not have permission to modify this model');
+    }
+
+    const model = await prisma.model.findFirst({
+      where: { id: modelId },
+    });
+
+    if (!model) {
+      throw new ApiError(404, 'Model not found');
+    }
+
+    const elements = (model.elements as unknown as ModelElement[]) || [];
+    const elementIndex = elements.findIndex(e => e.id === elementId);
+
+    if (elementIndex === -1) {
+      throw new ApiError(404, 'Element not found in model');
+    }
+
+    elements[elementIndex] = {
+      ...elements[elementIndex],
+      presentation: {
+        ...(elements[elementIndex].presentation || {}),
+        ...presentation,
+        position2D: presentation.position2D || elements[elementIndex].presentation?.position2D,
+        position3D: presentation.position3D || elements[elementIndex].presentation?.position3D,
+        size2D: presentation.size2D || elements[elementIndex].presentation?.size2D,
+        size3D: presentation.size3D || elements[elementIndex].presentation?.size3D,
+        appearance: presentation.appearance || elements[elementIndex].presentation?.appearance,
+      },
+    };
 
     const updated = await prisma.model.update({
       where: { id: modelId },

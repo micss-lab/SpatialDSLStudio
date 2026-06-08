@@ -8,7 +8,7 @@ import { Diagram, Metamodel, Model } from '../../../models/types';
  * Props for the main CodeGenerator component
  */
 export interface CodeGeneratorProps {
-  diagramId?: string; // Make diagramId optional
+  modelId?: string;
 }
 
 /**

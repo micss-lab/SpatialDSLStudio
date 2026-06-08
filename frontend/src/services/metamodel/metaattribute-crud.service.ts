@@ -1,4 +1,4 @@
-import { Metamodel, MetaAttribute, EPackage } from '../../models/types';
+import { Metamodel, MetaAttribute, MetaAttributeType, EPackage } from '../../models/types';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -18,7 +18,7 @@ export function addMetaAttribute(
   metamodel: Metamodel,
   classId: string,
   name: string,
-  type: 'string' | 'number' | 'boolean' | 'date',
+  type: MetaAttributeType,
   defaultValue: any | undefined,
   required: boolean | undefined,
   many: boolean,

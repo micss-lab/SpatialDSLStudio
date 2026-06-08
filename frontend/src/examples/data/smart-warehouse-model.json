@@ -1,0 +1,1004 @@
+{
+  "id": "20000000-0000-4000-8000-000000000100",
+  "name": "WarehouseModel",
+  "metamodelId": "10000000-0000-4000-8000-000000000100",
+  "elements": [
+    {
+      "id": "20000000-0000-4000-8000-000000000001",
+      "modelElementId": "10000000-0000-4000-8000-000000000101",
+      "style": {
+        "name": "WarehouseMAS",
+        "OpcuaServerPort": 4840,
+        "NamespaceURI": "urn:warehouse:mas",
+        "UpdateInterval": 1000
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": -355.24012383264187,
+          "y": 0.11047725930117736
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000009",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 209,
+          "y": 239.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 4142.011,
+          "y": -11901.853
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 8000,
+          "heightMm": 5003.28764721,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645004775_2c7i2r9p3"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000010",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #2",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 359,
+          "y": 237.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": -3575.119,
+          "y": -11821.99
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 7817.82207736,
+          "heightMm": 5022.88767315,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645228674_wh03hojov"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000011",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #3",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 506,
+          "y": 240.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": -9359.314,
+          "y": -6882.734
+        },
+        "rotationZ": 90,
+        "size3D": {
+          "widthMm": 15317.1712797,
+          "heightMm": 4895.59627925,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645238929_1zddy86vx"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000012",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #4",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 653,
+          "y": 244.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 4140.941,
+          "y": -16221.492
+        },
+        "rotationZ": 90,
+        "size3D": {
+          "widthMm": 4007.50971724,
+          "heightMm": 4298.32332311,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645037406_qzjtp881g"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000006",
+      "modelElementId": "10000000-0000-4000-8000-000000000104",
+      "style": {
+        "name": "Output Location",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 60,
+          "y": 241.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 32090.567,
+          "y": 577
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 6000,
+          "heightMm": 3000,
+          "depthMm": 3000
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645206134_n2w4vbvld"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000007",
+      "modelElementId": "10000000-0000-4000-8000-000000000105",
+      "style": {
+        "name": "Idle Location",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 61,
+          "y": 109.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 3897.20166951,
+          "y": 18420.7445771
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 2000,
+          "heightMm": 2000,
+          "depthMm": 6000
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764644852003_r2krw7xes"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000004",
+      "modelElementId": "10000000-0000-4000-8000-000000000103",
+      "style": {
+        "name": "Conveyor",
+        "InitialPositions": "",
+        "Produced": false
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 354,
+          "y": 104.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": -22140.676,
+          "y": -9669.243
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 6000,
+          "heightMm": 2000,
+          "depthMm": 3000
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764644882576_bmcz1n952"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000002",
+      "modelElementId": "10000000-0000-4000-8000-000000000102",
+      "style": {
+        "name": "Mobile Robot Resource",
+        "InitialPositions": "",
+        "Priority": 1,
+        "LowBatteryThreshold": 1,
+        "ChargeRate": 10,
+        "MaxSpeed": "1200.0",
+        "CollisionThreshold": "2800.0",
+        "AvoidanceOffset": "1500.0",
+        "SafeDistance": "1000.0",
+        "Location": "",
+        "Target": "",
+        "BatteryLevel": 100,
+        "HasProduct": false
+      },
+      "references": {
+        "assignedStation": "20000000-0000-4000-8000-000000000007"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 626,
+          "y": 109.29999923706055
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 4527.32751114,
+          "y": 16706.0891961
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 3000,
+          "heightMm": 3000,
+          "depthMm": 4000
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764644586553_toe1d3n0e"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000005",
+      "modelElementId": "10000000-0000-4000-8000-000000000103",
+      "style": {
+        "name": "Conveyor #2",
+        "InitialPositions": "",
+        "Produced": false
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 488,
+          "y": 106.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": -21906.9869673,
+          "y": 10129.7838605
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 6000,
+          "heightMm": 2000,
+          "depthMm": 3000
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645178849_gs01gcbvs"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000003",
+      "modelElementId": "10000000-0000-4000-8000-000000000102",
+      "style": {
+        "name": "Mobile Robot Resource #2",
+        "InitialPositions": "",
+        "Priority": 2,
+        "LowBatteryThreshold": 1,
+        "ChargeRate": 10,
+        "MaxSpeed": "1200.0",
+        "CollisionThreshold": "2800.0",
+        "AvoidanceOffset": "1500.0",
+        "SafeDistance": "1000.0",
+        "Location": "",
+        "Target": "",
+        "BatteryLevel": 100,
+        "HasProduct": false
+      },
+      "references": {
+        "assignedStation": "20000000-0000-4000-8000-000000000008"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 763,
+          "y": 112.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 3804.86905984,
+          "y": -15858.3726788
+        },
+        "rotationZ": 180,
+        "size3D": {
+          "widthMm": 3000,
+          "heightMm": 3000,
+          "depthMm": 4000
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764644026466_qoswxvy9i"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000008",
+      "modelElementId": "10000000-0000-4000-8000-000000000105",
+      "style": {
+        "name": "Idle Location #2",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 207,
+          "y": 107.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 3673.28218994,
+          "y": -18004.326837
+        },
+        "rotationZ": 180,
+        "size3D": {
+          "widthMm": 2000,
+          "heightMm": 2000,
+          "depthMm": 6000
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764644862698_tv6grx99b"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000013",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #5",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 793,
+          "y": 243.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": -2288.116,
+          "y": 935.992
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 10373.8809737,
+          "heightMm": 5474.01050959,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645251653_ykm47oc75"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000014",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #6",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 62,
+          "y": 376.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 12026.251,
+          "y": -11843.178
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 8351.18363324,
+          "heightMm": 5197.11837046,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645259250_mfpfe1e6a"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000015",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #7",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 208,
+          "y": 372.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": -3638.816,
+          "y": 13340.438
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 8000,
+          "heightMm": 4298.32332311,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645271194_f68dv0akf"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000016",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #8",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 358,
+          "y": 376.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 9159.431,
+          "y": 1303.905
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 13199.2476892,
+          "heightMm": 5474.01050959,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645280137_0lxjzcinb"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000017",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #9",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 506,
+          "y": 375.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": -16903.329,
+          "y": -9517.167
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 11452.3087336,
+          "heightMm": 4298.32332311,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645291054_o7s0th2m7"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000018",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #10",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 650,
+          "y": 374.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": -9628.315,
+          "y": 8067.253
+        },
+        "rotationZ": 90,
+        "size3D": {
+          "widthMm": 15307.055632,
+          "heightMm": 5082.55617776,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645303849_srlnfgguq"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000019",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #11",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 791,
+          "y": 375.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": -17472.264,
+          "y": 10847.35
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 11753.8667325,
+          "heightMm": 5255.62654295,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645316584_zqvf92r3c"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000020",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #12",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 68,
+          "y": 496.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 18105.147,
+          "y": 10840.556
+        },
+        "rotationZ": 90,
+        "size3D": {
+          "widthMm": 9627.03108478,
+          "heightMm": 4989.85391508,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645325223_j081pw5c5"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000021",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #13",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 212,
+          "y": 492.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 28357.021,
+          "y": 392.098
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 16132.8686258,
+          "heightMm": 5626.47427146,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645335754_tid7e37bk"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000022",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #14",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 361,
+          "y": 492.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 12069.708,
+          "y": 13326.669
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 8000,
+          "heightMm": 4543.99435415,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645344887_lqjrvw0zj"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000023",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #15",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 503,
+          "y": 494.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 18213.197,
+          "y": 1254.04
+        },
+        "rotationZ": 90,
+        "size3D": {
+          "widthMm": 10373.8809737,
+          "heightMm": 5474.01050959,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645353656_q3nfimue5"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000024",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #16",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 648,
+          "y": 497.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 18157.116,
+          "y": -9138.552
+        },
+        "rotationZ": 90,
+        "size3D": {
+          "widthMm": 10880.8218604,
+          "heightMm": 5216.51825945,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645362585_h9ehrdhyk"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000025",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #17",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 777,
+          "y": 492.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 4222.269,
+          "y": 13445.531
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 8000,
+          "heightMm": 4298.32332311,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645375025_7p16onsp9"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000026",
+      "modelElementId": "10000000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "Pathway Area #18",
+        "InitialPositions": ""
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 63,
+          "y": 609.5
+        },
+        "size2D": {
+          "width": 120,
+          "height": 80
+        },
+        "position3D": {
+          "x": 4194.029,
+          "y": 17401.215
+        },
+        "rotationZ": 90,
+        "size3D": {
+          "widthMm": 4007.50971724,
+          "heightMm": 4298.32332311,
+          "depthMm": 200
+        },
+        "appearance": {
+          "type": "custom-3d-model",
+          "shape": "custom-3d-model",
+          "color": "#ffffff",
+          "fillColor": "#ffffff",
+          "strokeColor": "black",
+          "strokeWidth": 1,
+          "modelFileId": "model_1764645384071_lqrcu9nnd"
+        }
+      }
+    }
+  ],
+  "conformsTo": "10000000-0000-4000-8000-000000000100",
+  "connections": []
+}

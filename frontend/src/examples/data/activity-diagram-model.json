@@ -1,0 +1,429 @@
+{
+  "id": "a2200000-0000-4000-8000-000000000001",
+  "name": "OrderProcessingActivity",
+  "metamodelId": "a1100000-0000-4000-8000-000000000001",
+  "conformsTo": "a1100000-0000-4000-8000-000000000001",
+  "elements": [
+    {
+      "id": "a2200000-0000-4000-8000-000000000001",
+      "modelElementId": "a1100000-0000-4000-8000-000000000101",
+      "style": {
+        "name": "OrderProcessing",
+        "description": "Receive a customer order, fulfil it if in stock, otherwise notify the customer."
+      },
+      "references": {
+        "containsNodes": [
+          "a2200000-0000-4000-8000-000000000010",
+          "a2200000-0000-4000-8000-000000000020",
+          "a2200000-0000-4000-8000-000000000030",
+          "a2200000-0000-4000-8000-000000000040",
+          "a2200000-0000-4000-8000-000000000050",
+          "a2200000-0000-4000-8000-000000000060",
+          "a2200000-0000-4000-8000-000000000070",
+          "a2200000-0000-4000-8000-000000000080",
+          "a2200000-0000-4000-8000-000000000090",
+          "a2200000-0000-4000-8000-0000000000a0",
+          "a2200000-0000-4000-8000-0000000000b0",
+          "a2200000-0000-4000-8000-0000000000c0",
+          "a2200000-0000-4000-8000-0000000000d0"
+        ]
+      },
+      "presentation": {
+        "position2D": { "x": 20, "y": 20 },
+        "size2D": { "width": 220, "height": 60 },
+        "appearance": {
+          "type": "rectangle",
+          "shape": "rectangle",
+          "fillColor": "#37474F",
+          "strokeColor": "#263238",
+          "fontColor": "#ffffff"
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000010",
+      "modelElementId": "a1100000-0000-4000-8000-000000000103",
+      "style": { "name": "Start" },
+      "references": { "flowsTo": [] },
+      "presentation": {
+        "position2D": { "x": 50, "y": 205 },
+        "size2D": { "width": 30, "height": 30 },
+        "appearance": {
+          "type": "circle",
+          "shape": "circle",
+          "fillColor": "#000000",
+          "strokeColor": "#000000",
+          "strokeWidth": 1
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000020",
+      "modelElementId": "a1100000-0000-4000-8000-000000000105",
+      "style": {
+        "name": "Receive Order",
+        "description": "Capture order details from the customer.",
+        "isLocallyReentrant": false
+      },
+      "references": { "flowsTo": [] },
+      "presentation": {
+        "position2D": { "x": 130, "y": 190 },
+        "size2D": { "width": 140, "height": 60 },
+        "appearance": {
+          "type": "rectangle",
+          "shape": "rectangle",
+          "fillColor": "#BBDEFB",
+          "strokeColor": "#1976D2",
+          "fontColor": "#0D47A1"
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000030",
+      "modelElementId": "a1100000-0000-4000-8000-000000000106",
+      "style": { "name": "In Stock?" },
+      "references": { "flowsTo": [] },
+      "presentation": {
+        "position2D": { "x": 330, "y": 190 },
+        "size2D": { "width": 140, "height": 60 },
+        "appearance": {
+          "type": "rectangle",
+          "shape": "rectangle",
+          "fillColor": "#FFE082",
+          "strokeColor": "#FFA000",
+          "fontColor": "#5D4037"
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000040",
+      "modelElementId": "a1100000-0000-4000-8000-000000000105",
+      "style": {
+        "name": "Process Payment",
+        "description": "Charge the customer's payment method.",
+        "isLocallyReentrant": false
+      },
+      "references": { "flowsTo": [] },
+      "presentation": {
+        "position2D": { "x": 530, "y": 90 },
+        "size2D": { "width": 140, "height": 60 },
+        "appearance": {
+          "type": "rectangle",
+          "shape": "rectangle",
+          "fillColor": "#BBDEFB",
+          "strokeColor": "#1976D2",
+          "fontColor": "#0D47A1"
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000050",
+      "modelElementId": "a1100000-0000-4000-8000-000000000105",
+      "style": {
+        "name": "Notify Customer",
+        "description": "Inform the customer the item is out of stock.",
+        "isLocallyReentrant": false
+      },
+      "references": { "flowsTo": [] },
+      "presentation": {
+        "position2D": { "x": 530, "y": 290 },
+        "size2D": { "width": 140, "height": 60 },
+        "appearance": {
+          "type": "rectangle",
+          "shape": "rectangle",
+          "fillColor": "#FFCDD2",
+          "strokeColor": "#C62828",
+          "fontColor": "#B71C1C"
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000060",
+      "modelElementId": "a1100000-0000-4000-8000-000000000108",
+      "style": { "name": "Fork" },
+      "references": { "flowsTo": [] },
+      "presentation": {
+        "position2D": { "x": 730, "y": 110 },
+        "size2D": { "width": 130, "height": 16 },
+        "appearance": {
+          "type": "rectangle",
+          "shape": "rectangle",
+          "fillColor": "#000000",
+          "strokeColor": "#000000",
+          "fontColor": "#ffffff"
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000070",
+      "modelElementId": "a1100000-0000-4000-8000-000000000105",
+      "style": {
+        "name": "Pack Order",
+        "description": "Pick the items and prepare the shipment box.",
+        "isLocallyReentrant": false
+      },
+      "references": { "flowsTo": [] },
+      "presentation": {
+        "position2D": { "x": 900, "y": 35 },
+        "size2D": { "width": 140, "height": 60 },
+        "appearance": {
+          "type": "rectangle",
+          "shape": "rectangle",
+          "fillColor": "#BBDEFB",
+          "strokeColor": "#1976D2",
+          "fontColor": "#0D47A1"
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000080",
+      "modelElementId": "a1100000-0000-4000-8000-000000000105",
+      "style": {
+        "name": "Send Invoice",
+        "description": "Email the invoice PDF to the customer.",
+        "isLocallyReentrant": false
+      },
+      "references": { "flowsTo": [] },
+      "presentation": {
+        "position2D": { "x": 900, "y": 165 },
+        "size2D": { "width": 140, "height": 60 },
+        "appearance": {
+          "type": "rectangle",
+          "shape": "rectangle",
+          "fillColor": "#BBDEFB",
+          "strokeColor": "#1976D2",
+          "fontColor": "#0D47A1"
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000090",
+      "modelElementId": "a1100000-0000-4000-8000-000000000109",
+      "style": { "name": "Join" },
+      "references": { "flowsTo": [] },
+      "presentation": {
+        "position2D": { "x": 1090, "y": 110 },
+        "size2D": { "width": 130, "height": 16 },
+        "appearance": {
+          "type": "rectangle",
+          "shape": "rectangle",
+          "fillColor": "#000000",
+          "strokeColor": "#000000",
+          "fontColor": "#ffffff"
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-0000000000a0",
+      "modelElementId": "a1100000-0000-4000-8000-000000000105",
+      "style": {
+        "name": "Ship Order",
+        "description": "Hand the parcel to the courier.",
+        "isLocallyReentrant": false
+      },
+      "references": { "flowsTo": [] },
+      "presentation": {
+        "position2D": { "x": 1260, "y": 90 },
+        "size2D": { "width": 140, "height": 60 },
+        "appearance": {
+          "type": "rectangle",
+          "shape": "rectangle",
+          "fillColor": "#BBDEFB",
+          "strokeColor": "#1976D2",
+          "fontColor": "#0D47A1"
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-0000000000b0",
+      "modelElementId": "a1100000-0000-4000-8000-000000000104",
+      "style": { "name": "End" },
+      "references": { "flowsTo": [] },
+      "presentation": {
+        "position2D": { "x": 1460, "y": 205 },
+        "size2D": { "width": 30, "height": 30 },
+        "appearance": {
+          "type": "circle",
+          "shape": "circle",
+          "fillColor": "#ffffff",
+          "strokeColor": "#000000",
+          "strokeWidth": 4
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-0000000000c0",
+      "modelElementId": "a1100000-0000-4000-8000-000000000111",
+      "style": { "name": "paymentInput" },
+      "references": {
+        "flowsTo": [],
+        "objectFlow": [],
+        "owner": "a2200000-0000-4000-8000-000000000040"
+      },
+      "presentation": {
+        "attachedToElementId": "a2200000-0000-4000-8000-000000000040",
+        "attachmentSide": "left",
+        "attachmentOffsetRatio": 0.5,
+        "size2D": { "width": 16, "height": 16 },
+        "appearance": {
+          "type": "square",
+          "shape": "square",
+          "fillColor": "#FFF8E1",
+          "strokeColor": "#F57F17",
+          "strokeWidth": 2
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-0000000000d0",
+      "modelElementId": "a1100000-0000-4000-8000-000000000112",
+      "style": { "name": "paymentOutput" },
+      "references": {
+        "flowsTo": [],
+        "objectFlow": [],
+        "owner": "a2200000-0000-4000-8000-000000000040"
+      },
+      "presentation": {
+        "attachedToElementId": "a2200000-0000-4000-8000-000000000040",
+        "attachmentSide": "right",
+        "attachmentOffsetRatio": 0.5,
+        "size2D": { "width": 16, "height": 16 },
+        "appearance": {
+          "type": "square",
+          "shape": "square",
+          "fillColor": "#E8F5E9",
+          "strokeColor": "#2E7D32",
+          "strokeWidth": 2
+        }
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "a2200000-0000-4000-8000-000000000201",
+      "sourceId": "a2200000-0000-4000-8000-000000000010",
+      "targetId": "a2200000-0000-4000-8000-000000000020",
+      "referenceId": "a1100000-0000-4000-8000-000000002201",
+      "referenceName": "flowsTo",
+      "type": "flowsTo",
+      "attributes": {}
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000202",
+      "sourceId": "a2200000-0000-4000-8000-000000000020",
+      "targetId": "a2200000-0000-4000-8000-000000000030",
+      "referenceId": "a1100000-0000-4000-8000-000000002201",
+      "referenceName": "flowsTo",
+      "type": "flowsTo",
+      "attributes": {}
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000203",
+      "sourceId": "a2200000-0000-4000-8000-000000000030",
+      "targetId": "a2200000-0000-4000-8000-000000000040",
+      "referenceId": "a1100000-0000-4000-8000-000000002201",
+      "referenceName": "[in stock]",
+      "type": "flowsTo",
+      "attributes": { "guard": "in stock" }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000204",
+      "sourceId": "a2200000-0000-4000-8000-000000000030",
+      "targetId": "a2200000-0000-4000-8000-000000000050",
+      "referenceId": "a1100000-0000-4000-8000-000000002201",
+      "referenceName": "[out of stock]",
+      "type": "flowsTo",
+      "attributes": { "guard": "out of stock" }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000205",
+      "sourceId": "a2200000-0000-4000-8000-000000000040",
+      "targetId": "a2200000-0000-4000-8000-000000000060",
+      "referenceId": "a1100000-0000-4000-8000-000000002201",
+      "referenceName": "flowsTo",
+      "type": "flowsTo",
+      "attributes": {}
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000206",
+      "sourceId": "a2200000-0000-4000-8000-000000000060",
+      "targetId": "a2200000-0000-4000-8000-000000000070",
+      "referenceId": "a1100000-0000-4000-8000-000000002201",
+      "referenceName": "flowsTo",
+      "type": "flowsTo",
+      "attributes": {}
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000207",
+      "sourceId": "a2200000-0000-4000-8000-000000000060",
+      "targetId": "a2200000-0000-4000-8000-000000000080",
+      "referenceId": "a1100000-0000-4000-8000-000000002201",
+      "referenceName": "flowsTo",
+      "type": "flowsTo",
+      "attributes": {}
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000208",
+      "sourceId": "a2200000-0000-4000-8000-000000000070",
+      "targetId": "a2200000-0000-4000-8000-000000000090",
+      "referenceId": "a1100000-0000-4000-8000-000000002201",
+      "referenceName": "flowsTo",
+      "type": "flowsTo",
+      "attributes": {}
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000209",
+      "sourceId": "a2200000-0000-4000-8000-000000000080",
+      "targetId": "a2200000-0000-4000-8000-000000000090",
+      "referenceId": "a1100000-0000-4000-8000-000000002201",
+      "referenceName": "flowsTo",
+      "type": "flowsTo",
+      "attributes": {}
+    },
+    {
+      "id": "a2200000-0000-4000-8000-00000000020a",
+      "sourceId": "a2200000-0000-4000-8000-000000000090",
+      "targetId": "a2200000-0000-4000-8000-0000000000a0",
+      "referenceId": "a1100000-0000-4000-8000-000000002201",
+      "referenceName": "flowsTo",
+      "type": "flowsTo",
+      "attributes": {}
+    },
+    {
+      "id": "a2200000-0000-4000-8000-00000000020b",
+      "sourceId": "a2200000-0000-4000-8000-0000000000a0",
+      "targetId": "a2200000-0000-4000-8000-0000000000b0",
+      "referenceId": "a1100000-0000-4000-8000-000000002201",
+      "referenceName": "flowsTo",
+      "type": "flowsTo",
+      "attributes": {}
+    },
+    {
+      "id": "a2200000-0000-4000-8000-00000000020c",
+      "sourceId": "a2200000-0000-4000-8000-000000000050",
+      "targetId": "a2200000-0000-4000-8000-0000000000b0",
+      "referenceId": "a1100000-0000-4000-8000-000000002201",
+      "referenceName": "flowsTo",
+      "type": "flowsTo",
+      "attributes": {}
+    },
+    {
+      "id": "a2200000-0000-4000-8000-00000000020d",
+      "sourceId": "a2200000-0000-4000-8000-000000000020",
+      "targetId": "a2200000-0000-4000-8000-0000000000c0",
+      "referenceId": "a1100000-0000-4000-8000-000000002202",
+      "referenceName": "objectFlow",
+      "type": "objectFlow",
+      "attributes": {}
+    },
+    {
+      "id": "a2200000-0000-4000-8000-00000000020e",
+      "sourceId": "a2200000-0000-4000-8000-0000000000d0",
+      "targetId": "a2200000-0000-4000-8000-000000000070",
+      "referenceId": "a1100000-0000-4000-8000-000000002202",
+      "referenceName": "objectFlow",
+      "type": "objectFlow",
+      "attributes": {}
+    }
+  ]
+}

@@ -1,9 +1,4 @@
-import { 
-  Model, 
-  Metamodel, 
-  OCLConstraint,
-  MetaClass
-} from '../../../models/types';
+import { Metamodel, OCLConstraint } from '../../../models/types';
 import { OclEngine } from '@stekoe/ocl.js';
 
 /**
