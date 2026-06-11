@@ -109,7 +109,7 @@ export const useRuleExecution = (): UseRuleExecutionReturn => {
             setStatusMessage(`Applied ${stepResults.length} rule(s). Use Play to continue applying rules.`);
             setStatusType('success');
           } else {
-            setStatusMessage('No rules could be applied to this diagram.');
+            setStatusMessage('No rules could be applied to this view.');
             setStatusType('warning');
           }
         }

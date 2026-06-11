@@ -9,6 +9,7 @@
       {
         "id": "40000000-0000-4000-8000-000000000201",
         "name": "Warehouse Floor Plan",
+        "description": "Full operational diagram showing all warehouse resources and layout areas in one view.",
         "viewpointId": "40000000-0000-4000-8000-000000000101",
         "kind": "diagram",
         "visibleMetaClassIds": [
@@ -66,7 +67,8 @@
                 "widthMm": 900,
                 "heightMm": 650,
                 "depthMm": 900
-              }
+              },
+              "modelUrl": "/models/mobile_robot.glb"
             }
           },
           "10000000-0000-4000-8000-000000000103": {
@@ -87,7 +89,8 @@
                 "widthMm": 2400,
                 "heightMm": 400,
                 "depthMm": 900
-              }
+              },
+              "modelUrl": "/models/conveyor_1.glb"
             }
           },
           "10000000-0000-4000-8000-000000000104": {
@@ -108,7 +111,8 @@
                 "widthMm": 1200,
                 "heightMm": 900,
                 "depthMm": 1200
-              }
+              },
+              "modelUrl": "/models/conveyor_2.glb"
             }
           },
           "10000000-0000-4000-8000-000000000105": {
@@ -123,14 +127,14 @@
               }
             },
             "three_d": {
-              "modelFileId": "model_1764644586553_toe1d3n0e",
               "fallbackShape": "box",
               "fallbackColor": "#06b6d4",
               "defaultSizeMm": {
                 "widthMm": 3000,
                 "heightMm": 3000,
                 "depthMm": 4000
-              }
+              },
+              "modelUrl": "/models/charging_station.glb"
             }
           },
           "10000000-0000-4000-8000-000000000106": {
@@ -151,7 +155,8 @@
                 "widthMm": 2600,
                 "heightMm": 80,
                 "depthMm": 900
-              }
+              },
+              "modelUrl": "/models/pathway_area.glb"
             }
           }
         },
@@ -277,6 +282,7 @@
       {
         "id": "40000000-0000-4000-8000-000000000202",
         "name": "Fleet and Charging",
+        "description": "Focused diagram for mobile robots, charging stations, and robot-to-station assignment.",
         "viewpointId": "40000000-0000-4000-8000-000000000101",
         "kind": "diagram",
         "visibleMetaClassIds": [
@@ -306,7 +312,8 @@
                 "widthMm": 900,
                 "heightMm": 650,
                 "depthMm": 900
-              }
+              },
+              "modelUrl": "/models/mobile_robot.glb"
             }
           },
           "10000000-0000-4000-8000-000000000105": {
@@ -321,14 +328,14 @@
               }
             },
             "three_d": {
-              "modelFileId": "model_1764644586553_toe1d3n0e",
               "fallbackShape": "box",
               "fallbackColor": "#06b6d4",
               "defaultSizeMm": {
                 "widthMm": 3000,
                 "heightMm": 3000,
                 "depthMm": 4000
-              }
+              },
+              "modelUrl": "/models/charging_station.glb"
             }
           }
         },
@@ -385,6 +392,7 @@
       {
         "id": "40000000-0000-4000-8000-000000000203",
         "name": "Material Flow",
+        "description": "Flow-oriented diagram for conveyors, output locations, and pathway areas involved in product movement.",
         "viewpointId": "40000000-0000-4000-8000-000000000101",
         "kind": "diagram",
         "visibleMetaClassIds": [
@@ -416,7 +424,8 @@
                 "widthMm": 2600,
                 "heightMm": 420,
                 "depthMm": 900
-              }
+              },
+              "modelUrl": "/models/conveyor_1.glb"
             }
           },
           "10000000-0000-4000-8000-000000000104": {
@@ -437,7 +446,8 @@
                 "widthMm": 1200,
                 "heightMm": 900,
                 "depthMm": 1200
-              }
+              },
+              "modelUrl": "/models/conveyor_2.glb"
             }
           },
           "10000000-0000-4000-8000-000000000106": {
@@ -458,7 +468,8 @@
                 "widthMm": 3200,
                 "heightMm": 80,
                 "depthMm": 900
-              }
+              },
+              "modelUrl": "/models/pathway_area.glb"
             }
           }
         },
@@ -549,6 +560,305 @@
           },
           {
             "id": "tool-flow-pathway-area",
+            "name": "Pathway Area",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000106"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "40000000-0000-4000-8000-000000000102",
+    "name": "Warehouse Diagnostics",
+    "description": "Engineering and monitoring perspectives for analyzing automation assets, infrastructure coverage, and runtime readiness.",
+    "metamodelId": "10000000-0000-4000-8000-000000000100",
+    "isDefault": false,
+    "representationDescriptions": [
+      {
+        "id": "40000000-0000-4000-8000-000000000204",
+        "name": "Automation Health Map",
+        "description": "Diagnostics diagram for checking robots, conveyors, charging stations, and charge assignment readiness.",
+        "viewpointId": "40000000-0000-4000-8000-000000000102",
+        "kind": "diagram",
+        "visibleMetaClassIds": [
+          "10000000-0000-4000-8000-000000000102",
+          "10000000-0000-4000-8000-000000000103",
+          "10000000-0000-4000-8000-000000000105"
+        ],
+        "creatableMetaClassIds": [
+          "10000000-0000-4000-8000-000000000102",
+          "10000000-0000-4000-8000-000000000103",
+          "10000000-0000-4000-8000-000000000105"
+        ],
+        "concreteSyntaxByMetaClassId": {
+          "10000000-0000-4000-8000-000000000102": {
+            "two_d": {
+              "shape": "circle",
+              "fillColor": "#dcfce7",
+              "strokeColor": "#15803d",
+              "strokeWidth": 3,
+              "defaultSize": {
+                "width": 76,
+                "height": 76
+              }
+            },
+            "three_d": {
+              "fallbackShape": "cylinder",
+              "fallbackColor": "#22c55e",
+              "defaultSizeMm": {
+                "widthMm": 900,
+                "heightMm": 650,
+                "depthMm": 900
+              },
+              "modelUrl": "/models/mobile_robot.glb"
+            }
+          },
+          "10000000-0000-4000-8000-000000000103": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#fef9c3",
+              "strokeColor": "#ca8a04",
+              "strokeWidth": 3,
+              "defaultSize": {
+                "width": 170,
+                "height": 52
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#eab308",
+              "defaultSizeMm": {
+                "widthMm": 2600,
+                "heightMm": 420,
+                "depthMm": 900
+              },
+              "modelUrl": "/models/conveyor_1.glb"
+            }
+          },
+          "10000000-0000-4000-8000-000000000105": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#cffafe",
+              "strokeColor": "#0e7490",
+              "strokeWidth": 3,
+              "defaultSize": {
+                "width": 130,
+                "height": 86
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#06b6d4",
+              "defaultSizeMm": {
+                "widthMm": 2200,
+                "heightMm": 1800,
+                "depthMm": 2200
+              },
+              "modelUrl": "/models/charging_station.glb"
+            }
+          }
+        },
+        "concreteSyntaxByReferenceId": {
+          "5a13acab-c46a-45cd-b2b5-e2ee8d9ba029": {
+            "lineColor": "#0f766e",
+            "lineWidth": 3,
+            "lineDash": [
+              2,
+              6
+            ],
+            "arrowHead": "filled",
+            "labelFormat": "charge assignment"
+          }
+        },
+        "edgeMappings": [
+          {
+            "id": "edge-health-charge-assignment",
+            "referenceId": "5a13acab-c46a-45cd-b2b5-e2ee8d9ba029",
+            "referenceName": "assignedStation",
+            "sourceMetaClassIds": [
+              "10000000-0000-4000-8000-000000000102"
+            ],
+            "targetMetaClassIds": [
+              "10000000-0000-4000-8000-000000000105"
+            ],
+            "concreteSyntax": {
+              "lineColor": "#0f766e",
+              "lineWidth": 3,
+              "lineDash": [
+                2,
+                6
+              ],
+              "arrowHead": "filled",
+              "labelFormat": "charge assignment"
+            }
+          }
+        ],
+        "toolDefinitions": [
+          {
+            "id": "tool-health-mobile-robot",
+            "name": "Mobile Robot",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000102"
+          },
+          {
+            "id": "tool-health-conveyor",
+            "name": "Conveyor",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000103"
+          },
+          {
+            "id": "tool-health-charging-station",
+            "name": "Charging Station",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000105"
+          }
+        ],
+        "isDefault": true
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000205",
+        "name": "Infrastructure Coverage",
+        "description": "Engineering diagram for reviewing coverage of warehouse zones, output locations, and pathway infrastructure.",
+        "viewpointId": "40000000-0000-4000-8000-000000000102",
+        "kind": "diagram",
+        "visibleMetaClassIds": [
+          "10000000-0000-4000-8000-000000000101",
+          "10000000-0000-4000-8000-000000000104",
+          "10000000-0000-4000-8000-000000000106"
+        ],
+        "creatableMetaClassIds": [
+          "10000000-0000-4000-8000-000000000104",
+          "10000000-0000-4000-8000-000000000106"
+        ],
+        "concreteSyntaxByMetaClassId": {
+          "10000000-0000-4000-8000-000000000101": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#f8fafc",
+              "strokeColor": "#475569",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 240,
+                "height": 130
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#cbd5e1",
+              "defaultSizeMm": {
+                "widthMm": 11000,
+                "heightMm": 200,
+                "depthMm": 9000
+              }
+            }
+          },
+          "10000000-0000-4000-8000-000000000104": {
+            "two_d": {
+              "shape": "diamond",
+              "fillColor": "#f0fdf4",
+              "strokeColor": "#166534",
+              "strokeWidth": 3,
+              "defaultSize": {
+                "width": 100,
+                "height": 100
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#16a34a",
+              "defaultSizeMm": {
+                "widthMm": 1200,
+                "heightMm": 900,
+                "depthMm": 1200
+              },
+              "modelUrl": "/models/conveyor_2.glb"
+            }
+          },
+          "10000000-0000-4000-8000-000000000106": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#f5f3ff",
+              "strokeColor": "#6d28d9",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 210,
+                "height": 66
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#8b5cf6",
+              "defaultSizeMm": {
+                "widthMm": 3200,
+                "heightMm": 80,
+                "depthMm": 900
+              },
+              "modelUrl": "/models/pathway_area.glb"
+            }
+          }
+        },
+        "concreteSyntaxByReferenceId": {
+          "f7530f99-1b89-4570-8ca6-6894f56521d6": {
+            "lineColor": "#6d28d9",
+            "lineWidth": 2,
+            "lineDash": [
+              6,
+              3
+            ],
+            "arrowHead": "open",
+            "labelFormat": "coverage area"
+          },
+          "9c2b6a3a-7a36-4da1-8720-3e4948cfd021": {
+            "lineColor": "#166534",
+            "lineWidth": 2,
+            "arrowHead": "filled",
+            "labelFormat": "output"
+          }
+        },
+        "edgeMappings": [
+          {
+            "id": "edge-coverage-pathway",
+            "referenceId": "f7530f99-1b89-4570-8ca6-6894f56521d6",
+            "referenceName": "contains",
+            "targetMetaClassIds": [
+              "10000000-0000-4000-8000-000000000106"
+            ],
+            "concreteSyntax": {
+              "lineColor": "#6d28d9",
+              "lineWidth": 2,
+              "lineDash": [
+                6,
+                3
+              ],
+              "arrowHead": "open",
+              "labelFormat": "coverage area"
+            }
+          },
+          {
+            "id": "edge-coverage-output",
+            "referenceId": "9c2b6a3a-7a36-4da1-8720-3e4948cfd021",
+            "referenceName": "contains",
+            "targetMetaClassIds": [
+              "10000000-0000-4000-8000-000000000104"
+            ],
+            "concreteSyntax": {
+              "lineColor": "#166534",
+              "lineWidth": 2,
+              "arrowHead": "filled",
+              "labelFormat": "output"
+            }
+          }
+        ],
+        "toolDefinitions": [
+          {
+            "id": "tool-coverage-output-location",
+            "name": "Output Location",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000104"
+          },
+          {
+            "id": "tool-coverage-pathway-area",
             "name": "Pathway Area",
             "type": "node",
             "metaClassId": "10000000-0000-4000-8000-000000000106"

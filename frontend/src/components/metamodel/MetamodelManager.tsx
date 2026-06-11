@@ -21,6 +21,7 @@ const MetamodelManager: React.FC = () => {
   const [metamodels, setMetamodels] = useState<Metamodel[]>([]);
   const [selectedMetamodel, setSelectedMetamodel] = useState<Metamodel | null>(null);
   const [newMetamodelName, setNewMetamodelName] = useState('');
+  const [newMetamodelDescription, setNewMetamodelDescription] = useState('');
   const [isMetamodelDialogOpen, setIsMetamodelDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [importData, setImportData] = useState('');
@@ -55,8 +56,9 @@ const MetamodelManager: React.FC = () => {
 
   const handleCreateMetamodel = () => {
     if (newMetamodelName.trim()) {
-      metamodelService.createMetamodel(newMetamodelName.trim());
+      metamodelService.createMetamodel(newMetamodelName.trim(), newMetamodelDescription.trim());
       setNewMetamodelName('');
+      setNewMetamodelDescription('');
       setIsMetamodelDialogOpen(false);
       refreshMetamodels();
     }
@@ -216,19 +218,26 @@ const MetamodelManager: React.FC = () => {
                     pr: 0
                   }}
                 >
-                  <Tooltip title={metamodel.name} enterDelay={700}>
-                    <Typography 
-                      sx={{
-                        fontSize: metamodel.name.length > 20 ? '0.875rem' : '1rem',
-                        lineHeight: 1.2,
-                        width: '100%',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      {metamodel.name}
-                    </Typography>
+                  <Tooltip title={metamodel.description ? `${metamodel.name} - ${metamodel.description}` : metamodel.name} enterDelay={700}>
+                    <Box sx={{ minWidth: 0, width: '100%' }}>
+                      <Typography
+                        sx={{
+                          fontSize: metamodel.name.length > 20 ? '0.875rem' : '1rem',
+                          lineHeight: 1.2,
+                          width: '100%',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {metamodel.name}
+                      </Typography>
+                      {metamodel.description && (
+                        <Typography variant="caption" color="text.secondary" noWrap>
+                          {metamodel.description}
+                        </Typography>
+                      )}
+                    </Box>
                   </Tooltip>
                 </ListItemButton>
                 
@@ -302,6 +311,15 @@ const MetamodelManager: React.FC = () => {
             fullWidth
             value={newMetamodelName}
             onChange={(e) => setNewMetamodelName(e.target.value)}
+          />
+          <TextField
+            margin="dense"
+            label="Description"
+            fullWidth
+            multiline
+            minRows={2}
+            value={newMetamodelDescription}
+            onChange={(e) => setNewMetamodelDescription(e.target.value)}
           />
         </DialogContent>
         <DialogActions>

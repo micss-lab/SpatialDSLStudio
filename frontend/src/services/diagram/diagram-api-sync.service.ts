@@ -28,6 +28,7 @@ export class DiagramApiSyncService {
     const saveData = {
       id: diagram.id,
       name: diagram.name,
+      description: diagram.description,
       modelId: diagram.modelId,
       viewpointId: diagram.viewpointId,
       representationDescriptionId: diagram.representationDescriptionId,
@@ -51,6 +52,7 @@ export class DiagramApiSyncService {
             `${API_ENDPOINTS.DIAGRAMS}/${diagram.id}`,
             {
               name: diagram.name,
+              description: diagram.description,
               viewpointId: diagram.viewpointId,
               representationDescriptionId: diagram.representationDescriptionId,
               elements: diagram.elements,
@@ -93,6 +95,7 @@ export class DiagramApiSyncService {
     const saveData = {
       id: diagram.id,
       name: diagram.name,
+      description: diagram.description,
       modelId: diagram.modelId,
       viewpointId: diagram.viewpointId,
       representationDescriptionId: diagram.representationDescriptionId,

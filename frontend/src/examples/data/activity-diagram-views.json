@@ -2,6 +2,7 @@
   {
     "id": "a3300000-0000-4000-8000-000000000001",
     "name": "Order Processing Flow",
+    "description": "Complete order-processing activity view including stock decision, payment, packing, invoice, and shipping.",
     "modelId": "a2200000-0000-4000-8000-000000000001",
     "viewpointId": "a4400000-0000-4000-8000-000000000001",
     "representationDescriptionId": "a4400000-0000-4000-8000-000000000101",
@@ -31,6 +32,7 @@
   {
     "id": "a3300000-0000-4000-8000-000000000002",
     "name": "Happy Path (In Stock)",
+    "description": "Focused view of the in-stock path through payment, packing, invoice, join, and shipment.",
     "modelId": "a2200000-0000-4000-8000-000000000001",
     "viewpointId": "a4400000-0000-4000-8000-000000000001",
     "representationDescriptionId": "a4400000-0000-4000-8000-000000000101",

@@ -547,6 +547,7 @@ class DiagramService {
       data: {
         id: data.id,
         name: data.name,
+        description: data.description,
         modelId: data.modelId,
         viewpointId: resolvedRepresentation.viewpoint.id,
         representationDescriptionId: resolvedRepresentation.representationDescription.id,
@@ -596,6 +597,7 @@ class DiagramService {
       where: { id },
       data: {
         ...(data.name !== undefined && { name: data.name }),
+        ...(data.description !== undefined && { description: data.description }),
         ...(resolvedRepresentation && {
           viewpointId: resolvedRepresentation.viewpoint.id,
           representationDescriptionId: resolvedRepresentation.representationDescription.id,
@@ -1103,6 +1105,7 @@ class DiagramService {
     return {
       id: d.id,
       name: d.name,
+      description: d.description || undefined,
       modelId: d.modelId,
       viewpointId: d.viewpointId || undefined,
       representationDescriptionId: d.representationDescriptionId || undefined,

@@ -38,7 +38,7 @@ export const RuleSelectionDialog: React.FC<RuleSelectionDialogProps> = ({
       maxWidth="sm"
       fullWidth
     >
-      <DialogTitle>Select Rules to Execute on Diagram</DialogTitle>
+      <DialogTitle>Select Rules to Execute on View</DialogTitle>
       <DialogContent>
         {availableRules.length === 0 ? (
           <Alert severity="info" sx={{ mt: 1 }}>

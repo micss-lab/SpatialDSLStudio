@@ -39,18 +39,40 @@ function maskEmail(email: string): string {
   return localPart.slice(0, 2) + '***' + domainPart;
 }
 
-async function sendEmail(to: string, subject: string, html: string): Promise<void> {
-  const maskedTo = maskEmail(to);
+interface EmailEnvelope {
+  to: string | string[];
+  cc?: string[];
+  bcc?: string[];
+}
+
+async function sendEmailMessage(envelope: EmailEnvelope, subject: string, html: string): Promise<void> {
+  const toValues = Array.isArray(envelope.to) ? envelope.to : [envelope.to];
+  const maskedTo = toValues.map(maskEmail).join(', ');
+  const maskedCc = envelope.cc?.map(maskEmail).join(', ');
+  const maskedBccCount = envelope.bcc?.length || 0;
   if (!resend) {
-    console.log(`[Email] Skipped (no API key): "${subject}" to ${maskedTo}`);
+    console.log(
+      `[Email] Skipped (no API key): "${subject}" to ${maskedTo}`
+      + `${maskedCc ? ` cc ${maskedCc}` : ''}`
+      + `${maskedBccCount ? ` bcc ${maskedBccCount} recipient(s)` : ''}`
+    );
     return;
   }
   try {
-    await resend.emails.send({ from, to, subject, html });
-    console.log(`[Email] Sent: "${subject}" to ${maskedTo}`);
+    await resend.emails.send({ from, ...envelope, subject, html });
+    console.log(
+      `[Email] Sent: "${subject}" to ${maskedTo}`
+      + `${maskedCc ? ` cc ${maskedCc}` : ''}`
+      + `${maskedBccCount ? ` bcc ${maskedBccCount} recipient(s)` : ''}`
+    );
   } catch (error) {
     console.error(`[Email] Failed: "${subject}" to ${maskedTo}`, error);
+    throw error;
   }
+}
+
+async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  await sendEmailMessage({ to }, subject, html);
 }
 
 export async function sendWelcomeEmail(email: string): Promise<void> {
@@ -126,4 +148,54 @@ export async function sendRoleRequestReviewedEmail(
     <p>${approved ? 'Your role has been updated. Log in to access your new permissions.' : 'You can submit a new request with additional information if needed.'}</p>
     <p><a href="${appUrl}">${appUrl}</a></p>`
   );
+}
+
+export interface AdminBroadcastEmailResult {
+  batches: number;
+  ccCount: number;
+  bccCount: number;
+}
+
+const BCC_BATCH_SIZE = 45;
+
+export async function sendAdminBroadcastEmail(
+  subject: string,
+  message: string,
+  adminEmails: string[],
+  userEmails: string[]
+): Promise<AdminBroadcastEmailResult> {
+  const uniqueAdminEmails = Array.from(new Set(adminEmails.filter(Boolean)));
+  const uniqueUserEmails = Array.from(new Set(userEmails.filter(Boolean)));
+  const adminEmailSet = new Set(uniqueAdminEmails);
+  const bccEmails = uniqueUserEmails.filter(email => !adminEmailSet.has(email));
+  const batches = Math.max(1, Math.ceil(bccEmails.length / BCC_BATCH_SIZE));
+  const escapedMessage = escapeHtml(message)
+    .split(/\r?\n/)
+    .map(line => line.trim() ? `<p>${line}</p>` : '<br />')
+    .join('');
+
+  const html = `<h2>${escapeHtml(subject)}</h2>
+    ${escapedMessage}
+    <hr />
+    <p>This notification was sent by the SpatialDSL Studio administration team.</p>
+    <p><a href="${appUrl}">${appUrl}</a></p>`;
+
+  for (let batchIndex = 0; batchIndex < batches; batchIndex += 1) {
+    const bcc = bccEmails.slice(batchIndex * BCC_BATCH_SIZE, (batchIndex + 1) * BCC_BATCH_SIZE);
+    await sendEmailMessage(
+      {
+        to: from,
+        ...(batchIndex === 0 && uniqueAdminEmails.length > 0 ? { cc: uniqueAdminEmails } : {}),
+        ...(bcc.length > 0 ? { bcc } : {}),
+      },
+      subject,
+      html
+    );
+  }
+
+  return {
+    batches,
+    ccCount: uniqueAdminEmails.length,
+    bccCount: bccEmails.length,
+  };
 }

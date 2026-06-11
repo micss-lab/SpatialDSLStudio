@@ -1,6 +1,7 @@
 {
   "id": "10000000-0000-4000-8000-000000000100",
   "name": "Smart Warehouse",
+  "description": "Abstract syntax for warehouse automation systems with robots, conveyors, charging stations, output locations, and pathway areas.",
   "eClass": "e7d0d970-9abd-4218-9ef9-9789e7b8862c",
   "uri": "http://www.modeling-tool.com/warehousemm",
   "prefix": "warehousemm",

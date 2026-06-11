@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
 import * as THREE from 'three';
 import { Text, Billboard } from '@react-three/drei';
-import { DiagramElement, MetaClass, Model } from '../../models/types';
+import { DiagramElement, MetaClass, Metamodel, Model, RepresentationDescription, Viewpoint } from '../../models/types';
 import { appearanceService, mmToPixel } from '../../services/diagram';
 import ShapeIndicator3D from './ShapeIndicator3D';
 
@@ -19,6 +19,9 @@ export interface Element3D extends DiagramElement {
 interface Node3DProps {
   element: Element3D;
   model?: Model | null;
+  metamodel?: Metamodel | null;
+  representationDescription?: RepresentationDescription;
+  viewpoint?: Viewpoint;
   onClick: () => void;
   onDragStart?: (event: any) => void;
   selected: boolean;
@@ -34,6 +37,9 @@ interface Node3DProps {
 const Node3D = forwardRef<THREE.Group, Node3DProps>(({
   element,
   model,
+  metamodel,
+  representationDescription,
+  viewpoint,
   onClick,
   onDragStart,
   selected,
@@ -50,8 +56,17 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
   const [modelLoading, setModelLoading] = useState(false);
 
   // Get appearance settings from the shared service
-  const appearance = appearanceService.getAppearanceSettings(element, model);
-  const shapeType = appearance.shape || 'rectangle';
+  const labelAppearance = React.useMemo(
+    () => appearanceService.getAppearanceSettings(element, model),
+    [element, model]
+  );
+  const appearance = React.useMemo(
+    () => appearanceService.get3DAppearanceSettings(element, model, metamodel, representationDescription, viewpoint),
+    [element, metamodel, model, representationDescription, viewpoint]
+  );
+  const shapeType: string = (appearance.modelUrl || (appearance as any).modelSrc || appearance.modelFileId)
+    ? 'custom-3d-model'
+    : (appearance.fallbackShape === 'box' ? 'rectangle' : appearance.fallbackShape || 'rectangle');
   
   // Get dimensions from style first (for persistence) or fallback to direct props
   const widthMm = element.style.widthMm || element.widthMm || appearance.widthMm || 500; // Default length in mm (Z-axis)
@@ -67,7 +82,7 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
       const loadModelData = async () => {
         try {
           setModelLoading(true);
-          const modelData = await appearanceService.getModelData(element, model);
+          const modelData = await appearanceService.getFileData(appearance, 'model', element);
           
           if (modelData) {
             try {
@@ -141,7 +156,7 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
     } else {
       setLoadedModel(null);
     }
-  }, [shapeType, element, model, widthMm, heightMm, depthMm, lowPerformance]);
+  }, [shapeType, element, appearance, widthMm, heightMm, depthMm, lowPerformance]);
 
   // Expose groupRef to parent when this element is selected
   useImperativeHandle(ref, () => groupRef.current as THREE.Group, []);
@@ -373,7 +388,7 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
       >
         <Text
           fontSize={selected ? textSize.nameSize * 1.2 : textSize.nameSize}
-          color={selected ? "#00ff00" : (appearance.fontColor || "#000000")}
+          color={selected ? "#00ff00" : (labelAppearance.fontColor || "#000000")}
           anchorX="center" // Center-align text for consistent appearance on both sides
           anchorY="middle"
           maxWidth={300}
@@ -403,4 +418,4 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
   );
 });
 
-export default Node3D; 
+export default Node3D;

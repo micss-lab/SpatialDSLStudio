@@ -489,7 +489,7 @@ const ModelElementAppearanceSelector: React.FC<ModelElementAppearanceSelectorPro
       </Typography>
       
       <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 2 }}>
-        Choose how this element appears in diagrams. This will be used when diagram elements link to this model element.
+        Choose how this element appears in views. This will be used when view elements link to this model element.
       </Typography>
       
       <Grid container spacing={2}>

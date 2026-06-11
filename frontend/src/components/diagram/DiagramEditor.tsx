@@ -1313,7 +1313,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
   }, []);
 
   if (!diagram || !metamodel) {
-    return <Typography>Loading diagram...</Typography>;
+    return <Typography>Loading view...</Typography>;
   }
 
   return (

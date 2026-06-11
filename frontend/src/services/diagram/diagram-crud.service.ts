@@ -35,11 +35,12 @@ export class DiagramCrudService {
     name: string,
     modelId: string,
     saveCallback: (diagram: Diagram) => void,
-    options: { viewpointId?: string; representationDescriptionId?: string } = {}
+    options: { viewpointId?: string; representationDescriptionId?: string; description?: string } = {}
   ): Diagram {
     const newDiagram: Diagram = {
       id: uuidv4(),
       name,
+      description: options.description,
       modelId,
       viewpointId: options.viewpointId,
       representationDescriptionId: options.representationDescriptionId,

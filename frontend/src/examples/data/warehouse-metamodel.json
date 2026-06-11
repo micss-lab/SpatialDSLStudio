@@ -1,6 +1,7 @@
 {
   "id": "225d08e9-881b-46d3-9dfc-293c0c7800df",
   "name": "WarehouseMM",
+  "description": "Legacy warehouse abstract syntax sample retained for compatibility with earlier examples.",
   "eClass": "e7d0d970-9abd-4218-9ef9-9789e7b8862c",
   "uri": "http://www.modeling-tool.com/warehousemm",
   "prefix": "warehousemm",

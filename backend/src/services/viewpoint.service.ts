@@ -273,6 +273,7 @@ class ViewpointService {
       return {
         id,
         name,
+        ...(typeof candidate.description === 'string' && { description: candidate.description }),
         viewpointId,
         kind: candidate.kind,
         visibleMetaClassIds: this.uniqueStringIds(candidate.visibleMetaClassIds, 'visibleMetaClassIds'),

@@ -52,6 +52,7 @@ describe('SharingService', () => {
       prismaMock.metamodel.findFirst.mockResolvedValue({
         id: 'mm-uuid-1',
         name: 'TestMM',
+        description: null,
         uri: 'http://test',
         prefix: 'test',
         eClass: null,
@@ -74,6 +75,7 @@ describe('SharingService', () => {
       prismaMock.metamodel.findFirst.mockResolvedValue({
         id: 'mm-uuid-1',
         name: 'TestMM',
+        description: null,
         uri: 'http://test',
         prefix: 'test',
         eClass: null,

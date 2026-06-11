@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { MetaClass, MetaReference, Metamodel } from '../../models/types';
 import { metamodelService } from '../../services/metamodel';
+import ColorSwatchField from '../common/ColorSwatchField';
 
 interface MetaClassNotationEditorProps {
   metamodel: Metamodel;
@@ -119,14 +120,11 @@ export const MetaClassNotationEditor: React.FC<MetaClassNotationEditorProps> = (
           Fallback edge notation. Representation descriptions own view notation.
         </Typography>
         <Stack spacing={2}>
-          <TextField
+          <ColorSwatchField
             label="Line color"
-            type="color"
-            size="small"
             value={syntax.lineColor || '#000000'}
             disabled={readOnly}
-            onChange={(event) => updateReferenceNotation('lineColor', event.target.value)}
-            InputLabelProps={{ shrink: true }}
+            onChange={(value) => updateReferenceNotation('lineColor', value)}
           />
           <TextField
             label="Line width"
@@ -181,8 +179,10 @@ export const MetaClassNotationEditor: React.FC<MetaClassNotationEditorProps> = (
             {shapeOptions.map(option => <MenuItem key={option} value={option}>{option}</MenuItem>)}
           </Select>
         </FormControl>
-        <TextField label="Fill" type="color" size="small" value={twoD.fillColor || '#4287f5'} disabled={readOnly} onChange={(event) => updateClassNotation('two_d', 'fillColor', event.target.value)} InputLabelProps={{ shrink: true }} />
-        <TextField label="Stroke" type="color" size="small" value={twoD.strokeColor || '#000000'} disabled={readOnly} onChange={(event) => updateClassNotation('two_d', 'strokeColor', event.target.value)} InputLabelProps={{ shrink: true }} />
+        <Stack direction="row" spacing={1}>
+          <ColorSwatchField label="Fill" value={twoD.fillColor || '#4287f5'} disabled={readOnly} onChange={(value) => updateClassNotation('two_d', 'fillColor', value)} />
+          <ColorSwatchField label="Stroke" value={twoD.strokeColor || '#000000'} disabled={readOnly} onChange={(value) => updateClassNotation('two_d', 'strokeColor', value)} />
+        </Stack>
         <TextField label="Stroke width" type="number" size="small" value={twoD.strokeWidth || 1} disabled={readOnly} onChange={(event) => updateClassNotation('two_d', 'strokeWidth', Number(event.target.value))} />
         <TextField label="Image URL" size="small" value={twoD.imageUrl || ''} disabled={readOnly} onChange={(event) => updateClassNotation('two_d', 'imageUrl', event.target.value || undefined)} />
         <Stack direction="row" spacing={1}>
@@ -203,7 +203,7 @@ export const MetaClassNotationEditor: React.FC<MetaClassNotationEditorProps> = (
             {fallbackShapeOptions.map(option => <MenuItem key={option} value={option}>{option}</MenuItem>)}
           </Select>
         </FormControl>
-        <TextField label="Fallback color" type="color" size="small" value={threeD.fallbackColor || '#4287f5'} disabled={readOnly} onChange={(event) => updateClassNotation('three_d', 'fallbackColor', event.target.value)} InputLabelProps={{ shrink: true }} />
+        <ColorSwatchField label="Fallback color" value={threeD.fallbackColor || '#4287f5'} disabled={readOnly} onChange={(value) => updateClassNotation('three_d', 'fallbackColor', value)} />
         <Stack direction="row" spacing={1}>
           <TextField label="W mm" type="number" size="small" value={threeD.defaultSizeMm?.widthMm || 500} disabled={readOnly} onChange={(event) => updateClassNestedNotation('three_d', 'defaultSizeMm', { widthMm: Number(event.target.value) })} />
           <TextField label="H mm" type="number" size="small" value={threeD.defaultSizeMm?.heightMm || 800} disabled={readOnly} onChange={(event) => updateClassNestedNotation('three_d', 'defaultSizeMm', { heightMm: Number(event.target.value) })} />

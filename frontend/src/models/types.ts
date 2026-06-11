@@ -64,6 +64,7 @@ export interface TransformationRuleMetaModel extends MetaMetaElement {
 export interface MetamodelElement {
   id: string;
   name: string;
+  description?: string;
   eClass: string; // ID of corresponding EClass in meta-metamodel
 }
 
@@ -228,6 +229,7 @@ export interface RepresentationPinMapping {
 export interface RepresentationDescription {
   id: string;
   name: string;
+  description?: string;
   viewpointId: string;
   kind: RepresentationKind;
   visibleMetaClassIds: string[];
@@ -336,6 +338,7 @@ export interface ModelElementPresentation {
 export interface Model {
   id: string;
   name: string;
+  description?: string;
   metamodelId: string;
   elements: ModelElement[];
   connections?: ModelConnection[];
@@ -437,6 +440,7 @@ export interface DiagramElement {
 export interface Diagram {
   id: string;
   name: string;
+  description?: string;
   modelId: string; // References a Model
   viewpointId?: string;
   representationDescriptionId?: string;

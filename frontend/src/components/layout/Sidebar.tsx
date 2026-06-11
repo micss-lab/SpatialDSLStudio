@@ -30,6 +30,7 @@ import InfoIcon from '@mui/icons-material/Info';
 import UpgradeIcon from '@mui/icons-material/Upgrade';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import { AuthUser } from '../../services/core';
 
 const EXPANDED_WIDTH = 264;
@@ -77,6 +78,12 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isAdmin, onLogout, onRoleReques
       path: '/viewpoints',
       icon: <AccountTreeIcon />,
       match: pathname => pathname.startsWith('/viewpoints') || /^\/metamodels\/[^/]+\/viewpoints/.test(pathname),
+    },
+    {
+      label: 'Representations',
+      path: '/representations',
+      icon: <ViewModuleIcon />,
+      match: pathname => pathname.startsWith('/representations'),
     },
     { label: 'Models', path: '/models', icon: <ModelTrainingIcon /> },
     {

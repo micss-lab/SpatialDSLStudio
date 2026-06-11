@@ -110,7 +110,7 @@ class DiagramService {
   createDiagram(
     name: string,
     modelId: string,
-    options: { viewpointId?: string; representationDescriptionId?: string } = {}
+    options: { viewpointId?: string; representationDescriptionId?: string; description?: string } = {}
   ): Diagram {
     return diagramCrudService.createDiagram(name, modelId, (diagram) => {
       this.saveToStorage();

@@ -35,6 +35,7 @@ import BugReportIcon from '@mui/icons-material/BugReport';
 import ShareIcon from '@mui/icons-material/Share';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
 
 import MetamodelManager from './components/metamodel/MetamodelManager';
 import { ViewpointManager } from './components/viewpoints';
@@ -585,6 +586,7 @@ const AuthenticatedApp: React.FC = () => {
               <Route path="/" element={<HomePage />} />
               <Route path="/metamodels" element={<MetamodelEditorPage />} />
               <Route path="/viewpoints" element={<ViewpointsPage />} />
+              <Route path="/representations" element={<RepresentationsPage />} />
               <Route path="/metamodels/:metamodelId/viewpoints" element={<ViewpointManager />} />
               <Route path="/metamodels/:id" element={<MetamodelEditorPage />} />
               <Route path="/models" element={<ModelsPage />} />
@@ -1015,52 +1017,247 @@ const ViewpointsPage: React.FC = () => {
   );
 };
 
+const getRepresentationKindLabel = (kind: string): string => (
+  kind === 'diagram' ? 'Visual view' : kind
+);
+
+const RepresentationsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [metamodels] = useState<Metamodel[]>(metamodelService.getAllMetamodels());
+  const [viewpointsByMetamodelId, setViewpointsByMetamodelId] = useState<Record<string, Viewpoint[]>>(() => {
+    const cached: Record<string, Viewpoint[]> = {};
+    metamodelService.getAllMetamodels().forEach(metamodel => {
+      cached[metamodel.id] = viewpointService.getCachedViewpoints(metamodel.id);
+    });
+    return cached;
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+
+    Promise.all(metamodels.map(async metamodel => {
+      try {
+        const viewpoints = await viewpointService.loadViewpoints(metamodel.id);
+        return { metamodelId: metamodel.id, viewpoints };
+      } catch {
+        return {
+          metamodelId: metamodel.id,
+          viewpoints: viewpointService.getCachedViewpoints(metamodel.id),
+        };
+      }
+    }))
+      .then(results => {
+        if (cancelled) return;
+        const next: Record<string, Viewpoint[]> = {};
+        results.forEach(result => {
+          next[result.metamodelId] = result.viewpoints;
+        });
+        setViewpointsByMetamodelId(next);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [metamodels]);
+
+  const groups = metamodels.map(metamodel => ({
+    metamodel,
+    viewpoints: viewpointsByMetamodelId[metamodel.id] || [],
+    color: getParentGroupColor(metamodel.id),
+  }));
+
+  const totalRepresentations = groups.reduce(
+    (total, group) => total + group.viewpoints.reduce(
+      (viewpointTotal, viewpoint) => viewpointTotal + viewpoint.representationDescriptions.length,
+      0
+    ),
+    0
+  );
+
+  return (
+    <Container sx={{ mt: 4, pb: 4, height: '100%', overflow: 'auto' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <ViewModuleIcon sx={{ fontSize: 36, color: 'primary.main', mr: 1.5 }} />
+        <Box sx={{ flexGrow: 1 }}>
+          <Typography variant="h4">Representation Descriptions</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Visual, table, and tree specifications grouped by their owning viewpoint and metamodel.
+          </Typography>
+        </Box>
+        {isLoading && <CircularProgress size={24} />}
+      </Box>
+
+      {metamodels.length === 0 ? (
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h6" color="textSecondary" gutterBottom>No Metamodels Found</Typography>
+          <Typography color="textSecondary" paragraph>
+            Create a metamodel before defining representation descriptions.
+          </Typography>
+          <Button component={Link} to="/metamodels" variant="outlined">Create Metamodel</Button>
+        </Paper>
+      ) : totalRepresentations === 0 ? (
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h6" color="textSecondary" gutterBottom>No Representation Descriptions Found</Typography>
+          <Typography color="textSecondary" paragraph>
+            Representation descriptions are created inside a metamodel viewpoint.
+          </Typography>
+          <Button component={Link} to="/viewpoints" variant="outlined" startIcon={<AccountTreeIcon />}>
+            Open Viewpoints
+          </Button>
+        </Paper>
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {groups.map(group => {
+            const representationCount = group.viewpoints.reduce(
+              (total, viewpoint) => total + viewpoint.representationDescriptions.length,
+              0
+            );
+            if (representationCount === 0) return null;
+
+            return (
+              <Box key={group.metamodel.id}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    mb: 1.5,
+                    px: 1.5,
+                    py: 1,
+                    borderLeft: '4px solid',
+                    borderLeftColor: group.color,
+                    bgcolor: getParentGroupSurfaceColor(group.metamodel.id),
+                    borderRadius: 1,
+                  }}
+                >
+                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: group.color, flexShrink: 0 }} />
+                  <Typography variant="subtitle2">{group.metamodel.name}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {representationCount} representation{representationCount === 1 ? '' : 's'}
+                  </Typography>
+                </Box>
+
+                <Paper sx={{ overflow: 'hidden' }}>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', md: 'minmax(180px, 1fr) minmax(220px, 1.4fr) 100px 130px 120px 120px' },
+                      px: 2,
+                      py: 1.25,
+                      bgcolor: 'grey.50',
+                      borderBottom: '1px solid',
+                      borderColor: 'divider',
+                      gap: 1,
+                    }}
+                  >
+                    <Typography variant="subtitle2">Viewpoint</Typography>
+                    <Typography variant="subtitle2">Representation</Typography>
+                    <Typography variant="subtitle2">Kind</Typography>
+                    <Typography variant="subtitle2">Visible</Typography>
+                    <Typography variant="subtitle2">Tools</Typography>
+                    <Typography variant="subtitle2">Action</Typography>
+                  </Box>
+
+                  {group.viewpoints.flatMap(viewpoint => (
+                    viewpoint.representationDescriptions.map(description => (
+                      <Box
+                        key={description.id}
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: { xs: '1fr', md: 'minmax(180px, 1fr) minmax(220px, 1.4fr) 100px 130px 120px 120px' },
+                          alignItems: 'center',
+                          px: 2,
+                          py: 1.5,
+                          borderBottom: '1px solid',
+                          borderColor: 'divider',
+                          gap: 1,
+                        }}
+                      >
+                        <Typography variant="body2" noWrap>{viewpoint.name}</Typography>
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography variant="body1" noWrap>
+                            {description.name}{description.isDefault ? ' (Default)' : ''}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" noWrap>
+                            {description.description || description.id}
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>{getRepresentationKindLabel(description.kind)}</Typography>
+                        <Typography variant="body2">{description.visibleMetaClassIds.length} classes</Typography>
+                        <Typography variant="body2">{description.toolDefinitions?.length || 0} tools</Typography>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<AccountTreeIcon />}
+                          onClick={() => navigate(`/metamodels/${group.metamodel.id}/viewpoints`)}
+                        >
+                          Manage
+                        </Button>
+                      </Box>
+                    ))
+                  ))}
+                </Paper>
+              </Box>
+            );
+          })}
+        </Box>
+      )}
+    </Container>
+  );
+};
+
 const HelpPage: React.FC = () => {
   const concepts = [
     {
       term: 'Metamodel',
-      scope: 'Language definition',
-      meaning: 'Defines the metaclasses, attributes, references, and constraints for a domain. Fallback notation may exist only as a compatibility seed.',
+      scope: 'Abstract syntax',
+      meaning: 'Defines the language concepts: metaclasses, attributes, references, inheritance, and constraints. Create this in Metamodels.',
       action: 'Manage Metamodels',
       path: '/metamodels',
     },
     {
       term: 'Viewpoint',
-      scope: 'Perspective for one metamodel',
-      meaning: 'Groups representation descriptions for a metamodel, such as an operations viewpoint or analysis viewpoint.',
+      scope: 'Workbench perspective',
+      meaning: 'Groups representation descriptions for one metamodel around a user role or task, such as operations, diagnostics, or analysis.',
       action: 'Manage Viewpoints',
       path: '/viewpoints',
     },
     {
       term: 'Representation Description',
-      scope: 'View specification',
-      meaning: 'Defines one diagram/table/tree specification: visible metaclasses, creatable metaclasses, mappings, tools, and canonical notation for that representation.',
-      action: 'Open Viewpoints',
-      path: '/viewpoints',
+      scope: 'Concrete syntax',
+      meaning: 'Defines one visual/table/tree specification: visible metaclasses, creatable metaclasses, mappings, tools, and canonical notation for that representation.',
+      action: 'Browse Representations',
+      path: '/representations',
     },
     {
       term: 'Model',
-      scope: 'Semantic data',
-      meaning: 'Stores instances of metaclasses and their attribute/reference values. This is the source data that views project.',
+      scope: 'Language instance',
+      meaning: 'Stores instances of metaclasses and their attribute/reference values. This is the semantic data that views project.',
       action: 'Manage Models',
       path: '/models',
     },
     {
       term: 'View',
       scope: 'Saved projection',
-      meaning: 'A concrete saved diagram/view over a model, using a selected viewpoint and representation description. Layout and membership live here.',
+      meaning: 'A concrete saved view over a model, using a selected viewpoint and representation description. Layout and membership live here.',
       action: 'Manage Views',
       path: '/views',
     },
   ];
 
   const workflow = [
-    { label: 'Define', text: 'Create a metamodel for the domain language.' },
-    { label: 'Specify', text: 'Create viewpoints and representation descriptions for the modeling perspectives users need.' },
+    { label: 'Define', text: 'Create abstract syntax in Metamodels: classes, attributes, references, inheritance, and constraints.' },
+    { label: 'Design', text: 'Use Viewpoints as the language workbench surface for role-specific perspectives.' },
+    { label: 'Specify', text: 'Create concrete syntax in representation descriptions: visible classes, mappings, notation, and tools.' },
     { label: 'Instantiate', text: 'Create models that conform to the metamodel.' },
     { label: 'Project', text: 'Create views from a model, viewpoint, and representation description.' },
     { label: 'Edit', text: 'Edit semantic data in models and view-specific layout/membership in views.' },
-    { label: 'Exchange', text: 'Use Ecore/XMI for semantic assets and Sirius .odesign for the supported viewpoint specification subset.' },
+    { label: 'Exchange', text: 'Use Ecore/XMI for abstract syntax and model data, and Sirius .odesign for the supported viewpoint/representation subset.' },
   ];
 
   return (
@@ -1138,6 +1335,37 @@ const HelpPage: React.FC = () => {
         </Typography>
       </Paper>
 
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>Descriptions</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Use descriptions to explain the intent of metamodels, viewpoints, representation descriptions, models, and views. These descriptions are resource documentation; domain attributes still belong in the metamodel and model data.
+        </Typography>
+      </Paper>
+
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>Language Designer / Workbench</Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+          <Box>
+            <Typography variant="subtitle2">Abstract Syntax</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Create it in Metamodels. This is the language structure: metaclasses, attributes, references, inheritance, and constraints.
+            </Typography>
+          </Box>
+          <Box>
+            <Typography variant="subtitle2">Concrete Syntax</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Create it in representation descriptions. This is the notation, mapping, palette tools, visible classes, and edge styling for a viewpoint.
+            </Typography>
+          </Box>
+          <Box>
+            <Typography variant="subtitle2">Workbench</Typography>
+            <Typography variant="body2" color="text.secondary">
+              The workbench is the user-facing combination of viewpoints, representations, models, and views that lets users create and inspect domain models.
+            </Typography>
+          </Box>
+        </Box>
+      </Paper>
+
       <Paper sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>SpatialDSL and Sirius Terms</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
@@ -1170,6 +1398,7 @@ const DiagramsPage: React.FC = () => {
   const [metamodels, setMetamodels] = useState<Metamodel[]>(metamodelService.getAllMetamodels());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newDiagramName, setNewDiagramName] = useState('');
+  const [newDiagramDescription, setNewDiagramDescription] = useState('');
   const [selectedModelId, setSelectedModelId] = useState('');
   const [availableViewpoints, setAvailableViewpoints] = useState<Viewpoint[]>([]);
   const [selectedViewpointId, setSelectedViewpointId] = useState('');
@@ -1227,6 +1456,7 @@ const DiagramsPage: React.FC = () => {
 
   const resetCreateDialog = () => {
     setNewDiagramName('');
+    setNewDiagramDescription('');
     setSelectedModelId('');
     setAvailableViewpoints([]);
     setSelectedViewpointId('');
@@ -1308,6 +1538,7 @@ const DiagramsPage: React.FC = () => {
   const handleCreateDiagram = () => {
     if (newDiagramName.trim() && selectedModelId) {
       const newDiagram = diagramService.createDiagram(newDiagramName, selectedModelId, {
+        description: newDiagramDescription.trim(),
         ...(selectedViewpointId ? { viewpointId: selectedViewpointId } : {}),
         ...(selectedRepresentationDescriptionId ? { representationDescriptionId: selectedRepresentationDescriptionId } : {}),
       });
@@ -1561,6 +1792,9 @@ const DiagramsPage: React.FC = () => {
                         </Box>
                       </Box>
                       <Typography color="textSecondary" gutterBottom>
+                        {diagram.description || 'No description'}
+                      </Typography>
+                      <Typography color="textSecondary" gutterBottom>
                         Model: {model?.name || 'Unknown'} 
                       </Typography>
                       <Typography color="textSecondary" gutterBottom>
@@ -1570,7 +1804,7 @@ const DiagramsPage: React.FC = () => {
                         Viewpoint: {viewpoint?.name || 'Default'}
                       </Typography>
                       <Typography color="textSecondary" gutterBottom>
-                        Representation: {representationDescription?.name || 'Default Diagram'}
+                        Representation: {representationDescription?.name || 'Default Visual'}
                       </Typography>
                       <Typography color="textSecondary" gutterBottom>
                         {(diagram.includedElementIds?.length || diagram.elements.filter(element => element.type === 'node').length)} Elements
@@ -1625,6 +1859,16 @@ const DiagramsPage: React.FC = () => {
             fullWidth
             value={newDiagramName}
             onChange={(e) => setNewDiagramName(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Description"
+            fullWidth
+            multiline
+            minRows={2}
+            value={newDiagramDescription}
+            onChange={(e) => setNewDiagramDescription(e.target.value)}
             sx={{ mb: 2 }}
           />
           <FormControl fullWidth>
@@ -1682,7 +1926,7 @@ const DiagramsPage: React.FC = () => {
           )}
           {selectedModelId && !isLoadingViewpoints && availableViewpoints.length === 0 && (
             <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
-              No viewpoint is configured for this metamodel. The backend will use or generate the default diagram representation.
+              No viewpoint is configured for this metamodel. The backend will use or generate the default visual representation.
             </Typography>
           )}
         </DialogContent>
@@ -1773,7 +2017,7 @@ const DiagramEditorPage: React.FC = () => {
             {diagram?.name || 'View'}
           </Typography>
           <Typography variant="caption" color="textSecondary" noWrap>
-            {viewpoint?.name || 'Default'} / {representationDescription?.name || 'Default Diagram'}
+            {viewpoint?.name || 'Default'} / {representationDescription?.name || 'Default Visual'}
           </Typography>
         </Box>
         <Button 

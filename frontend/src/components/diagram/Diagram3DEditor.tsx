@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { Diagram, Metamodel, Model, ModelElement } from '../../models/types';
 import { concreteSyntaxResolver, diagramService } from '../../services/diagram';
 import { metamodelService } from '../../services/metamodel';
+import viewpointService from '../../services/viewpoint.service';
 import DiagramPalette, { DiagramPaletteDragItem } from '../palette/DiagramPalette';
 import DiagramElementProperties from './DiagramElementProperties';
 import { modelService } from '../../services/model';
@@ -683,6 +684,11 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
       .map(item => item.element);
   }, [diagram?.elements, elementZIndexes]);
 
+  const viewContext = React.useMemo(
+    () => diagram ? viewpointService.resolveRepresentationDescription(diagram) : {},
+    [diagram]
+  );
+
   // If we have a WebGL error, show fallback UI
   if (webGLError) {
     return (
@@ -967,7 +973,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
   if (!diagram || !metamodel) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Typography variant="h6">Loading diagram...</Typography>
+        <Typography variant="h6">Loading view...</Typography>
       </Box>
     );
   }
@@ -1212,6 +1218,9 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
                       position3D: position3D
                     }}
                     model={model}
+                    metamodel={metamodel}
+                    representationDescription={viewContext.representationDescription}
+                    viewpoint={viewContext.viewpoint}
                     onClick={() => handleElementClick(element as Element3D)}
                     onDragStart={(e) => {
                       if (selectedElement?.id === element.id && !isDragging) {
@@ -1285,7 +1294,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
                 
                 {/* Explanatory note about 3D vs 2D coordinates */}
                 <Typography variant="caption" color="textSecondary" sx={{ mb: 1 }}>
-                  Note: 3D positions are separate from 2D diagram positions. Changes here will not affect the 2D view.
+                  Note: 3D positions are separate from 2D view positions. Changes here will not affect the 2D view.
                 </Typography>
                 
                 {/* Transform Mode Controls */}

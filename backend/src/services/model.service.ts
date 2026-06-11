@@ -112,6 +112,7 @@ class ModelService {
       data: {
         id: data.id,
         name: data.name,
+        description: data.description,
         metamodelId: data.metamodelId,
         elements: (data.elements || []) as any,
         connections: (data.connections || []) as any,
@@ -145,6 +146,7 @@ class ModelService {
       where: { id },
       data: {
         ...(data.name !== undefined && { name: data.name }),
+        ...(data.description !== undefined && { description: data.description }),
         ...(data.elements !== undefined && { elements: data.elements as any }),
         ...(data.connections !== undefined && { connections: data.connections as any }),
       },
@@ -441,6 +443,7 @@ class ModelService {
     return {
       id: m.id,
       name: m.name,
+      description: m.description || undefined,
       metamodelId: m.metamodelId,
       elements: (m.elements as unknown as ModelElement[]) || [],
       connections: (m.connections as unknown as ModelConnection[]) || [],

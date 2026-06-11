@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Alert,
   FormControl,
   InputLabel,
   Select,
@@ -48,12 +49,14 @@ const ModelManager: React.FC = () => {
   const [importData, setImportData] = useState('');
   const [importFileFormat, setImportFileFormat] = useState('');
   const [importFileName, setImportFileName] = useState('');
+  const [importStatus, setImportStatus] = useState('');
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareTarget, setShareTarget] = useState<Model | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
   // Form states
   const [newModelName, setNewModelName] = useState('');
+  const [newModelDescription, setNewModelDescription] = useState('');
   const [selectedMetamodelId, setSelectedMetamodelId] = useState('');
   
   // Load models and metamodels
@@ -82,10 +85,11 @@ const ModelManager: React.FC = () => {
   // Handle creating a new model
   const handleCreateModel = () => {
     if (newModelName.trim() && selectedMetamodelId) {
-      const newModel = modelService.createModel(newModelName, selectedMetamodelId);
+      const newModel = modelService.createModel(newModelName, selectedMetamodelId, newModelDescription.trim());
       setModels([...models, newModel]);
       setSelectedModel(newModel);
       setNewModelName('');
+      setNewModelDescription('');
       setSelectedMetamodelId('');
       setIsCreateDialogOpen(false);
     }
@@ -173,8 +177,9 @@ const ModelManager: React.FC = () => {
     }
   };
 
-  const handleImportModel = () => {
+  const handleImportModel = async () => {
     try {
+      setImportStatus('');
       if (importFileFormat === 'xmi') {
         const result = modelXmiImportService.importModel(importData, importFileName || 'Imported XMI Model');
         if (!result.model) {
@@ -182,7 +187,7 @@ const ModelManager: React.FC = () => {
           return;
         }
 
-        const importedModel = modelService.importModel(result.model);
+        const importedModel = await modelService.importModel(result.model);
         if (result.warnings.length > 0) {
           alert(result.warnings.map(warning => warning.message).join('\n'));
         }
@@ -199,6 +204,7 @@ const ModelManager: React.FC = () => {
           setSelectedModel(refreshedImportedModel);
           navigate(`/models/${refreshedImportedModel.id}`);
         }
+        setImportStatus(`Imported ${importedModel.name}.`);
         return;
       }
 
@@ -217,7 +223,7 @@ const ModelManager: React.FC = () => {
       }
       
       // Import as JSON, preserving the model ID, element IDs, references, and connections.
-      const importedModel = modelService.importModel(modelData);
+      const importedModel = await modelService.importModel(modelData);
       
       setIsImportDialogOpen(false);
       setImportData('');
@@ -233,6 +239,7 @@ const ModelManager: React.FC = () => {
         setSelectedModel(refreshedImportedModel);
         navigate(`/models/${refreshedImportedModel.id}`);
       }
+      setImportStatus(`Imported ${importedModel.name}.`);
       
     } catch (error) {
       console.error('Error importing model:', error);
@@ -252,6 +259,15 @@ const ModelManager: React.FC = () => {
           fullWidth
           value={newModelName}
           onChange={(e) => setNewModelName(e.target.value)}
+        />
+        <TextField
+          margin="dense"
+          label="Description"
+          fullWidth
+          multiline
+          minRows={2}
+          value={newModelDescription}
+          onChange={(e) => setNewModelDescription(e.target.value)}
         />
         <FormControl fullWidth margin="normal">
           <InputLabel>Conforms to Metamodel</InputLabel>
@@ -347,6 +363,11 @@ const ModelManager: React.FC = () => {
           />
         </Box>
       </Box>
+      {importStatus && (
+        <Alert severity="success" sx={{ mb: 1 }} onClose={() => setImportStatus('')}>
+          {importStatus}
+        </Alert>
+      )}
       
       <List sx={{ flexGrow: 1 }}>
         {groupByParent(
@@ -439,7 +460,7 @@ const ModelManager: React.FC = () => {
                           model.name.length > 20 ? theme.typography.body2.fontSize : theme.typography.body1.fontSize
                       }
                     }}
-                    secondary={group.parentName}
+                    secondary={model.description ? `${group.parentName} - ${model.description}` : group.parentName}
                   />
                 </ListItemButton>
               </ListItem>

@@ -112,6 +112,7 @@ class MetamodelService {
       data: {
         id: data.id,
         name: data.name,
+        description: data.description,
         uri: data.uri,
         prefix: data.prefix,
         eClass: data.conformsTo,
@@ -149,6 +150,7 @@ class MetamodelService {
       where: { id },
       data: {
         ...(data.name !== undefined && { name: data.name }),
+        ...(data.description !== undefined && { description: data.description }),
         ...(data.uri !== undefined && { uri: data.uri }),
         ...(data.prefix !== undefined && { prefix: data.prefix }),
         ...(data.classes !== undefined && { classes: data.classes as any }),
@@ -389,6 +391,7 @@ class MetamodelService {
     return {
       id: mm.id,
       name: mm.name,
+      description: mm.description || undefined,
       eClass: mm.eClass || '',
       uri: mm.uri,
       prefix: mm.prefix,

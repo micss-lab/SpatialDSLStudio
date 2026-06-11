@@ -1,6 +1,7 @@
 {
   "id": "a2200000-0000-4000-8000-000000000001",
   "name": "OrderProcessingActivity",
+  "description": "Example activity model for order processing, payment, packing, invoice, and shipping behavior.",
   "metamodelId": "a1100000-0000-4000-8000-000000000001",
   "conformsTo": "a1100000-0000-4000-8000-000000000001",
   "elements": [

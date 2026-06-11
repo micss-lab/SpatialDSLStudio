@@ -22,6 +22,7 @@ import { ApiError } from '../../middleware/errorHandler';
 const mockModelRow = {
   id: 'model-uuid-1',
   name: 'TestModel',
+  description: null,
   metamodelId: 'mm-uuid-1',
   elements: [],
   connections: [],

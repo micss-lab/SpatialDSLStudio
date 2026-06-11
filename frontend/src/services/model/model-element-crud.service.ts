@@ -198,6 +198,10 @@ export class ModelElementCrudService {
       ...(element.presentation || {}),
       position2D: position
     };
+    element.style = {
+      ...(element.style || {}),
+      position
+    };
 
     saveCallback(model.id);
     return true;

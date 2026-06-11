@@ -244,7 +244,7 @@ const TransformationExecutionPanel: React.FC<TransformationExecutionPanelProps> 
           }
         } else {
           setExecutionStatus('Transformation execution failed.');
-          console.error('Transformation execution failed - check that rules match diagram elements');
+          console.error('Transformation execution failed - check that rules match view elements');
         }
       } catch (error) {
         setExecutionStatus(`Error: ${error instanceof Error ? error.message : String(error)}`);

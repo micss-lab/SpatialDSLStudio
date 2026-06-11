@@ -10,6 +10,7 @@
       {
         "id": "a4400000-0000-4000-8000-000000000101",
         "name": "Activity Diagram",
+        "description": "Executable diagram representation for arranging activity nodes, pins, and control or object flows.",
         "viewpointId": "a4400000-0000-4000-8000-000000000001",
         "kind": "diagram",
         "visibleMetaClassIds": [
@@ -106,6 +107,7 @@
       {
         "id": "a4400000-0000-4000-8000-000000000102",
         "name": "Activity Node Inventory",
+        "description": "Tabular representation placeholder for reviewing activity node inventory outside the diagram editor.",
         "viewpointId": "a4400000-0000-4000-8000-000000000001",
         "kind": "table",
         "visibleMetaClassIds": [

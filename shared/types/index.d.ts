@@ -56,6 +56,7 @@ export type Constraint = OCLConstraint | JSConstraint;
 export interface MetamodelElement {
     id: string;
     name: string;
+    description?: string;
     eClass: string;
 }
 export interface MetaClass extends MetamodelElement {
@@ -181,6 +182,7 @@ export interface RepresentationPinMapping {
 export interface RepresentationDescription {
     id: string;
     name: string;
+    description?: string;
     viewpointId: string;
     kind: RepresentationKind;
     visibleMetaClassIds: string[];
@@ -298,6 +300,7 @@ export interface ModelConnection {
 export interface Model {
     id: string;
     name: string;
+    description?: string;
     metamodelId: string;
     elements: ModelElement[];
     connections?: ModelConnection[];
@@ -327,6 +330,7 @@ export interface GridSettings {
 export interface Diagram {
     id: string;
     name: string;
+    description?: string;
     modelId: string;
     viewpointId?: string;
     representationDescriptionId?: string;
@@ -552,6 +556,7 @@ export interface PaginatedResponse<T> {
 }
 export interface CreateMetamodelRequest {
     name: string;
+    description?: string;
     uri: string;
     prefix: string;
     conformsTo: string;
@@ -561,6 +566,7 @@ export interface CreateMetamodelRequest {
 }
 export interface UpdateMetamodelRequest {
     name?: string;
+    description?: string;
     uri?: string;
     prefix?: string;
     classes?: MetaClass[];
@@ -569,6 +575,7 @@ export interface UpdateMetamodelRequest {
 }
 export interface CreateModelRequest {
     name: string;
+    description?: string;
     metamodelId: string;
     conformsTo: string;
     elements?: ModelElement[];
@@ -576,12 +583,14 @@ export interface CreateModelRequest {
 }
 export interface UpdateModelRequest {
     name?: string;
+    description?: string;
     elements?: ModelElement[];
     connections?: ModelConnection[];
 }
 export interface CreateDiagramRequest {
     id?: string;
     name: string;
+    description?: string;
     modelId: string;
     viewpointId?: string;
     representationDescriptionId?: string;
@@ -591,6 +600,7 @@ export interface CreateDiagramRequest {
 }
 export interface UpdateDiagramRequest {
     name?: string;
+    description?: string;
     viewpointId?: string;
     representationDescriptionId?: string;
     elements?: DiagramElement[];

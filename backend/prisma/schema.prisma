@@ -140,6 +140,7 @@ model EPackage {
 model Metamodel {
   id         String   @id @default(uuid())
   name       String
+  description String?
   uri        String
   prefix     String
   eClass     String?  // ID of corresponding EClass in meta-metamodel
@@ -208,6 +209,7 @@ model Viewpoint {
 model Model {
   id           String   @id @default(uuid())
   name         String
+  description  String?
   metamodelId  String   // Duplicate for easy access
   
   // Store model elements as JSONB
@@ -241,6 +243,7 @@ model Model {
 model Diagram {
   id        String   @id @default(uuid())
   name      String
+  description String?
   
   // Foreign key to model
   modelId   String

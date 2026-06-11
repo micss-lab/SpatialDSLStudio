@@ -12,7 +12,7 @@ import { metamodelService } from '../../services/metamodel';
 import ValidationErrorDialog from '../common/ValidationErrorDialog';
 import ModelElementAppearanceSelector from './ModelElementAppearanceSelector';
 import SearchBar from '../common/SearchBar';
-import { getAllAttributes, getMetaClassForElement, calculateElementDimensions } from './utils/elementUtils';
+import { getAllAttributes, getAllReferences, getMetaClassForElement, calculateElementDimensions } from './utils/elementUtils';
 import { findElementAtPosition } from './utils/geometryUtils';
 import { parseBendPoints, calculateReferencePath } from './utils/referenceUtils';
 import { useModelCanvas } from './hooks/useModelCanvas';
@@ -129,6 +129,24 @@ const VisualModelEditor: React.FC<VisualModelEditorProps> = ({ modelId }) => {
       .map(([name, type]) => ({ name, type }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [metamodel]);
+
+  const isReferenceTargetCompatible = React.useCallback((reference: MetaReference, targetMetaClassId: string): boolean => {
+    if (!metamodel) return false;
+    if (reference.target === targetMetaClassId) return true;
+
+    const visited = new Set<string>();
+    const inheritsFromTarget = (classId: string): boolean => {
+      if (visited.has(classId)) return false;
+      visited.add(classId);
+
+      const metaClass = metamodel.classes.find(c => c.id === classId);
+      if (!metaClass?.superTypes?.length) return false;
+      if (metaClass.superTypes.includes(reference.target)) return true;
+      return metaClass.superTypes.some(superTypeId => inheritsFromTarget(superTypeId));
+    };
+
+    return inheritsFromTarget(targetMetaClassId);
+  }, [metamodel]);
   
   // Clear search results and highlights when model changes
   useEffect(() => {
@@ -208,7 +226,7 @@ const VisualModelEditor: React.FC<VisualModelEditorProps> = ({ modelId }) => {
             const targetMetaClass = getMetaClassForElement(targetElement, metamodel);
             const targetMetaClassId = targetMetaClass?.id;
             
-            if (targetMetaClassId && referenceMetaReference.target === targetMetaClassId) {
+            if (targetMetaClassId && isReferenceTargetCompatible(referenceMetaReference, targetMetaClassId)) {
               // Create reference to other element
               createReference(referenceStartElement.id, targetElement.id, referenceMetaReference);
             } else {
@@ -517,7 +535,7 @@ const VisualModelEditor: React.FC<VisualModelEditorProps> = ({ modelId }) => {
         if (refValue === null || refValue === undefined) continue;
         
         // Find the metamodel reference definition
-        const metaReference = sourceMetaClass.references.find(r => r.name === refName);
+        const metaReference = getAllReferences(sourceMetaClass, metamodel).find(r => r.name === refName);
         if (!metaReference) continue;
         
         // Handle both single references and reference arrays
@@ -653,12 +671,8 @@ const VisualModelEditor: React.FC<VisualModelEditorProps> = ({ modelId }) => {
         console.log(`Source: ${sourceMetaClass.name}, Target: ${targetMetaClass.name}`);
         
         // Find all references in the source metaclass that can target the target metaclass
-        const validReferences = sourceMetaClass.references.filter(ref => {
-          const directMatch = ref.target === targetMetaClass.id;
-          const superTypeMatch = targetMetaClass.superTypes && 
-                               targetMetaClass.superTypes.includes(ref.target);
-          return directMatch || superTypeMatch;
-        });
+        const validReferences = getAllReferences(sourceMetaClass, metamodel)
+          .filter(ref => isReferenceTargetCompatible(ref, targetMetaClass.id));
         
         setAvailableReferences(validReferences);
         
@@ -670,7 +684,7 @@ const VisualModelEditor: React.FC<VisualModelEditorProps> = ({ modelId }) => {
         }
       }
     }
-  }, [isReferenceDialogOpen, referenceStartElement, referenceTarget, model, metamodel]);
+  }, [isReferenceDialogOpen, referenceStartElement, referenceTarget, model, metamodel, isReferenceTargetCompatible]);
   
   // Render the Add Element dialog
   const renderAddElementDialog = () => (
@@ -827,7 +841,7 @@ const VisualModelEditor: React.FC<VisualModelEditorProps> = ({ modelId }) => {
               if (metamodel && referenceStartElement) {
                 const sourceMetaClass = metamodel.classes.find(c => c.id === referenceStartElement.modelElementId);
                 if (sourceMetaClass) {
-                  const selectedRef = sourceMetaClass.references.find(r => r.id === e.target.value);
+                  const selectedRef = getAllReferences(sourceMetaClass, metamodel).find(r => r.id === e.target.value);
                   // Set the selected reference as the meta reference to use
                   if (selectedRef) {
                     setReferenceMetaReference(selectedRef);
@@ -859,8 +873,8 @@ const VisualModelEditor: React.FC<VisualModelEditorProps> = ({ modelId }) => {
           const sourceMetaClass = referenceStartElement && metamodel ? 
             metamodel.classes.find(c => c.id === referenceStartElement.modelElementId) : null;
             
-          const selectedRef = sourceMetaClass ?
-            sourceMetaClass.references.find(r => r.id === selectedReferenceId) : null;
+          const selectedRef = sourceMetaClass && metamodel ?
+            getAllReferences(sourceMetaClass, metamodel).find(r => r.id === selectedReferenceId) : null;
             
           if (selectedRef && selectedRef.attributes && selectedRef.attributes.length > 0) {
             return (
@@ -964,7 +978,7 @@ const VisualModelEditor: React.FC<VisualModelEditorProps> = ({ modelId }) => {
                 return;
               }
               
-              const referenceDef = sourceMetaClass.references.find(r => r.id === selectedReferenceId);
+              const referenceDef = getAllReferences(sourceMetaClass, metamodel).find(r => r.id === selectedReferenceId);
               if (!referenceDef) {
                 console.error("Reference definition not found:", selectedReferenceId);
                 return;

@@ -585,7 +585,7 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
           </Select>
         </FormControl>
         <Typography variant="caption" color="textSecondary">
-          Links this diagram element to a model element. The name from the model will be displayed in the diagram.
+          Links this view element to a model element. The name from the model will be displayed in the view.
         </Typography>
       </Box>}
       
@@ -628,14 +628,14 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
         </Box>
       )}
       
-      {/* Only show Diagram Attributes section if not in 3D mode */}
+      {/* Only show view attributes section if not in 3D mode */}
       {!is3D && (
         <>
           <Divider sx={{ my: 2 }} />
           
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
             <Typography variant="subtitle2">
-              Diagram Attributes
+              View Attributes
             </Typography>
             
             <Button

@@ -17,6 +17,7 @@ export function syncMetamodelToAPI(
   const saveData = {
     id: metamodel.id,
     name: metamodel.name,
+    description: metamodel.description,
     uri: metamodel.uri,
     prefix: metamodel.prefix,
     eClass: metamodel.eClass,
@@ -82,6 +83,7 @@ export function saveMetamodelToAPI(
   const saveData = {
     id: metamodel.id,
     name: metamodel.name,
+    description: metamodel.description,
     uri: metamodel.uri,
     prefix: metamodel.prefix,
     eClass: metamodel.eClass,

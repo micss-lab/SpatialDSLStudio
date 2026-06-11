@@ -53,6 +53,8 @@ import { metamodelService } from '../../services/metamodel';
 import { diagramService } from '../../services/diagram';
 import viewpointService from '../../services/viewpoint.service';
 import { siriusInteropService } from '../../services/interoperability';
+import ColorSwatchField from '../common/ColorSwatchField';
+import { fileStorageService } from '../../services/core';
 
 type ViewpointDraft = Pick<Viewpoint, 'name' | 'description' | 'isDefault'>;
 type SiriusFileAction = 'validate' | 'import';
@@ -87,6 +89,7 @@ const emptyRepresentationDraft = (
 ): RepresentationDescription => ({
   id: uuidv4(),
   name: '',
+  description: '',
   viewpointId,
   kind: 'diagram',
   visibleMetaClassIds: metamodel.classes.map(cls => cls.id),
@@ -140,6 +143,10 @@ const getReportSummary = (report: SiriusCompatibilityReport): string => (
   + `${report.warnings.length} warning(s), `
   + `${report.droppedFeatures.length} dropped, `
   + `${report.unresolvedReferences.length} unresolved`
+);
+
+const getRepresentationKindLabel = (kind: string): string => (
+  kind === 'diagram' ? 'visual view' : kind
 );
 
 const mergeConcreteSyntax = (
@@ -199,10 +206,12 @@ const ViewpointManager: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSiriusBusy, setIsSiriusBusy] = useState(false);
   const [siriusStatus, setSiriusStatus] = useState('');
+  const [jsonImportStatus, setJsonImportStatus] = useState('');
   const [siriusReport, setSiriusReport] = useState<SiriusCompatibilityReport | null>(null);
   const [isSiriusReportOpen, setIsSiriusReportOpen] = useState(false);
   const isCreatingViewpointRef = useRef(false);
   const siriusFileInputRef = useRef<HTMLInputElement | null>(null);
+  const jsonFileInputRef = useRef<HTMLInputElement | null>(null);
   const siriusFileActionRef = useRef<SiriusFileAction>('import');
 
   const selectedViewpoint = useMemo(
@@ -299,6 +308,41 @@ const ViewpointManager: React.FC = () => {
     siriusFileInputRef.current?.click();
   };
 
+  const handleOpenJsonFilePicker = () => {
+    if (!canEditMetamodel) return;
+    jsonFileInputRef.current?.click();
+  };
+
+  const handleJsonFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !metamodelId || !canEditMetamodel) return;
+
+    setIsSiriusBusy(true);
+    setJsonImportStatus('');
+    setSiriusStatus('');
+    setSiriusReport(null);
+    setError('');
+
+    try {
+      const content = await file.text();
+      const imported = await viewpointService.importViewpointsJson(content, metamodelId);
+      const nextViewpoints = await viewpointService.loadViewpoints(metamodelId);
+      setViewpoints(nextViewpoints);
+      setSelectedViewpointId(currentId => (
+        imported[0]?.id && nextViewpoints.some(viewpoint => viewpoint.id === imported[0].id)
+          ? imported[0].id
+          : getPreferredViewpointId(nextViewpoints, currentId)
+      ));
+      imported.forEach(viewpoint => dispatchViewpointChanged(viewpoint.id));
+      setJsonImportStatus(`Imported or updated ${imported.length} viewpoint(s) from ${file.name}.`);
+    } catch (error: any) {
+      setError(error.message || 'Failed to import viewpoint JSON');
+    } finally {
+      setIsSiriusBusy(false);
+    }
+  };
+
   const handleSiriusFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -306,6 +350,7 @@ const ViewpointManager: React.FC = () => {
 
     setIsSiriusBusy(true);
     setSiriusStatus('');
+    setJsonImportStatus('');
     setError('');
 
     try {
@@ -580,8 +625,6 @@ const ViewpointManager: React.FC = () => {
             </Button>
           )}
         </Stack>
-        <Divider sx={{ my: 2 }} />
-        <Typography variant="caption" color="text.secondary">Sirius Compatibility</Typography>
         <input
           ref={siriusFileInputRef}
           type="file"
@@ -589,6 +632,35 @@ const ViewpointManager: React.FC = () => {
           accept=".odesign,.xml,.zip,.aird,.ecore,.xmi"
           onChange={handleSiriusFileChange}
         />
+        <Divider sx={{ my: 2 }} />
+        <Typography variant="caption" color="text.secondary">SpatialDSL JSON</Typography>
+        <input
+          ref={jsonFileInputRef}
+          type="file"
+          hidden
+          accept=".json,application/json"
+          onChange={handleJsonFileChange}
+        />
+        <Stack direction="row" spacing={1} sx={{ mt: 1, mb: 1.5, flexWrap: 'wrap', rowGap: 1 }}>
+          {canEditMetamodel && (
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<FileUploadIcon />}
+              disabled={isSiriusBusy}
+              onClick={handleOpenJsonFilePicker}
+            >
+              Import JSON
+            </Button>
+          )}
+        </Stack>
+        {jsonImportStatus && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {jsonImportStatus}
+          </Alert>
+        )}
+        <Divider sx={{ my: 2 }} />
+        <Typography variant="caption" color="text.secondary">Sirius Compatibility</Typography>
         <Stack direction="row" spacing={1} sx={{ mt: 1, mb: 1.5, flexWrap: 'wrap', rowGap: 1 }}>
           <Button
             size="small"
@@ -752,12 +824,17 @@ const ViewpointManager: React.FC = () => {
                     <Box sx={{ minWidth: 0 }}>
                       <Stack direction="row" spacing={1} alignItems="center">
                         <Typography variant="subtitle2" noWrap>{description.name}</Typography>
-                        <Chip size="small" label={description.kind} />
+                        <Chip size="small" label={getRepresentationKindLabel(description.kind)} />
                         {description.isDefault && <Chip size="small" label="Default" />}
                       </Stack>
                       <Typography variant="caption" color="text.secondary">
                         Visible {description.visibleMetaClassIds?.length || 0} / Creatable {description.creatableMetaClassIds?.length || 0} / Notation {getNotationCount(description.concreteSyntaxByMetaClassId) + getNotationCount(description.concreteSyntaxByReferenceId)}
                       </Typography>
+                      {description.description && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                          {description.description}
+                        </Typography>
+                      )}
                     </Box>
                     <Stack direction="row" spacing={1}>
                       <Button size="small" onClick={() => handleEditRepresentation(description)}>
@@ -993,6 +1070,37 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
     });
   };
 
+  const handleClass3DModelUpload = (file?: File) => {
+    if (!file || readOnly) return;
+    if (!file.name.toLowerCase().endsWith('.glb')) {
+      window.alert('Please upload a GLB 3D model file.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      window.alert('3D model file size must be 10MB or less.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async event => {
+      try {
+        const result = event.target?.result as string;
+        const fileId = await fileStorageService.storeFile(result, 'model', file.name);
+        updateClassSyntax({
+          ...classSyntax,
+          three_d: {
+            ...(classSyntax.three_d || {}),
+            modelFileId: fileId,
+            modelUrl: undefined,
+          },
+        });
+      } catch (error: any) {
+        window.alert(error.message || 'Failed to store 3D model file.');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const updateReferenceSyntax = (syntax: ConcreteSyntaxEdge | undefined) => {
     if (!selectedReferenceEntry) return;
     const next = { ...(draft.concreteSyntaxByReferenceId || {}) };
@@ -1017,6 +1125,15 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
       <Box sx={{ display: 'grid', gridTemplateColumns: { md: '360px 1fr' }, gap: 2 }}>
         <Stack spacing={2}>
           <TextField label="Name" size="small" value={draft.name} disabled={readOnly} onChange={event => onChange({ ...draft, name: event.target.value })} />
+          <TextField
+            label="Description"
+            size="small"
+            value={draft.description || ''}
+            disabled={readOnly}
+            multiline
+            minRows={2}
+            onChange={event => onChange({ ...draft, description: event.target.value })}
+          />
           <FormControl size="small">
             <InputLabel>Kind</InputLabel>
             <Select
@@ -1025,7 +1142,7 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
               disabled={readOnly}
               onChange={event => onChange({ ...draft, kind: event.target.value as RepresentationKind })}
             >
-              <MenuItem value="diagram">diagram</MenuItem>
+              <MenuItem value="diagram">visual view</MenuItem>
               <MenuItem value="table" disabled>table (planned)</MenuItem>
               <MenuItem value="tree" disabled>tree (planned)</MenuItem>
             </Select>
@@ -1036,7 +1153,7 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
             onChange={(_, checked) => onChange({ ...draft, isDefault: checked })}
           />
           <Typography variant="caption" color="text.secondary">
-            Diagram is executable now; table and tree are reserved.
+            Visual views are executable now; table and tree are reserved.
           </Typography>
 
           <Divider />
@@ -1092,7 +1209,7 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
         </Stack>
 
         <Stack spacing={2}>
-          {draft.visibleMetaClassIds.length === 0 && <Alert severity="warning">Diagram representation has no visible metaclasses.</Alert>}
+          {draft.visibleMetaClassIds.length === 0 && <Alert severity="warning">Visual representation has no visible metaclasses.</Alert>}
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Typography variant="subtitle1" gutterBottom>Metaclass Notation</Typography>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
@@ -1121,8 +1238,8 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
                   </Select>
                 </FormControl>
                 <Stack direction="row" spacing={1}>
-                  <TextField label="Fill" type="color" size="small" value={classSyntax.two_d?.fillColor || '#4287f5'} disabled={readOnly} onChange={event => updateClass2D('fillColor', event.target.value)} InputLabelProps={{ shrink: true }} />
-                  <TextField label="Stroke" type="color" size="small" value={classSyntax.two_d?.strokeColor || '#000000'} disabled={readOnly} onChange={event => updateClass2D('strokeColor', event.target.value)} InputLabelProps={{ shrink: true }} />
+                  <ColorSwatchField label="Fill" value={classSyntax.two_d?.fillColor || '#4287f5'} disabled={readOnly} onChange={value => updateClass2D('fillColor', value)} />
+                  <ColorSwatchField label="Stroke" value={classSyntax.two_d?.strokeColor || '#000000'} disabled={readOnly} onChange={value => updateClass2D('strokeColor', value)} />
                   <TextField label="Stroke width" type="number" size="small" value={classSyntax.two_d?.strokeWidth || 1} disabled={readOnly} onChange={event => updateClass2D('strokeWidth', Number(event.target.value))} />
                 </Stack>
                 <Stack direction="row" spacing={1}>
@@ -1131,13 +1248,58 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
                 </Stack>
                 <Divider />
                 <Typography variant="subtitle2">3D</Typography>
+                <TextField
+                  label="3D model URL"
+                  size="small"
+                  value={classSyntax.three_d?.modelUrl || ''}
+                  disabled={readOnly}
+                  placeholder="/models/mobile_robot.glb or https://..."
+                  onChange={event => updateClass3D('modelUrl', event.target.value || undefined)}
+                />
+                {!readOnly && (
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Button size="small" variant="outlined" component="label">
+                      Upload GLB
+                      <input
+                        type="file"
+                        hidden
+                        accept=".glb,model/gltf-binary"
+                        onChange={event => {
+                          handleClass3DModelUpload(event.target.files?.[0]);
+                          event.target.value = '';
+                        }}
+                      />
+                    </Button>
+                    {(classSyntax.three_d?.modelFileId || classSyntax.three_d?.modelUrl) && (
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={() => updateClassSyntax({
+                          ...classSyntax,
+                          three_d: {
+                            ...(classSyntax.three_d || {}),
+                            modelFileId: undefined,
+                            modelUrl: undefined,
+                          },
+                        })}
+                      >
+                        Clear model
+                      </Button>
+                    )}
+                    {classSyntax.three_d?.modelFileId && (
+                      <Typography variant="caption" color="text.secondary">
+                        Stored model: {classSyntax.three_d.modelFileId.slice(0, 8)}...
+                      </Typography>
+                    )}
+                  </Stack>
+                )}
                 <FormControl size="small">
                   <InputLabel>Fallback</InputLabel>
                   <Select label="Fallback" value={classSyntax.three_d?.fallbackShape || 'box'} disabled={readOnly} onChange={event => updateClass3D('fallbackShape', event.target.value)}>
                     {fallbackShapeOptions.map(shape => <MenuItem key={shape} value={shape}>{shape}</MenuItem>)}
                   </Select>
                 </FormControl>
-                <TextField label="Fallback color" type="color" size="small" value={classSyntax.three_d?.fallbackColor || '#4287f5'} disabled={readOnly} onChange={event => updateClass3D('fallbackColor', event.target.value)} InputLabelProps={{ shrink: true }} />
+                <ColorSwatchField label="Fallback color" value={classSyntax.three_d?.fallbackColor || '#4287f5'} disabled={readOnly} onChange={value => updateClass3D('fallbackColor', value)} />
                 <Stack direction="row" spacing={1}>
                   <TextField label="W mm" type="number" size="small" value={classSyntax.three_d?.defaultSizeMm?.widthMm || 500} disabled={readOnly} onChange={event => updateClass3DSize('widthMm', Number(event.target.value))} />
                   <TextField label="H mm" type="number" size="small" value={classSyntax.three_d?.defaultSizeMm?.heightMm || 800} disabled={readOnly} onChange={event => updateClass3DSize('heightMm', Number(event.target.value))} />
@@ -1175,7 +1337,7 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
             {selectedReferenceEntry ? (
               <Stack spacing={2}>
                 <Stack direction="row" spacing={1}>
-                  <TextField label="Line" type="color" size="small" value={referenceSyntax.lineColor || '#000000'} disabled={readOnly} onChange={event => updateReferenceSyntax({ ...referenceSyntax, lineColor: event.target.value })} InputLabelProps={{ shrink: true }} />
+                  <ColorSwatchField label="Line" value={referenceSyntax.lineColor || '#000000'} disabled={readOnly} onChange={value => updateReferenceSyntax({ ...referenceSyntax, lineColor: value })} />
                   <TextField label="Width" type="number" size="small" value={referenceSyntax.lineWidth || 2} disabled={readOnly} onChange={event => updateReferenceSyntax({ ...referenceSyntax, lineWidth: Number(event.target.value) })} />
                   <FormControl size="small" sx={{ minWidth: 140 }}>
                     <InputLabel>Arrow</InputLabel>

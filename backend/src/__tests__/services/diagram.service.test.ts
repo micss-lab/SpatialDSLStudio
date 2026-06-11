@@ -23,6 +23,7 @@ import { ApiError } from '../../middleware/errorHandler';
 const mockDiagramRow = {
   id: 'diag-uuid-1',
   name: 'TestDiagram',
+  description: null,
   modelId: 'model-uuid-1',
   viewpointId: null,
   representationDescriptionId: null,
@@ -39,6 +40,7 @@ const mockDiagramRow = {
 const mockModelRow = {
   id: 'model-uuid-1',
   name: 'TestModel',
+  description: null,
   metamodelId: 'metamodel-uuid-1',
   elements: [],
   connections: [],
@@ -51,6 +53,7 @@ const mockModelRow = {
 const mockMetamodelRow = {
   id: 'metamodel-uuid-1',
   name: 'TestMetamodel',
+  description: null,
   uri: 'test',
   prefix: 'test',
   eClass: '',

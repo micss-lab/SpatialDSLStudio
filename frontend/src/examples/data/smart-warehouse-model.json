@@ -1,6 +1,7 @@
 {
   "id": "20000000-0000-4000-8000-000000000100",
   "name": "WarehouseModel",
+  "description": "Example warehouse instance with mobile robots, charging stations, conveyors, output locations, and pathway areas.",
   "metamodelId": "10000000-0000-4000-8000-000000000100",
   "elements": [
     {

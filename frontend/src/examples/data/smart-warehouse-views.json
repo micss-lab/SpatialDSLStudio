@@ -2,6 +2,7 @@
   {
     "id": "30000000-0000-4000-8000-000000000101",
     "name": "Warehouse View",
+    "description": "Complete floor-plan projection over the warehouse model using the operations viewpoint.",
     "modelId": "20000000-0000-4000-8000-000000000100",
     "viewpointId": "40000000-0000-4000-8000-000000000101",
     "representationDescriptionId": "40000000-0000-4000-8000-000000000201",
@@ -44,6 +45,7 @@
   {
     "id": "30000000-0000-4000-8000-000000000102",
     "name": "Fleet and Charging View",
+    "description": "Focused projection for robot fleet status and charging-station relationships.",
     "modelId": "20000000-0000-4000-8000-000000000100",
     "viewpointId": "40000000-0000-4000-8000-000000000101",
     "representationDescriptionId": "40000000-0000-4000-8000-000000000202",
@@ -67,6 +69,7 @@
   {
     "id": "30000000-0000-4000-8000-000000000103",
     "name": "Material Flow View",
+    "description": "Projection for conveyors, output locations, and flow-relevant pathway areas.",
     "modelId": "20000000-0000-4000-8000-000000000100",
     "viewpointId": "40000000-0000-4000-8000-000000000101",
     "representationDescriptionId": "40000000-0000-4000-8000-000000000203",
@@ -95,11 +98,72 @@
   {
     "id": "30000000-0000-4000-8000-000000000104",
     "name": "Pathway Network View",
+    "description": "Projection emphasizing pathway connectivity and navigable warehouse areas.",
     "modelId": "20000000-0000-4000-8000-000000000100",
     "viewpointId": "40000000-0000-4000-8000-000000000101",
     "representationDescriptionId": "40000000-0000-4000-8000-000000000201",
     "elements": [],
     "includedElementIds": [
+      "20000000-0000-4000-8000-000000000009",
+      "20000000-0000-4000-8000-000000000010",
+      "20000000-0000-4000-8000-000000000011",
+      "20000000-0000-4000-8000-000000000012",
+      "20000000-0000-4000-8000-000000000013",
+      "20000000-0000-4000-8000-000000000014",
+      "20000000-0000-4000-8000-000000000015",
+      "20000000-0000-4000-8000-000000000016",
+      "20000000-0000-4000-8000-000000000017",
+      "20000000-0000-4000-8000-000000000018",
+      "20000000-0000-4000-8000-000000000019",
+      "20000000-0000-4000-8000-000000000020",
+      "20000000-0000-4000-8000-000000000021",
+      "20000000-0000-4000-8000-000000000022",
+      "20000000-0000-4000-8000-000000000023",
+      "20000000-0000-4000-8000-000000000024",
+      "20000000-0000-4000-8000-000000000025",
+      "20000000-0000-4000-8000-000000000026"
+    ],
+    "gridSettings": {
+      "sizeX": 45000,
+      "sizeY": 45000
+    },
+    "schemaVersion": 2,
+    "migrationWarnings": []
+  },
+  {
+    "id": "30000000-0000-4000-8000-000000000105",
+    "name": "Automation Health View",
+    "description": "Diagnostics projection for automation assets and charging readiness.",
+    "modelId": "20000000-0000-4000-8000-000000000100",
+    "viewpointId": "40000000-0000-4000-8000-000000000102",
+    "representationDescriptionId": "40000000-0000-4000-8000-000000000204",
+    "elements": [],
+    "includedElementIds": [
+      "20000000-0000-4000-8000-000000000002",
+      "20000000-0000-4000-8000-000000000003",
+      "20000000-0000-4000-8000-000000000004",
+      "20000000-0000-4000-8000-000000000005",
+      "20000000-0000-4000-8000-000000000007",
+      "20000000-0000-4000-8000-000000000008"
+    ],
+    "gridSettings": {
+      "sizeX": 45000,
+      "sizeY": 45000
+    },
+    "schemaVersion": 2,
+    "migrationWarnings": []
+  },
+  {
+    "id": "30000000-0000-4000-8000-000000000106",
+    "name": "Infrastructure Coverage View",
+    "description": "Engineering projection for reviewing pathway and output-location coverage.",
+    "modelId": "20000000-0000-4000-8000-000000000100",
+    "viewpointId": "40000000-0000-4000-8000-000000000102",
+    "representationDescriptionId": "40000000-0000-4000-8000-000000000205",
+    "elements": [],
+    "includedElementIds": [
+      "20000000-0000-4000-8000-000000000001",
+      "20000000-0000-4000-8000-000000000006",
       "20000000-0000-4000-8000-000000000009",
       "20000000-0000-4000-8000-000000000010",
       "20000000-0000-4000-8000-000000000011",

@@ -1,4 +1,10 @@
-import { DiagramElement, Model } from '../../models/types';
+import {
+  DiagramElement,
+  Metamodel,
+  Model,
+  RepresentationDescription,
+  Viewpoint,
+} from '../../models/types';
 import * as THREE from 'three';
 import { fileStorageService } from '../core';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
@@ -42,6 +48,37 @@ class AppearanceService {
     return concreteSyntaxResolver.resolveDiagramElementAppearance(element, model, metamodel);
   }
 
+  get3DAppearanceSettings(
+    element: DiagramElement,
+    model?: Model | null,
+    metamodel?: Metamodel | null,
+    representationDescription?: RepresentationDescription,
+    viewpoint?: Viewpoint
+  ) {
+    const resolvedMetamodel = metamodel || (model ? metamodelService.getMetamodelById(model.conformsTo || model.metamodelId) : undefined);
+    const linkedId = element.style?.linkedModelElementId || element.style?.modelElementRefId || element.id;
+    const linkedElement = model?.elements.find(candidate => candidate.id === linkedId);
+
+    if (linkedElement) {
+      return concreteSyntaxResolver.resolve3D(linkedElement, resolvedMetamodel, representationDescription, viewpoint);
+    }
+
+    return {
+      ...concreteSyntaxResolver.resolve3D(
+        {
+          id: element.id,
+          modelElementId: element.modelElementId,
+          style: element.style || {},
+          references: {},
+        },
+        resolvedMetamodel,
+        representationDescription,
+        viewpoint
+      ),
+      ...this.getAppearanceSettings(element, model),
+    };
+  }
+
   /**
    * Get the actual image or model data URL, resolving file IDs if necessary
    * @param appearance The appearance config
@@ -62,16 +99,7 @@ class AppearanceService {
       // Fallback to inline data or URL
       return appearance.imageSrc || appearance.imageUrl || null;
     } else if (type === 'model') {
-      // First, check for bundled models based on metaclass ID (priority for deployed builds)
-      if (element) {
-        const bundledModel = this.getBundledModelPath(element.modelElementId);
-        if (bundledModel) {
-          console.log('Using bundled model for metaclass:', element.modelElementId, '→', bundledModel);
-          return bundledModel;
-        }
-      }
-      
-      // Then check for stored file ID in API storage (for user-uploaded models)
+      // First check explicit representation/model notation.
       if (appearance.modelFileId) {
         try {
           const storedFile = await fileStorageService.getFile(appearance.modelFileId);
@@ -84,8 +112,20 @@ class AppearanceService {
         }
       }
       
-      // Fallback to inline data or URL
-      return appearance.modelSrc || appearance.modelUrl || null;
+      const explicitModel = appearance.modelSrc || appearance.modelUrl;
+      if (explicitModel) return explicitModel;
+
+      // Backward-compatible fallback for older warehouse examples that predate
+      // representation-level 3D asset notation.
+      if (element) {
+        const bundledModel = this.getBundledModelPath(element.modelElementId);
+        if (bundledModel) {
+          console.log('Using bundled model for metaclass:', element.modelElementId, '→', bundledModel);
+          return bundledModel;
+        }
+      }
+
+      return null;
     }
     
     return null;

@@ -40,7 +40,7 @@ const StatusOverlay3D: React.FC<StatusOverlay3DProps> = ({
       }}
     >
       <Typography variant="body2">
-        Diagram: {diagram?.name}
+        View: {diagram?.name}
       </Typography>
       <Typography variant="caption" color="textSecondary">
         {isDraggingPaletteItem 

@@ -1,6 +1,7 @@
 {
   "id": "a1100000-0000-4000-8000-000000000001",
   "name": "UMLActivityDiagramMM",
+  "description": "Abstract syntax for UML-style activity diagrams with actions, control nodes, object pins, and activity flows.",
   "eClass": "e7d0d970-9abd-4218-9ef9-9789e7b8862c",
   "uri": "http://www.spatialdsl.studio/examples/uml/activity",
   "prefix": "uml_activity",

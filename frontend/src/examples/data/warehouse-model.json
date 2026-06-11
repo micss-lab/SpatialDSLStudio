@@ -1,6 +1,7 @@
 {
   "id": "24f0cfd5-8171-459b-b181-4bb519264483",
   "name": "WarehouseModel",
+  "description": "Legacy warehouse model sample retained for compatibility with earlier examples.",
   "metamodelId": "225d08e9-881b-46d3-9dfc-293c0c7800df",
   "elements": [
     {

@@ -12,6 +12,7 @@ const ADMIN_ENDPOINTS = {
   STATS: '/admin/stats',
   RESOURCES: '/admin/resources',
   HEALTH: '/admin/health',
+  NOTIFICATIONS_BROADCAST: '/admin/notifications/broadcast',
 };
 
 // Types
@@ -129,6 +130,19 @@ export interface SystemHealth {
     totalSizeBytes: number;
     totalSizeMB: number;
   };
+}
+
+export interface AdminNotificationPayload {
+  subject: string;
+  message: string;
+  userIds?: string[];
+}
+
+export interface AdminNotificationResult {
+  totalUsers: number;
+  ccAdmins: number;
+  bccUsers: number;
+  batches: number;
 }
 
 class AdminService {
@@ -249,6 +263,10 @@ class AdminService {
    */
   async getSystemHealth(): Promise<SystemHealth> {
     return apiClient.get<SystemHealth>(ADMIN_ENDPOINTS.HEALTH);
+  }
+
+  async sendBroadcastNotification(payload: AdminNotificationPayload): Promise<AdminNotificationResult> {
+    return apiClient.post<AdminNotificationResult>(ADMIN_ENDPOINTS.NOTIFICATIONS_BROADCAST, payload);
   }
 }
 

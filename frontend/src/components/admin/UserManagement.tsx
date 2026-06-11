@@ -422,7 +422,7 @@ const UserManagement: React.FC = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        <Tooltip title={`Metamodels: ${user.resourceCounts.metamodels}, Models: ${user.resourceCounts.models}, Diagrams: ${user.resourceCounts.diagrams}`}>
+                        <Tooltip title={`Metamodels: ${user.resourceCounts.metamodels}, Models: ${user.resourceCounts.models}, Views: ${user.resourceCounts.diagrams}`}>
                           <Typography variant="body2">
                             {user.resourceCounts.metamodels + user.resourceCounts.models + user.resourceCounts.diagrams} resources
                           </Typography>

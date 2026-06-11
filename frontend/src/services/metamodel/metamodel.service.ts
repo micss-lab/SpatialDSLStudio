@@ -119,13 +119,14 @@ class MetamodelService {
     return this.metamodels.find(mm => mm.id === id);
   }
 
-  createMetamodel(name: string): Metamodel {
+  createMetamodel(name: string, description: string = ''): Metamodel {
     const corePackage = metaMetamodelService.getCoreEPackage();
     const ePackageClass = corePackage.classes.find(cls => cls.name === 'EPackage');
     
     const newMetamodel: Metamodel = {
       id: uuidv4(),
       name,
+      description,
       eClass: ePackageClass ? ePackageClass.id : '',
       uri: `http://www.modeling-tool.com/${name.toLowerCase()}`,
       prefix: name.toLowerCase(),
