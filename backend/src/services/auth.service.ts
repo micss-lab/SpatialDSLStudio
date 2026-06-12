@@ -6,7 +6,7 @@ import { JwtPayload } from '../middleware/auth';
 import { UserRole } from '../../../shared/types';
 import { metametamodelService } from './metametamodel.service';
 import prisma from '../config/database';
-import { sendWelcomeEmail, sendPasswordResetEmail } from './email.service';
+import { sendEmailVerificationCodeEmail, sendWelcomeEmail, sendPasswordResetEmail } from './email.service';
 
 const SALT_ROUNDS = 10;
 
@@ -29,6 +29,12 @@ export interface AuthResponse {
   };
   token: string;
   expiresIn: string;
+}
+
+export interface RegistrationPendingResponse {
+  email: string;
+  verificationRequired: true;
+  message: string;
 }
 
 class AuthService {
@@ -65,10 +71,14 @@ class AuthService {
     });
   }
 
+  private generateVerificationCode(): string {
+    return crypto.randomInt(100000, 1000000).toString();
+  }
+
   /**
    * Register a new user
    */
-  async register(input: RegisterInput): Promise<AuthResponse> {
+  async register(input: RegisterInput): Promise<RegistrationPendingResponse> {
     const { email, password } = input;
 
     // Validate email format
@@ -100,32 +110,16 @@ class AuthService {
         email: email.toLowerCase(),
         password: hashedPassword,
         role: 'VIEWER',
+        emailVerified: false,
       },
     });
 
-    // Initialize core ePackage for the new user
-    try {
-      await metametamodelService.initializeCoreEcore(user.id);
-    } catch (error) {
-      console.error('Error initializing core ePackage for new user:', error);
-      // Don't fail registration if ePackage init fails - user can still use the app
-    }
-
-    // Send welcome email (fire-and-forget)
-    sendWelcomeEmail(user.email);
-
-    // Generate token
-    const token = this.generateToken(user);
+    await this.createAndSendVerificationCode(user.id, user.email);
 
     return {
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role as UserRole,
-        createdAt: user.createdAt,
-      },
-      token,
-      expiresIn: config.jwt.expiresIn,
+      email: user.email,
+      verificationRequired: true,
+      message: 'Account created. Enter the verification code sent to your email to finish registration.',
     };
   }
 
@@ -151,7 +145,127 @@ class AuthService {
       throw new Error('Invalid email or password');
     }
 
+    if (!user.emailVerified) {
+      await this.createAndSendVerificationCode(user.id, user.email);
+      throw new Error('Email verification required');
+    }
+
     // Generate token
+    const token = this.generateToken(user);
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role as UserRole,
+        createdAt: user.createdAt,
+      },
+      token,
+      expiresIn: config.jwt.expiresIn,
+    };
+  }
+
+  private async createAndSendVerificationCode(userId: string, email: string): Promise<void> {
+    await prisma.emailVerificationCode.updateMany({
+      where: { userId, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
+    const code = this.generateVerificationCode();
+    const codeHash = this.hashToken(code);
+
+    await prisma.emailVerificationCode.create({
+      data: {
+        codeHash,
+        userId,
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      },
+    });
+
+    await sendEmailVerificationCodeEmail(email, code);
+  }
+
+  async resendVerificationCode(email: string): Promise<void> {
+    if (!this.validateEmail(email)) {
+      throw new Error('Invalid email format');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+
+    if (!user || user.emailVerified) {
+      return;
+    }
+
+    await this.createAndSendVerificationCode(user.id, user.email);
+  }
+
+  async verifyEmail(email: string, code: string): Promise<AuthResponse> {
+    if (!this.validateEmail(email)) {
+      throw new Error('Invalid email format');
+    }
+
+    const normalizedCode = String(code || '').trim();
+    if (!/^\d{6}$/.test(normalizedCode)) {
+      throw new Error('Verification code must be 6 digits');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+
+    if (!user) {
+      throw new Error('Invalid or expired verification code');
+    }
+
+    if (user.emailVerified) {
+      const token = this.generateToken(user);
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role as UserRole,
+          createdAt: user.createdAt,
+        },
+        token,
+        expiresIn: config.jwt.expiresIn,
+      };
+    }
+
+    const codeHash = this.hashToken(normalizedCode);
+    const verificationCode = await prisma.emailVerificationCode.findFirst({
+      where: {
+        userId: user.id,
+        codeHash,
+        usedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!verificationCode || verificationCode.expiresAt < new Date()) {
+      throw new Error('Invalid or expired verification code');
+    }
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerified: true },
+      }),
+      prisma.emailVerificationCode.update({
+        where: { id: verificationCode.id },
+        data: { usedAt: new Date() },
+      }),
+    ]);
+
+    try {
+      await metametamodelService.initializeCoreEcore(user.id);
+    } catch (error) {
+      console.error('Error initializing core ePackage for verified user:', error);
+    }
+
+    sendWelcomeEmail(user.email);
+
     const token = this.generateToken(user);
 
     return {

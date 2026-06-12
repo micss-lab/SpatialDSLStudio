@@ -26,6 +26,7 @@ const makeUser = (overrides = {}) => ({
   email: 'user@example.com',
   password: '$2b$10$hashedpassword',
   role: 'DSL_DESIGNER' as const,
+  emailVerified: true,
   isSuspended: false,
   lastLogin: null,
   createdAt: new Date(),

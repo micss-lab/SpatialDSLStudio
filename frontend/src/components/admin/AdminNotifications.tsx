@@ -141,6 +141,7 @@ const AdminNotifications: React.FC = () => {
           {result && (
             <Alert severity="success">
               Sent notification to {result.totalUsers} user(s): {result.ccAdmins} admin(s) CCed, {result.bccUsers} user(s) BCCed across {result.batches} email batch{result.batches === 1 ? '' : 'es'}.
+              {result.emailIds?.length ? ` Tracking IDs: ${result.emailIds.join(', ')}` : ''}
             </Alert>
           )}
 

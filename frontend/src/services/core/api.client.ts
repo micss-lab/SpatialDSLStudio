@@ -261,6 +261,8 @@ export const API_ENDPOINTS = {
   // Auth
   AUTH_LOGIN: '/auth/login',
   AUTH_REGISTER: '/auth/register',
+  AUTH_VERIFY_EMAIL: '/auth/verify-email',
+  AUTH_RESEND_VERIFICATION_CODE: '/auth/resend-verification-code',
   AUTH_ME: '/auth/me',
   AUTH_VERIFY: '/auth/verify',
   AUTH_CHANGE_PASSWORD: '/auth/change-password',
@@ -330,6 +332,17 @@ export interface RegisterRequest {
   password: string;
 }
 
+export interface RegistrationPendingResponse {
+  email: string;
+  verificationRequired: true;
+  message: string;
+}
+
+export interface VerifyEmailRequest {
+  email: string;
+  code: string;
+}
+
 // User role enum (matches backend)
 export type UserRole = 'ADMIN' | 'DSL_DESIGNER' | 'MODELER' | 'VIEWER';
 
@@ -364,7 +377,7 @@ export const authApi = {
     return result;
   },
 
-  register: async (data: RegisterRequest): Promise<AuthResponse> => {
+  register: async (data: RegisterRequest): Promise<RegistrationPendingResponse> => {
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH_REGISTER}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -373,6 +386,32 @@ export const authApi = {
     const result = await response.json();
     if (!response.ok) {
       throw new Error(result.error || 'Registration failed');
+    }
+    return result;
+  },
+
+  verifyEmail: async (data: VerifyEmailRequest): Promise<AuthResponse> => {
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH_VERIFY_EMAIL}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Email verification failed');
+    }
+    return result;
+  },
+
+  resendVerificationCode: async (email: string): Promise<{ message: string }> => {
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH_RESEND_VERIFICATION_CODE}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to resend verification code');
     }
     return result;
   },

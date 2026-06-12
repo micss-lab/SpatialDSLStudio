@@ -21,6 +21,7 @@ jest.mock('../../services/metametamodel.service', () => ({
 
 // Mock email service
 jest.mock('../../services/email.service', () => ({
+  sendEmailVerificationCodeEmail: jest.fn(),
   sendWelcomeEmail: jest.fn(),
   sendPasswordResetEmail: jest.fn(),
 }));
@@ -40,15 +41,25 @@ describe('AuthService', () => {
     password: '$hashed$password',
     role: 'DSL_DESIGNER' as const,
     isSuspended: false,
+    emailVerified: true,
     lastLogin: null,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
   };
 
   describe('register', () => {
-    it('creates a new user and returns auth response', async () => {
+    it('creates a new pending user and sends a verification code', async () => {
       prismaMock.user.findUnique.mockResolvedValue(null);
-      prismaMock.user.create.mockResolvedValue(mockUser);
+      prismaMock.user.create.mockResolvedValue({ ...mockUser, emailVerified: false });
+      prismaMock.emailVerificationCode.updateMany.mockResolvedValue({ count: 0 });
+      prismaMock.emailVerificationCode.create.mockResolvedValue({
+        id: 'code-1',
+        codeHash: 'hashed-code',
+        userId: mockUser.id,
+        expiresAt: new Date(Date.now() + 900000),
+        usedAt: null,
+        createdAt: new Date(),
+      });
 
       const result = await authService.register({
         email: 'test@example.com',
@@ -63,12 +74,22 @@ describe('AuthService', () => {
           data: expect.objectContaining({
             email: 'test@example.com',
             role: 'VIEWER',
+            emailVerified: false,
           }),
         })
       );
-      expect(result.user.email).toBe('test@example.com');
-      expect(result.token).toBeDefined();
-      expect(result.expiresIn).toBeDefined();
+      expect(prismaMock.emailVerificationCode.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          codeHash: expect.any(String),
+          userId: mockUser.id,
+          expiresAt: expect.any(Date),
+        }),
+      });
+      expect(result).toEqual({
+        email: 'test@example.com',
+        verificationRequired: true,
+        message: expect.any(String),
+      });
     });
 
     it('throws error when email is already taken', async () => {
@@ -93,7 +114,9 @@ describe('AuthService', () => {
 
     it('stores email in lowercase', async () => {
       prismaMock.user.findUnique.mockResolvedValue(null);
-      prismaMock.user.create.mockResolvedValue({ ...mockUser, email: 'test@example.com' });
+      prismaMock.user.create.mockResolvedValue({ ...mockUser, email: 'test@example.com', emailVerified: false });
+      prismaMock.emailVerificationCode.updateMany.mockResolvedValue({ count: 0 });
+      prismaMock.emailVerificationCode.create.mockResolvedValue({} as any);
 
       await authService.register({ email: 'TEST@EXAMPLE.COM', password: 'password123' });
 
@@ -102,19 +125,21 @@ describe('AuthService', () => {
       });
     });
 
-    it('still succeeds if ePackage initialization fails', async () => {
+    it('does not initialize core ePackage before email verification', async () => {
       const { metametamodelService } = require('../../services/metametamodel.service');
-      metametamodelService.initializeCoreEcore.mockRejectedValue(new Error('DB error'));
 
       prismaMock.user.findUnique.mockResolvedValue(null);
-      prismaMock.user.create.mockResolvedValue(mockUser);
+      prismaMock.user.create.mockResolvedValue({ ...mockUser, emailVerified: false });
+      prismaMock.emailVerificationCode.updateMany.mockResolvedValue({ count: 0 });
+      prismaMock.emailVerificationCode.create.mockResolvedValue({} as any);
 
       const result = await authService.register({
         email: 'test@example.com',
         password: 'password123',
       });
 
-      expect(result.user.email).toBe('test@example.com');
+      expect(result.email).toBe('test@example.com');
+      expect(metametamodelService.initializeCoreEcore).not.toHaveBeenCalled();
     });
   });
 
@@ -149,6 +174,19 @@ describe('AuthService', () => {
       ).rejects.toThrow('Invalid email or password');
     });
 
+    it('throws and resends code when email is not verified', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({ ...mockUser, emailVerified: false });
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      prismaMock.emailVerificationCode.updateMany.mockResolvedValue({ count: 0 });
+      prismaMock.emailVerificationCode.create.mockResolvedValue({} as any);
+
+      await expect(
+        authService.login({ email: 'test@example.com', password: 'password123' })
+      ).rejects.toThrow('Email verification required');
+
+      expect(prismaMock.emailVerificationCode.create).toHaveBeenCalled();
+    });
+
     it('looks up email in lowercase', async () => {
       prismaMock.user.findUnique.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
@@ -158,6 +196,65 @@ describe('AuthService', () => {
       expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
       });
+    });
+  });
+
+  describe('verifyEmail', () => {
+    it('verifies a valid code and returns auth response', async () => {
+      const verificationCode = {
+        id: 'code-1',
+        codeHash: 'hashed-code',
+        userId: mockUser.id,
+        expiresAt: new Date(Date.now() + 900000),
+        usedAt: null,
+        createdAt: new Date(),
+      };
+      prismaMock.user.findUnique.mockResolvedValue({ ...mockUser, emailVerified: false });
+      prismaMock.emailVerificationCode.findFirst.mockResolvedValue(verificationCode);
+      prismaMock.$transaction.mockResolvedValue([
+        { ...mockUser, emailVerified: true },
+        { ...verificationCode, usedAt: new Date() },
+      ]);
+
+      const result = await authService.verifyEmail('test@example.com', '123456');
+
+      expect(prismaMock.emailVerificationCode.findFirst).toHaveBeenCalledWith({
+        where: {
+          userId: mockUser.id,
+          codeHash: expect.any(String),
+          usedAt: null,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(prismaMock.$transaction).toHaveBeenCalled();
+      expect(result.user.email).toBe('test@example.com');
+      expect(result.token).toBeDefined();
+    });
+
+    it('rejects invalid verification codes', async () => {
+      await expect(
+        authService.verifyEmail('test@example.com', '123')
+      ).rejects.toThrow('Verification code must be 6 digits');
+    });
+  });
+
+  describe('resendVerificationCode', () => {
+    it('sends a new code for an unverified user', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({ ...mockUser, emailVerified: false });
+      prismaMock.emailVerificationCode.updateMany.mockResolvedValue({ count: 0 });
+      prismaMock.emailVerificationCode.create.mockResolvedValue({} as any);
+
+      await authService.resendVerificationCode('test@example.com');
+
+      expect(prismaMock.emailVerificationCode.create).toHaveBeenCalled();
+    });
+
+    it('does nothing for verified users', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(mockUser);
+
+      await authService.resendVerificationCode('test@example.com');
+
+      expect(prismaMock.emailVerificationCode.create).not.toHaveBeenCalled();
     });
   });
 

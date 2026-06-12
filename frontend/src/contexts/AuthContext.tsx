@@ -54,6 +54,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
+  verifyEmail: (email: string, code: string) => Promise<void>;
+  resendVerificationCode: (email: string) => Promise<void>;
   logout: () => void;
   error: string | null;
   clearError: () => void;
@@ -163,6 +165,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  const verifyEmail = useCallback(async (email: string, code: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response: AuthResponse = await authApi.verifyEmail({ email, code });
+      apiClient.setToken(response.token);
+      await clearAllServiceCaches();
+      setUser(response.user);
+      setRegistrationSuccess(false);
+    } catch (err: any) {
+      setError(err.message || 'Email verification failed');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const resendVerificationCode = useCallback(async (email: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await authApi.resendVerificationCode(email);
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend verification code');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const logout = useCallback(() => {
     // Set flag to prevent "session expired" message
     isLoggingOutRef.current = true;
@@ -216,6 +248,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     login,
     register,
+    verifyEmail,
+    resendVerificationCode,
     logout,
     error,
     clearError,
