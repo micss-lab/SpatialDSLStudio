@@ -2,6 +2,8 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import LoginPage from '../../components/auth/LoginPage';
+
 // Mock the auth context
 const mockLogin = jest.fn();
 const mockRegister = jest.fn();
@@ -19,8 +21,6 @@ jest.mock('../../contexts/AuthContext', () => ({
     clearRegistrationSuccess: mockClearRegistrationSuccess,
   }),
 }));
-
-import LoginPage from '../../components/auth/LoginPage';
 
 beforeEach(() => {
   jest.clearAllMocks();

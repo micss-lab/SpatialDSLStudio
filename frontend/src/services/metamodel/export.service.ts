@@ -1,7 +1,7 @@
 import { metamodelService } from './metamodel.service';
 import { ecoreService } from './ecore.service';
 
-export type ExportFormat = 'json' | 'ecore' | 'xmi' | 'uml' | 'png';
+export type ExportFormat = 'json' | 'ecore' | 'uml' | 'png';
 
 class ExportService {
   /**
@@ -26,8 +26,6 @@ class ExportService {
         return metamodelService.downloadMetamodelAsJson(metamodelId);
       case 'ecore':
         return ecoreService.downloadAsEcore(metamodelId);
-      case 'xmi':
-        return ecoreService.downloadAsXmi(metamodelId);
       case 'uml':
         return ecoreService.downloadAsUmlClassDiagram(metamodelId);
       case 'png':
@@ -121,23 +119,6 @@ class ExportService {
         resolve('ecore');
       };
       
-      const xmiButton = document.createElement('button');
-      xmiButton.textContent = 'XMI';
-      xmiButton.style.padding = '8px 16px';
-      xmiButton.style.backgroundColor = '#673AB7';
-      xmiButton.style.color = 'white';
-      xmiButton.style.border = 'none';
-      xmiButton.style.borderRadius = '4px';
-      xmiButton.style.cursor = 'pointer';
-      xmiButton.style.fontSize = '16px';
-      xmiButton.style.flex = '1';
-      xmiButton.style.margin = '0 0 10px 5px';
-      xmiButton.style.minWidth = '100px';
-      xmiButton.onclick = () => {
-        document.body.removeChild(modal);
-        resolve('xmi');
-      };
-      
       const umlButton = document.createElement('button');
       umlButton.textContent = 'UML Class';
       umlButton.style.padding = '8px 16px';
@@ -192,7 +173,6 @@ class ExportService {
       // Assemble dialog
   buttonContainer.appendChild(jsonButton);
   buttonContainer.appendChild(ecoreButton);
-  buttonContainer.appendChild(xmiButton);
   buttonContainer.appendChild(umlButton);
   buttonContainer.appendChild(pngButton);
   buttonContainer.appendChild(cancelButton);

@@ -1,5 +1,5 @@
 // Element utility functions
-import { ModelElement, MetaClass, Metamodel } from '../../../models/types';
+import { ModelElement, MetaClass, MetaReference, Metamodel } from '../../../models/types';
 
 /**
  * Get all attributes including inherited ones from parent classes
@@ -44,6 +44,44 @@ export const getAllAttributes = (metaClass: MetaClass, metamodel: Metamodel): an
   }
   
   return uniqueAttributes;
+};
+
+/**
+ * Get all references including inherited ones from parent classes.
+ */
+export const getAllReferences = (metaClass: MetaClass, metamodel: Metamodel): MetaReference[] => {
+  const allReferences: MetaReference[] = [...(metaClass.references || [])];
+  const processedClasses = new Set<string>([metaClass.id]);
+
+  const collectInheritedReferences = (currentClass: MetaClass) => {
+    if (!currentClass.superTypes || currentClass.superTypes.length === 0) return;
+
+    for (const superTypeId of currentClass.superTypes) {
+      if (processedClasses.has(superTypeId)) continue;
+      processedClasses.add(superTypeId);
+
+      const superClass = metamodel.classes.find(c => c.id === superTypeId);
+      if (superClass) {
+        allReferences.push(...(superClass.references || []));
+        collectInheritedReferences(superClass);
+      }
+    }
+  };
+
+  collectInheritedReferences(metaClass);
+
+  const uniqueReferences: MetaReference[] = [];
+  const seenNames = new Set<string>();
+
+  for (let i = allReferences.length - 1; i >= 0; i--) {
+    const ref = allReferences[i];
+    if (!seenNames.has(ref.name)) {
+      seenNames.add(ref.name);
+      uniqueReferences.unshift(ref);
+    }
+  }
+
+  return uniqueReferences;
 };
 
 /**

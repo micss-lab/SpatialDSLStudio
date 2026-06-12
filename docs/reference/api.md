@@ -98,19 +98,62 @@ Base: `/api/models`
 - `POST /:id/connections`
 - `DELETE /:id/connections/:connectionId`
 
-## Diagram endpoints
+## Diagram/View endpoints
 
 Base: `/api/diagrams`
+
+These endpoints retain the `/api/diagrams` path for compatibility. In the current product model, a diagram row represents a view: a projection of model elements plus view-specific grid settings.
 
 - `GET /` (optional query: `modelId`)
 - `GET /:id`
 - `POST /`
 - `PUT /:id`
 - `DELETE /:id`
+- `POST /:id/model-elements`
+- `POST /:id/model-elements/add-all`
+- `PUT /:id/model-elements/:modelElementId/presentation`
+- `DELETE /:id/model-elements/:modelElementId`
 - `POST /:id/elements`
 - `PUT /:id/elements/:elementId`
 - `DELETE /:id/elements/:elementId`
 - `PUT /:id/grid-settings`
+
+The `model-elements` routes are the preferred view-membership API. The `elements` routes are compatibility routes for older clients.
+
+Create and update payloads may include optional `viewpointId` and `representationDescriptionId`. When omitted, the backend resolves the model metamodel's default viewpoint and default diagram representation description. Current diagram editors reject non-`diagram` representation descriptions.
+
+## Viewpoint endpoints
+
+Base: `/api/viewpoints`
+
+Viewpoints are metamodel-level specification resources. Access follows the owning metamodel rather than adding a separate shareable resource type.
+
+- `GET /` (optional query: `metamodelId`)
+- `GET /default?metamodelId=:id`
+- `GET /:id`
+- `POST /`
+- `PUT /:id`
+- `DELETE /:id`
+- `GET /:id/representation-descriptions`
+- `POST /:id/representation-descriptions`
+- `PUT /:id/representation-descriptions/:representationDescriptionId`
+- `DELETE /:id/representation-descriptions/:representationDescriptionId`
+
+Representation descriptions are embedded in the viewpoint JSON. First-release executable kind is `diagram`; `table` and `tree` are reserved for specification data.
+
+## Sirius interoperability endpoints
+
+Base: `/api/interoperability/sirius`
+
+These endpoints implement the first Sirius compatibility slice for Viewpoint Specification Models. `.odesign` validate/import/export is supported for the documented diagram subset. Validation also recognizes `.aird`, `.ecore`, `.xmi`, and base64-encoded `project-zip` payloads so deferred or delegated files appear in the compatibility report instead of being silently ignored.
+
+- `POST /validate`
+- `POST /import`
+- `POST /export`
+
+`validate` accepts JSON `{ content, sourceFormat?, metamodelId?, options? }` and returns a compatibility report plus a preview of imported viewpoints. For `sourceFormat: "project-zip"`, `content` is a base64 ZIP payload and the backend validates safe relative paths before delegating the first `.odesign` file it finds. `import` accepts `{ content, metamodelId, options? }` and creates SpatialDSL viewpoints and diagram representation descriptions for the supported `.odesign` subset. `export` accepts `{ metamodelId, viewpointIds?, options? }` and returns `{ filename, content, report }` for generated `.odesign` XML.
+
+Every operation returns a `SiriusCompatibilityReport` with `warnings`, `droppedFeatures`, and `unresolvedReferences`.
 
 ## Transformation endpoints
 

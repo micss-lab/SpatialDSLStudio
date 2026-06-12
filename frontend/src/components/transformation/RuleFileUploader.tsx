@@ -1,11 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Button, 
-  Box, 
-  Typography, 
-  Alert,
-  CircularProgress
-} from '@mui/material';
+import { Button, Box, Alert, CircularProgress } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { transformationService } from '../../services/transformation';
 

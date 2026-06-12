@@ -1,26 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Box, 
-  Button, 
-  Typography, 
-  TextField, 
-  List, 
-  ListItem, 
-  ListItemText, 
-  Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
-  ListItemButton,
-  Tooltip
-} from '@mui/material';
+import { Box, Button, Typography, TextField, List, ListItem, Paper, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, ListItemButton, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import ShareIcon from '@mui/icons-material/Share';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import { Metamodel } from '../../models/types';
 import { metamodelService } from '../../services/metamodel';
 import VisualMetamodelEditor from './VisualMetamodelEditor';
@@ -36,6 +21,7 @@ const MetamodelManager: React.FC = () => {
   const [metamodels, setMetamodels] = useState<Metamodel[]>([]);
   const [selectedMetamodel, setSelectedMetamodel] = useState<Metamodel | null>(null);
   const [newMetamodelName, setNewMetamodelName] = useState('');
+  const [newMetamodelDescription, setNewMetamodelDescription] = useState('');
   const [isMetamodelDialogOpen, setIsMetamodelDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [importData, setImportData] = useState('');
@@ -47,6 +33,7 @@ const MetamodelManager: React.FC = () => {
   useEffect(() => {
     // Load metamodels when component mounts
     refreshMetamodels();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const refreshMetamodels = () => {
@@ -69,8 +56,9 @@ const MetamodelManager: React.FC = () => {
 
   const handleCreateMetamodel = () => {
     if (newMetamodelName.trim()) {
-      metamodelService.createMetamodel(newMetamodelName.trim());
+      metamodelService.createMetamodel(newMetamodelName.trim(), newMetamodelDescription.trim());
       setNewMetamodelName('');
+      setNewMetamodelDescription('');
       setIsMetamodelDialogOpen(false);
       refreshMetamodels();
     }
@@ -142,31 +130,17 @@ const MetamodelManager: React.FC = () => {
 
   const handleImportMetamodel = () => {
     try {
-      if (importFileFormat === 'ecore' || importFileFormat === 'xmi') {
+      if (importFileFormat === 'ecore') {
         // Import as Ecore
         const metamodelId = ecoreService.importFromEcore(importData);
         if (!metamodelId) {
           throw new Error('Failed to import Ecore metamodel');
         }
       } else {
-        // Import as JSON
-      const metamodelData = JSON.parse(importData);
-      
-      // Validate that it's a proper metamodel
-      if (!metamodelData.name || !metamodelData.classes) {
-        throw new Error('Invalid metamodel format');
-      }
-      
-      // Create a new metamodel with the imported data
-      const newMetamodel = metamodelService.createMetamodel(metamodelData.name);
-      
-      // Update it with the imported data (preserving the new ID)
-      const updatedData = {
-        ...metamodelData,
-        id: newMetamodel.id
-      };
-      
-      metamodelService.updateMetamodel(newMetamodel.id, updatedData);
+        // Import as JSON, preserving the metamodel ID and nested class/reference IDs.
+        const metamodelData = JSON.parse(importData);
+        const importedMetamodel = metamodelService.importMetamodel(metamodelData);
+        navigate(`/metamodels/${importedMetamodel.id}`);
       }
       
       setIsImportDialogOpen(false);
@@ -213,7 +187,7 @@ const MetamodelManager: React.FC = () => {
             )}
             <input
               type="file"
-              accept=".json,.ecore,.xmi"
+              accept=".json,.ecore"
               ref={fileInputRef}
               style={{ display: 'none' }}
               onChange={handleFileChange}
@@ -244,19 +218,26 @@ const MetamodelManager: React.FC = () => {
                     pr: 0
                   }}
                 >
-                  <Tooltip title={metamodel.name} enterDelay={700}>
-                    <Typography 
-                      sx={{
-                        fontSize: metamodel.name.length > 20 ? '0.875rem' : '1rem',
-                        lineHeight: 1.2,
-                        width: '100%',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      {metamodel.name}
-                    </Typography>
+                  <Tooltip title={metamodel.description ? `${metamodel.name} - ${metamodel.description}` : metamodel.name} enterDelay={700}>
+                    <Box sx={{ minWidth: 0, width: '100%' }}>
+                      <Typography
+                        sx={{
+                          fontSize: metamodel.name.length > 20 ? '0.875rem' : '1rem',
+                          lineHeight: 1.2,
+                          width: '100%',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {metamodel.name}
+                      </Typography>
+                      {metamodel.description && (
+                        <Typography variant="caption" color="text.secondary" noWrap>
+                          {metamodel.description}
+                        </Typography>
+                      )}
+                    </Box>
                   </Tooltip>
                 </ListItemButton>
                 
@@ -274,6 +255,11 @@ const MetamodelManager: React.FC = () => {
                   <Tooltip title="Export Metamodel (JSON or Ecore)">
                     <IconButton size="small" onClick={() => handleExportMetamodel(metamodel)}>
                       <FileDownloadIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Manage Viewpoints">
+                    <IconButton size="small" onClick={() => navigate(`/metamodels/${metamodel.id}/viewpoints`)}>
+                      <AccountTreeIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
                   {canDelete && (
@@ -326,6 +312,15 @@ const MetamodelManager: React.FC = () => {
             value={newMetamodelName}
             onChange={(e) => setNewMetamodelName(e.target.value)}
           />
+          <TextField
+            margin="dense"
+            label="Description"
+            fullWidth
+            multiline
+            minRows={2}
+            value={newMetamodelDescription}
+            onChange={(e) => setNewMetamodelDescription(e.target.value)}
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsMetamodelDialogOpen(false)}>Cancel</Button>
@@ -341,8 +336,8 @@ const MetamodelManager: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            {importFileFormat === 'ecore' || importFileFormat === 'xmi' 
-              ? 'Importing Ecore/XMI metamodel. Press Import to continue.' 
+            {importFileFormat === 'ecore'
+              ? 'Importing Ecore metamodel. Press Import to continue.'
               : 'Review the JSON metamodel data before importing:'}
           </Typography>
           <TextField
@@ -353,7 +348,7 @@ const MetamodelManager: React.FC = () => {
             onChange={(e) => setImportData(e.target.value)}
             variant="outlined"
             InputProps={{
-              readOnly: importFileFormat === 'ecore' || importFileFormat === 'xmi'
+              readOnly: importFileFormat === 'ecore'
             }}
           />
         </DialogContent>
@@ -380,4 +375,4 @@ const MetamodelManager: React.FC = () => {
   );
 };
 
-export default MetamodelManager; 
+export default MetamodelManager;

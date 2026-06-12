@@ -23,10 +23,12 @@ import { ApiError } from '../../middleware/errorHandler';
 const mockMetamodelRow = {
   id: 'mm-uuid-1',
   name: 'TestMetamodel',
+  description: null,
   uri: 'http://example.com/mm',
   prefix: 'tm',
   eClass: 'pkg-uuid-1',
   classes: [],
+  enums: [],
   constraints: [],
   conformsToId: 'pkg-uuid-1',
   userId: 'user-uuid-1',

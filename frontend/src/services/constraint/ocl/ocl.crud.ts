@@ -1,10 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { 
-  OCLConstraint, 
-  Metamodel,
-  MetaClass,
-  OCLValidationResult
-} from '../../../models/types';
+import { OCLConstraint, MetaClass, OCLValidationResult } from '../../../models/types';
 import { OCLServiceContext, IMetamodelService } from './types';
 import { ensureMetamodelRegistered } from './ocl.engine';
 

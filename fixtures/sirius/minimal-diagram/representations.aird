@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<viewpoint:DAnalysis
+    xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:viewpoint="http://www.eclipse.org/sirius/1.1.0"
+    xmlns:diagram="http://www.eclipse.org/sirius/diagram/1.1.0"
+    xmi:id="analysis-minimal"
+    selectedViews="//@ownedViews.0">
+  <semanticResources>model/sample.xmi</semanticResources>
+  <ownedViews
+      xmi:id="view-minimal"
+      viewpoint="description/minimal.odesign#viewpoint-minimal">
+    <ownedRepresentations
+        xsi:type="diagram:DSemanticDiagram"
+        xmi:id="representation-minimal"
+        name="Demo System"
+        uid="representation-minimal"
+        target="model/sample.xmi#system-demo"
+        description="description/minimal.odesign#diagram-minimal">
+      <ownedDiagramElements
+          xmi:id="node-api"
+          name="API"
+          target="model/sample.xmi#component-api"
+          mapping="description/minimal.odesign#mapping-component"/>
+      <ownedDiagramElements
+          xmi:id="node-db"
+          name="Database"
+          target="model/sample.xmi#component-db"
+          mapping="description/minimal.odesign#mapping-component"/>
+      <ownedDiagramElements
+          xmi:id="edge-api-db"
+          name="API to Database"
+          target="model/sample.xmi#component-api"
+          mapping="description/minimal.odesign#mapping-dependency"/>
+    </ownedRepresentations>
+  </ownedViews>
+</viewpoint:DAnalysis>

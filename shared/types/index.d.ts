@@ -56,6 +56,7 @@ export type Constraint = OCLConstraint | JSConstraint;
 export interface MetamodelElement {
     id: string;
     name: string;
+    description?: string;
     eClass: string;
 }
 export interface MetaClass extends MetamodelElement {
@@ -68,9 +69,21 @@ export interface MetaClass extends MetamodelElement {
         y: number;
     };
     constraints?: Constraint[];
+    concreteSyntax?: ConcreteSyntax;
 }
+export interface MetaEnumLiteral {
+    name: string;
+    value?: number;
+    literal?: string;
+}
+export interface MetaEnum extends MetamodelElement {
+    literals: MetaEnumLiteral[];
+}
+export type MetaAttributeType = 'string' | 'number' | 'boolean' | 'date' | {
+    enumId: string;
+};
 export interface MetaAttribute extends MetamodelElement {
-    type: 'string' | 'number' | 'boolean' | 'date';
+    type: MetaAttributeType;
     defaultValue?: any;
     required?: boolean;
     many: boolean;
@@ -87,6 +100,7 @@ export interface MetaReference extends MetamodelElement {
     };
     allowSelfReference?: boolean;
     attributes?: MetaAttribute[];
+    concreteSyntax?: ConcreteSyntaxEdge;
     isMultiValued?: boolean;
     isInherited?: boolean;
     inheritedFrom?: string;
@@ -95,8 +109,147 @@ export interface Metamodel extends MetamodelElement {
     uri: string;
     prefix: string;
     classes: MetaClass[];
+    enums?: MetaEnum[];
     conformsTo: string;
     constraints?: Constraint[];
+}
+export interface ConcreteSyntax2D {
+    shape?: 'default' | 'square' | 'rectangle' | 'circle' | 'ellipse' | 'diamond' | 'triangle' | 'star' | 'cylinder' | 'sphere' | 'cone' | 'custom-image' | 'custom-3d-model';
+    fillColor?: string;
+    strokeColor?: string;
+    strokeWidth?: number;
+    imageFileId?: string;
+    imageUrl?: string;
+    imageSrc?: string;
+    fontSize?: number;
+    fontFamily?: string;
+    fontColor?: string;
+    defaultSize?: {
+        width: number;
+        height: number;
+    };
+}
+export interface ConcreteSyntax3D {
+    modelFileId?: string;
+    modelUrl?: string;
+    modelSrc?: string;
+    fallbackShape?: 'box' | 'sphere' | 'cylinder';
+    fallbackColor?: string;
+    defaultSizeMm?: {
+        widthMm: number;
+        heightMm: number;
+        depthMm: number;
+    };
+}
+export interface ConcreteSyntaxEdge {
+    lineColor?: string;
+    lineWidth?: number;
+    lineDash?: number[];
+    arrowHead?: 'none' | 'open' | 'filled' | 'diamond';
+    labelFormat?: string;
+}
+export interface ConcreteSyntax {
+    two_d?: ConcreteSyntax2D;
+    three_d?: ConcreteSyntax3D;
+}
+export type RepresentationKind = 'diagram' | 'table' | 'tree';
+export interface ToolDefinition {
+    id: string;
+    name: string;
+    type?: string;
+    metaClassId?: string;
+    referenceId?: string;
+    payload?: Record<string, any>;
+}
+export interface RepresentationEdgeMapping {
+    id: string;
+    referenceId?: string;
+    referenceName?: string;
+    sourceMetaClassIds?: string[];
+    targetMetaClassIds?: string[];
+    concreteSyntax?: ConcreteSyntaxEdge;
+}
+export interface RepresentationPinMapping {
+    id: string;
+    pinMetaClassIds: string[];
+    ownerMetaClassIds: string[];
+    attachmentReferenceName?: string;
+    direction?: 'input' | 'output' | 'inout';
+    allowedSides?: Array<'top' | 'right' | 'bottom' | 'left'>;
+    defaultSide?: 'top' | 'right' | 'bottom' | 'left';
+    defaultOffsetRatio?: number;
+}
+export interface RepresentationDescription {
+    id: string;
+    name: string;
+    description?: string;
+    viewpointId: string;
+    kind: RepresentationKind;
+    visibleMetaClassIds: string[];
+    creatableMetaClassIds: string[];
+    concreteSyntaxByMetaClassId?: Record<string, ConcreteSyntax>;
+    concreteSyntaxByReferenceId?: Record<string, ConcreteSyntaxEdge>;
+    edgeMappings?: RepresentationEdgeMapping[];
+    pinMappings?: RepresentationPinMapping[];
+    toolDefinitions?: ToolDefinition[];
+    isDefault?: boolean;
+}
+export interface Viewpoint {
+    id: string;
+    name: string;
+    description?: string;
+    metamodelId: string;
+    representationDescriptions: RepresentationDescription[];
+    sharedConcreteSyntaxByMetaClassId?: Record<string, ConcreteSyntax>;
+    isDefault?: boolean;
+}
+export type SiriusSourceFormat = 'ecore' | 'xmi' | 'odesign' | 'aird' | 'project-zip';
+export type SiriusTargetFormat = 'spatialdsl' | 'sirius-project';
+export interface SiriusInteropWarning {
+    severity: 'info' | 'warning' | 'error';
+    code: string;
+    message: string;
+    sourcePath?: string;
+    sourceElementId?: string;
+    spatialElementId?: string;
+}
+export interface SiriusCompatibilityReport {
+    sourceFormat: SiriusSourceFormat;
+    targetFormat: SiriusTargetFormat;
+    supported: boolean;
+    warnings: SiriusInteropWarning[];
+    droppedFeatures: SiriusInteropWarning[];
+    unresolvedReferences: SiriusInteropWarning[];
+}
+export interface SiriusImportOptions {
+    importEcore: boolean;
+    importXmi: boolean;
+    importOdesign: boolean;
+    importAird: boolean;
+    failOnUnsupportedFeatures: boolean;
+    preserveSiriusIds: boolean;
+}
+export interface SiriusExportOptions {
+    includeEcore: boolean;
+    includeXmi: boolean;
+    includeOdesign: boolean;
+    includeAird: boolean;
+    includeSpatialDslSidecar: boolean;
+    failOnUnsupportedFeatures: boolean;
+}
+export interface SiriusOdesignPreview {
+    groupName?: string;
+    viewpoints: Viewpoint[];
+    report: SiriusCompatibilityReport;
+}
+export interface SiriusImportResult {
+    viewpoints: Viewpoint[];
+    report: SiriusCompatibilityReport;
+}
+export interface SiriusExportResult {
+    filename: string;
+    content: string;
+    report: SiriusCompatibilityReport;
 }
 export interface ModelElement {
     id: string;
@@ -105,16 +258,49 @@ export interface ModelElement {
     modelElementId: string;
     style: Record<string, any>;
     references: Record<string, string | string[] | null>;
+    presentation?: ModelElementPresentation;
+}
+export interface ModelElementPresentation {
+    position2D?: {
+        x: number;
+        y: number;
+    };
+    position3D?: {
+        x: number;
+        y: number;
+    };
+    size2D?: {
+        width: number;
+        height: number;
+    };
+    size3D?: {
+        widthMm: number;
+        heightMm: number;
+        depthMm: number;
+    };
+    rotationZ?: number;
+    appearance?: Record<string, any>;
+    attachedToElementId?: string;
+    attachmentSide?: 'top' | 'right' | 'bottom' | 'left';
+    attachmentOffsetRatio?: number;
 }
 export interface ModelConnection {
     id: string;
     sourceId: string;
     targetId: string;
+    referenceId?: string;
+    referenceName?: string;
     type?: string;
+    attributes?: Record<string, any>;
+    bendPoints2D?: Array<{
+        x: number;
+        y: number;
+    }>;
 }
 export interface Model {
     id: string;
     name: string;
+    description?: string;
     metamodelId: string;
     elements: ModelElement[];
     connections?: ModelConnection[];
@@ -144,9 +330,15 @@ export interface GridSettings {
 export interface Diagram {
     id: string;
     name: string;
+    description?: string;
     modelId: string;
+    viewpointId?: string;
+    representationDescriptionId?: string;
     elements: DiagramElement[];
+    includedElementIds?: string[];
     gridSettings?: GridSettings;
+    schemaVersion?: number;
+    migrationWarnings?: string[];
 }
 export type PatternType = 'LHS' | 'RHS' | 'NAC';
 export interface PatternElement {
@@ -364,21 +556,26 @@ export interface PaginatedResponse<T> {
 }
 export interface CreateMetamodelRequest {
     name: string;
+    description?: string;
     uri: string;
     prefix: string;
     conformsTo: string;
     classes?: MetaClass[];
+    enums?: MetaEnum[];
     constraints?: Constraint[];
 }
 export interface UpdateMetamodelRequest {
     name?: string;
+    description?: string;
     uri?: string;
     prefix?: string;
     classes?: MetaClass[];
+    enums?: MetaEnum[];
     constraints?: Constraint[];
 }
 export interface CreateModelRequest {
     name: string;
+    description?: string;
     metamodelId: string;
     conformsTo: string;
     elements?: ModelElement[];
@@ -386,19 +583,95 @@ export interface CreateModelRequest {
 }
 export interface UpdateModelRequest {
     name?: string;
+    description?: string;
     elements?: ModelElement[];
     connections?: ModelConnection[];
 }
 export interface CreateDiagramRequest {
+    id?: string;
     name: string;
+    description?: string;
     modelId: string;
+    viewpointId?: string;
+    representationDescriptionId?: string;
     elements?: DiagramElement[];
+    includedElementIds?: string[];
     gridSettings?: GridSettings;
 }
 export interface UpdateDiagramRequest {
     name?: string;
+    description?: string;
+    viewpointId?: string;
+    representationDescriptionId?: string;
     elements?: DiagramElement[];
+    includedElementIds?: string[];
     gridSettings?: GridSettings;
+    schemaVersion?: number;
+    migrationWarnings?: string[];
+}
+export interface CreateViewpointRequest {
+    id?: string;
+    name: string;
+    description?: string;
+    metamodelId: string;
+    representationDescriptions?: RepresentationDescription[];
+    sharedConcreteSyntaxByMetaClassId?: Record<string, ConcreteSyntax>;
+    isDefault?: boolean;
+}
+export interface UpdateViewpointRequest {
+    name?: string;
+    description?: string;
+    representationDescriptions?: RepresentationDescription[];
+    sharedConcreteSyntaxByMetaClassId?: Record<string, ConcreteSyntax>;
+    isDefault?: boolean;
+}
+export type SiriusSourceFormat = 'ecore' | 'xmi' | 'odesign' | 'aird' | 'project-zip';
+export type SiriusTargetFormat = 'spatialdsl' | 'sirius-project';
+export interface SiriusInteropWarning {
+    severity: 'info' | 'warning' | 'error';
+    code: string;
+    message: string;
+    sourcePath?: string;
+    sourceElementId?: string;
+    spatialElementId?: string;
+}
+export interface SiriusCompatibilityReport {
+    sourceFormat: SiriusSourceFormat;
+    targetFormat: SiriusTargetFormat;
+    supported: boolean;
+    warnings: SiriusInteropWarning[];
+    droppedFeatures: SiriusInteropWarning[];
+    unresolvedReferences: SiriusInteropWarning[];
+}
+export interface SiriusImportOptions {
+    importEcore: boolean;
+    importXmi: boolean;
+    importOdesign: boolean;
+    importAird: boolean;
+    failOnUnsupportedFeatures: boolean;
+    preserveSiriusIds: boolean;
+}
+export interface SiriusExportOptions {
+    includeEcore: boolean;
+    includeXmi: boolean;
+    includeOdesign: boolean;
+    includeAird: boolean;
+    includeSpatialDslSidecar: boolean;
+    failOnUnsupportedFeatures: boolean;
+}
+export interface SiriusOdesignPreview {
+    groupName?: string;
+    viewpoints: Viewpoint[];
+    report: SiriusCompatibilityReport;
+}
+export interface SiriusImportResult {
+    viewpoints: Viewpoint[];
+    report: SiriusCompatibilityReport;
+}
+export interface SiriusExportResult {
+    filename: string;
+    content: string;
+    report: SiriusCompatibilityReport;
 }
 export interface CreatePatternRequest {
     name: string;

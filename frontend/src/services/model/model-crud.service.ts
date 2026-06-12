@@ -35,11 +35,13 @@ export class ModelCrudService {
   createModel(
     name: string, 
     metamodelId: string,
-    saveCallback: (model: Model) => void
+    saveCallback: (model: Model) => void,
+    description: string = ''
   ): Model {
     const newModel: Model = {
       id: uuidv4(),
       name,
+      description,
       metamodelId,
       elements: [],
       conformsTo: metamodelId

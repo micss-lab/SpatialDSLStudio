@@ -1,6 +1,6 @@
 // Model Zoom Controls Component
 import React from 'react';
-import { Paper, IconButton, Typography, Tooltip, Box } from '@mui/material';
+import { Paper, IconButton, Typography, Tooltip } from '@mui/material';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';

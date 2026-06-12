@@ -34,11 +34,13 @@ export function validateJSSyntax(expression: string): JSValidationResult {
           return false;
         }
       `;
+      // eslint-disable-next-line no-new-func
       new Function(functionBody);
     } catch (complexError) {
       console.log('Complex validation failed, trying simple expression');
       // If that fails, try to parse it as a simple expression
       try {
+        // eslint-disable-next-line no-new-func
         new Function('self', `return (${expression});`);
       } catch (error) {
         result.valid = false;

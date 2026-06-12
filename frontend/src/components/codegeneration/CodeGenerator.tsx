@@ -1,56 +1,14 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Button,
-  List,
-  ListItem,
-  ListItemText,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Divider,
-  IconButton,
-  Tabs,
-  Tab,
-  SelectChangeEvent,
-  ListItemButton,
-  ListSubheader,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Chip,
-  TabScrollButton,
-  CircularProgress
-} from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Paper, Typography, TextField, Select, MenuItem, FormControl, InputLabel, Button, Dialog, DialogTitle, DialogContent, DialogActions, Divider, IconButton, Tabs, Tab, CircularProgress } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DownloadIcon from '@mui/icons-material/Download';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ShareIcon from '@mui/icons-material/Share';
-import { CodeGenerationTemplate, CodeGenerationResult, Diagram, Metamodel, CodeGenerationProject, Model } from '../../models/types';
+import { CodeGenerationTemplate, CodeGenerationResult, Metamodel, CodeGenerationProject, Model } from '../../models/types';
 import { codeGenerationService } from '../../services/codegeneration';
-import { diagramService } from '../../services/diagram';
 import { metamodelService } from '../../services/metamodel';
 import { modelService } from '../../services/model';
 import { ShareDialog } from '../common';
 import { useAuth } from '../../contexts/AuthContext';
-import CodeMirror from '@uiw/react-codemirror';
-import { javascript } from '@codemirror/lang-javascript';
-import { okaidia } from '@uiw/codemirror-theme-okaidia';
-import { autocompletion } from '@codemirror/autocomplete';
-import { createHandlebarsCompletions } from '../../services/codegeneration';
-import { CodeGeneratorProps, ProjectTemplate } from './types';
+import { CodeGeneratorProps } from './types';
 import { downloadFile, downloadAllFilesAsZip } from './utils/fileDownload';
 import { TabPanel } from './components/TabPanel';
 import { TemplateEditor } from './components/TemplateEditor';
@@ -61,7 +19,7 @@ import { GeneratedFilesTab } from './components/GeneratedFilesTab';
 import { useProjectManagement } from './hooks/useProjectManagement';
 import { useTemplateManagement } from './hooks/useTemplateManagement';
 
-const CodeGenerator: React.FC<CodeGeneratorProps> = ({ diagramId }) => {
+const CodeGenerator: React.FC<CodeGeneratorProps> = ({ modelId }) => {
   const { canCreate, canDelete, canShare } = useAuth();
   
   // Use custom hooks for state management
@@ -70,7 +28,7 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ diagramId }) => {
   
   // Local state
   const [loading, setLoading] = useState<boolean>(true);
-  const [diagram, setDiagram] = useState<Diagram | null>(null);
+  const [routeModel, setRouteModel] = useState<Model | null>(null);
   const [metamodels, setMetamodels] = useState<Metamodel[]>([]);
   const [models, setModels] = useState<Model[]>([]);
   const [exampleTemplates, setExampleTemplates] = useState<CodeGenerationTemplate[]>([]);
@@ -94,11 +52,8 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ diagramId }) => {
         const allModels = modelService.getAllModels();
         setModels(allModels);
         
-        // If diagramId is provided, load that diagram
-        if (diagramId) {
-          const diagramData = diagramService.getDiagramById(diagramId);
-          setDiagram(diagramData || null);
-        }
+        const modelFromRoute = modelId ? modelService.getModelById(modelId) || null : null;
+        setRouteModel(modelFromRoute);
         
         // Load example templates
         const allTemplates = codeGenerationService.getAllTemplates();
@@ -139,8 +94,14 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ diagramId }) => {
         projectManagement.setExampleProjects(exampleProjs);
         projectManagement.setProjects(userProjs);
         
-        // Select first project if available
-        if (userProjs.length > 0) {
+        const allProjectOptions = [...userProjs, ...exampleProjs];
+        const compatibleProject = modelFromRoute
+          ? allProjectOptions.find(p => p.targetMetamodelId === modelFromRoute.conformsTo)
+          : undefined;
+
+        if (compatibleProject) {
+          projectManagement.setSelectedProject(compatibleProject.id);
+        } else if (userProjs.length > 0) {
           projectManagement.setSelectedProject(userProjs[0].id);
         } else if (exampleProjs.length > 0) {
           projectManagement.setSelectedProject(exampleProjs[0].id);
@@ -153,7 +114,8 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ diagramId }) => {
     };
     
     loadData();
-  }, [diagramId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modelId]);
 
   const handleGenerateCode = () => {
     if (!projectManagement.selectedProject) {
@@ -174,18 +136,18 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ diagramId }) => {
         throw new Error(`No models found for metamodel: ${project.targetMetamodelId}`);
       }
       
-      // Smart model selection: prioritize diagram's model if available, or analyze template for model references
+      // Smart model selection: prioritize the route model if available, or analyze template for model references
       let selectedModel = relatedModels[0]; // Default to first model
       
-      // If we have a diagramId, use that diagram's model
-      if (diagramId) {
-        const diagram = diagramService.getDiagramById(diagramId);
-        if (diagram) {
-          const diagramModel = modelService.getModelById(diagram.modelId);
-          if (diagramModel && relatedModels.some(m => m.id === diagramModel.id)) {
-            selectedModel = diagramModel;
-          }
+      if (modelId) {
+        const requestedModel = routeModel || modelService.getModelById(modelId);
+        if (!requestedModel) {
+          throw new Error(`Model with ID ${modelId} not found`);
         }
+        if (!relatedModels.some(m => m.id === requestedModel.id)) {
+          throw new Error(`Selected project does not target the model's metamodel: ${requestedModel.conformsTo}`);
+        }
+        selectedModel = requestedModel;
       } else {
         // For standalone code generation, analyze project templates to find referenced models
         const projectTemplates = project.templates;
@@ -201,26 +163,15 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ diagramId }) => {
         }
       }
       
-      // Find the diagram for the selected model if it exists
-      const diagrams = diagramService.getAllDiagrams();
-      const matchingDiagram = diagrams.find(d => d.modelId === selectedModel.id);
-      
-      let results: CodeGenerationResult[];
-      
-      if (matchingDiagram) {
-        // Use diagram-based generation if a diagram exists
-        results = codeGenerationService.generateProjectCode(
-          matchingDiagram.id,
-          projectManagement.selectedProject
-        );
-      } else {
-        // Use model-based generation if no diagram exists
-        results = codeGenerationService.generateProjectCodeFromModel(
-          selectedModel.id,
-          projectManagement.selectedProject
-        );
-      }
-      
+      // Code-gen always runs against the model (abstract syntax), not a view.
+      // Views are read-projections of the model and may be partial subsets, so
+      // running code-gen against a view would yield non-deterministic output
+      // depending on which view happened to be found first.
+      const results = codeGenerationService.generateProjectCodeFromModel(
+        selectedModel.id,
+        projectManagement.selectedProject
+      );
+
       setGeneratedCode(results);
       setSelectedFileIndex(results.length > 0 ? 0 : null);
       setActiveTab(2); // Switch to Generated Files tab
@@ -498,7 +449,7 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ diagramId }) => {
                   onChange={(value) => templateManagement.updateTemplateTab(index, { content: value })}
                   metamodels={metamodels}
                   models={models}
-                  diagram={diagram}
+                  diagram={null}
                   targetMetamodelId={projectManagement.projectTarget}
                 />
                 
@@ -575,4 +526,4 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ diagramId }) => {
   );
 };
 
-export default CodeGenerator; 
+export default CodeGenerator;

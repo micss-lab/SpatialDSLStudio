@@ -8,6 +8,10 @@ jest.mock('bcryptjs', () => ({
   compare: jest.fn(),
 }));
 
+jest.mock('../../services/email.service', () => ({
+  sendAdminBroadcastEmail: jest.fn(),
+}));
+
 beforeEach(() => {
   mockReset(prismaMock);
   jest.clearAllMocks();
@@ -15,6 +19,7 @@ beforeEach(() => {
 
 import { adminService } from '../../services/admin.service';
 import { ApiError } from '../../middleware/errorHandler';
+import { sendAdminBroadcastEmail } from '../../services/email.service';
 
 const makeUser = (overrides = {}) => ({
   id: 'user-uuid-1',
@@ -200,6 +205,101 @@ describe('AdminService', () => {
       const result = await adminService.bulkDeleteUsers('admin-uuid', ['user-1', 'user-2', 'admin-uuid']);
 
       expect(result).toBe(2);
+    });
+  });
+
+  describe('sendNotificationToAllUsers', () => {
+    it('sends a broadcast with admins cc and non-admin users bcc', async () => {
+      prismaMock.user.findMany.mockResolvedValue([
+        makeUser({ id: 'admin-1', email: 'admin@example.com', role: 'ADMIN' }) as any,
+        makeUser({ id: 'modeler-1', email: 'modeler@example.com', role: 'MODELER' }) as any,
+        makeUser({ id: 'viewer-1', email: 'viewer@example.com', role: 'VIEWER' }) as any,
+      ]);
+      (sendAdminBroadcastEmail as jest.Mock).mockResolvedValue({
+        batches: 1,
+        ccCount: 1,
+        bccCount: 2,
+      });
+
+      const result = await adminService.sendNotificationToAllUsers({
+        subject: 'Upcoming migration',
+        message: 'We are planning a major change.',
+      });
+
+      expect(sendAdminBroadcastEmail).toHaveBeenCalledWith(
+        'Upcoming migration',
+        'We are planning a major change.',
+        ['admin@example.com'],
+        ['admin@example.com', 'modeler@example.com', 'viewer@example.com']
+      );
+      expect(result).toEqual({
+        totalUsers: 3,
+        ccAdmins: 1,
+        bccUsers: 2,
+        batches: 1,
+      });
+    });
+
+    it('sends a broadcast only to selected users when userIds are provided', async () => {
+      prismaMock.user.findMany.mockResolvedValue([
+        makeUser({ id: 'admin-1', email: 'admin@example.com', role: 'ADMIN' }) as any,
+        makeUser({ id: 'modeler-1', email: 'modeler@example.com', role: 'MODELER' }) as any,
+      ]);
+      (sendAdminBroadcastEmail as jest.Mock).mockResolvedValue({
+        batches: 1,
+        ccCount: 1,
+        bccCount: 1,
+      });
+
+      const result = await adminService.sendNotificationToAllUsers({
+        subject: 'Targeted update',
+        message: 'Only selected users should receive this.',
+        userIds: ['admin-1', 'modeler-1', 'modeler-1'],
+      });
+
+      expect(prismaMock.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: { in: ['admin-1', 'modeler-1'] } },
+        })
+      );
+      expect(sendAdminBroadcastEmail).toHaveBeenCalledWith(
+        'Targeted update',
+        'Only selected users should receive this.',
+        ['admin@example.com'],
+        ['admin@example.com', 'modeler@example.com']
+      );
+      expect(result).toEqual({
+        totalUsers: 2,
+        ccAdmins: 1,
+        bccUsers: 1,
+        batches: 1,
+      });
+    });
+
+    it('rejects selected recipients when any selected user cannot be found', async () => {
+      prismaMock.user.findMany.mockResolvedValue([
+        makeUser({ id: 'admin-1', email: 'admin@example.com', role: 'ADMIN' }) as any,
+      ]);
+
+      await expect(
+        adminService.sendNotificationToAllUsers({
+          subject: 'Targeted update',
+          message: 'Only selected users should receive this.',
+          userIds: ['admin-1', 'missing-user'],
+        })
+      ).rejects.toThrow(ApiError);
+
+      expect(sendAdminBroadcastEmail).not.toHaveBeenCalled();
+    });
+
+    it('rejects empty subject or message', async () => {
+      await expect(
+        adminService.sendNotificationToAllUsers({ subject: '', message: 'Body' })
+      ).rejects.toThrow(ApiError);
+
+      await expect(
+        adminService.sendNotificationToAllUsers({ subject: 'Subject', message: '' })
+      ).rejects.toThrow(ApiError);
     });
   });
 

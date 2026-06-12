@@ -17,11 +17,13 @@ export function syncMetamodelToAPI(
   const saveData = {
     id: metamodel.id,
     name: metamodel.name,
+    description: metamodel.description,
     uri: metamodel.uri,
     prefix: metamodel.prefix,
     eClass: metamodel.eClass,
     conformsTo: metamodel.conformsTo,
     classes: metamodel.classes,
+    enums: metamodel.enums || [],
     constraints: metamodel.constraints,
   };
 
@@ -81,11 +83,13 @@ export function saveMetamodelToAPI(
   const saveData = {
     id: metamodel.id,
     name: metamodel.name,
+    description: metamodel.description,
     uri: metamodel.uri,
     prefix: metamodel.prefix,
     eClass: metamodel.eClass,
     conformsTo: metamodel.conformsTo,
     classes: metamodel.classes,
+    enums: metamodel.enums || [],
     constraints: metamodel.constraints,
   };
 

@@ -1,0 +1,121 @@
+[
+  {
+    "id": "a4400000-0000-4000-8000-000000000001",
+    "name": "UML Activity",
+    "description": "Activity-diagram representation over UML activity model instances.",
+    "metamodelId": "a1100000-0000-4000-8000-000000000001",
+    "isDefault": true,
+    "sharedConcreteSyntaxByMetaClassId": {},
+    "representationDescriptions": [
+      {
+        "id": "a4400000-0000-4000-8000-000000000101",
+        "name": "Activity Diagram",
+        "description": "Executable diagram representation for arranging activity nodes, pins, and control or object flows.",
+        "viewpointId": "a4400000-0000-4000-8000-000000000001",
+        "kind": "diagram",
+        "visibleMetaClassIds": [
+          "a1100000-0000-4000-8000-000000000101",
+          "a1100000-0000-4000-8000-000000000103",
+          "a1100000-0000-4000-8000-000000000104",
+          "a1100000-0000-4000-8000-000000000105",
+          "a1100000-0000-4000-8000-000000000106",
+          "a1100000-0000-4000-8000-000000000107",
+          "a1100000-0000-4000-8000-000000000108",
+          "a1100000-0000-4000-8000-000000000109",
+          "a1100000-0000-4000-8000-000000000110",
+          "a1100000-0000-4000-8000-000000000111",
+          "a1100000-0000-4000-8000-000000000112"
+        ],
+        "creatableMetaClassIds": [
+          "a1100000-0000-4000-8000-000000000103",
+          "a1100000-0000-4000-8000-000000000104",
+          "a1100000-0000-4000-8000-000000000105",
+          "a1100000-0000-4000-8000-000000000106",
+          "a1100000-0000-4000-8000-000000000107",
+          "a1100000-0000-4000-8000-000000000108",
+          "a1100000-0000-4000-8000-000000000109",
+          "a1100000-0000-4000-8000-000000000111",
+          "a1100000-0000-4000-8000-000000000112"
+        ],
+        "isDefault": true,
+        "concreteSyntaxByMetaClassId": {
+          "a1100000-0000-4000-8000-000000000111": {
+            "two_d": {
+              "shape": "square",
+              "fillColor": "#FFF8E1",
+              "strokeColor": "#F57F17",
+              "strokeWidth": 2,
+              "defaultSize": { "width": 16, "height": 16 }
+            }
+          },
+          "a1100000-0000-4000-8000-000000000112": {
+            "two_d": {
+              "shape": "square",
+              "fillColor": "#E8F5E9",
+              "strokeColor": "#2E7D32",
+              "strokeWidth": 2,
+              "defaultSize": { "width": 16, "height": 16 }
+            }
+          }
+        },
+        "edgeMappings": [
+          {
+            "id": "a4400000-0000-4000-8000-000000000201",
+            "referenceId": "a1100000-0000-4000-8000-000000002201",
+            "referenceName": "flowsTo",
+            "concreteSyntax": {
+              "lineColor": "#263238",
+              "lineWidth": 2,
+              "arrowHead": "filled"
+            }
+          },
+          {
+            "id": "a4400000-0000-4000-8000-000000000202",
+            "referenceId": "a1100000-0000-4000-8000-000000002202",
+            "referenceName": "objectFlow",
+            "concreteSyntax": {
+              "lineColor": "#2E7D32",
+              "lineWidth": 2,
+              "lineDash": [6, 4],
+              "arrowHead": "filled"
+            }
+          }
+        ],
+        "pinMappings": [
+          {
+            "id": "a4400000-0000-4000-8000-000000000301",
+            "pinMetaClassIds": ["a1100000-0000-4000-8000-000000000111"],
+            "ownerMetaClassIds": ["a1100000-0000-4000-8000-000000000105"],
+            "attachmentReferenceName": "owner",
+            "direction": "input",
+            "allowedSides": ["top", "right", "bottom", "left"],
+            "defaultSide": "left",
+            "defaultOffsetRatio": 0.5
+          },
+          {
+            "id": "a4400000-0000-4000-8000-000000000302",
+            "pinMetaClassIds": ["a1100000-0000-4000-8000-000000000112"],
+            "ownerMetaClassIds": ["a1100000-0000-4000-8000-000000000105"],
+            "attachmentReferenceName": "owner",
+            "direction": "output",
+            "allowedSides": ["top", "right", "bottom", "left"],
+            "defaultSide": "right",
+            "defaultOffsetRatio": 0.5
+          }
+        ]
+      },
+      {
+        "id": "a4400000-0000-4000-8000-000000000102",
+        "name": "Activity Node Inventory",
+        "description": "Tabular representation placeholder for reviewing activity node inventory outside the diagram editor.",
+        "viewpointId": "a4400000-0000-4000-8000-000000000001",
+        "kind": "table",
+        "visibleMetaClassIds": [
+          "a1100000-0000-4000-8000-000000000102",
+          "a1100000-0000-4000-8000-000000000105"
+        ],
+        "creatableMetaClassIds": []
+      }
+    ]
+  }
+]

@@ -286,6 +286,14 @@ export const API_ENDPOINTS = {
   
   // Diagrams
   DIAGRAMS: '/diagrams',
+
+  // Viewpoints
+  VIEWPOINTS: '/viewpoints',
+
+  // Interoperability
+  SIRIUS_VALIDATE: '/interoperability/sirius/validate',
+  SIRIUS_IMPORT: '/interoperability/sirius/import',
+  SIRIUS_EXPORT: '/interoperability/sirius/export',
   
   // Transformations
   TRANSFORMATION_PATTERNS: '/transformations/patterns',

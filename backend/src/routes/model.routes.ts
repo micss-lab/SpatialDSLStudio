@@ -118,6 +118,28 @@ router.put(
 );
 
 /**
+ * @route   PUT /api/models/:id/elements/:elementId/presentation
+ * @desc    Update canonical presentation data for a model element
+ */
+router.put(
+  '/:id/elements/:elementId/presentation',
+  validate([
+    param('id').isUUID().withMessage('Invalid model ID format'),
+    param('elementId').notEmpty().withMessage('Element ID is required'),
+  ]),
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const model = await modelService.updateElementPresentation(
+      req.params.id,
+      req.params.elementId,
+      req.body,
+      req.user!.userId,
+      req.user!.role
+    );
+    res.json({ success: true, data: model });
+  })
+);
+
+/**
  * @route   DELETE /api/models/:id/elements/:elementId
  * @desc    Delete an element from a model
  */

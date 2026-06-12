@@ -2,6 +2,9 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import SearchBar from '../../components/common/SearchBar';
+import { SearchResult } from '../../services/common';
+
 // Mock MUI icons and heavy deps to avoid jsdom issues
 jest.mock('@mui/icons-material/Search', () => () => <span data-testid="search-icon" />);
 jest.mock('@mui/icons-material/Clear', () => () => <span data-testid="clear-icon" />);
@@ -13,9 +16,6 @@ jest.mock('@mui/icons-material/Link', () => () => <span data-testid="link-icon" 
 jest.mock('@mui/icons-material/Rule', () => () => <span data-testid="rule-icon" />);
 jest.mock('@mui/icons-material/AccountTree', () => () => <span data-testid="tree-icon" />);
 jest.mock('@mui/icons-material/Keyboard', () => () => <span data-testid="keyboard-icon" />);
-
-import SearchBar from '../../components/common/SearchBar';
-import { SearchResult, SearchEntityType } from '../../services/common';
 
 const mockOnSearch = jest.fn();
 const mockOnSelectResult = jest.fn();
@@ -113,12 +113,15 @@ describe('SearchBar', () => {
     // Clear button may be conditionally rendered; skip assertion if not present
     const clearBtn = screen.queryByTestId('clear-icon');
     if (clearBtn) {
+      // eslint-disable-next-line testing-library/no-node-access
       fireEvent.click(clearBtn.closest('button')!);
       await waitFor(() => {
+        // eslint-disable-next-line jest/no-conditional-expect
         expect(input).toHaveValue('');
       });
     } else {
       // Input still has value; no crash verifies resilience
+      // eslint-disable-next-line jest/no-conditional-expect
       expect(input).toHaveValue('test query');
     }
   });
@@ -217,7 +220,9 @@ describe('SearchBar with multiple result types', () => {
 
     await waitFor(() => {
       expect(screen.getAllByText('Person')[0]).toBeInTheDocument();
+      // eslint-disable-next-line testing-library/no-wait-for-multiple-assertions
       expect(screen.getByText('name')).toBeInTheDocument();
+      // eslint-disable-next-line testing-library/no-wait-for-multiple-assertions
       expect(screen.getByText('friends')).toBeInTheDocument();
     });
   });

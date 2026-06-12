@@ -1,5 +1,5 @@
-import { Metamodel, MetaClass, Model } from '../../models/types';
-import { TestCase, TestCoverage, CoverageMetric, CoverageReport } from './testing-types';
+import { Metamodel } from '../../models/types';
+import { TestCase, CoverageMetric, CoverageReport } from './testing-types';
 import { metamodelService } from '../metamodel';
 import { modelService } from '../model';
 

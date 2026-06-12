@@ -240,7 +240,7 @@ const ResourceDashboard: React.FC = () => {
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <StatCard
-            title="Diagrams"
+            title="Views"
             value={stats.resources.diagrams}
             icon={<DesignServicesIcon />}
             color="#0891b2"

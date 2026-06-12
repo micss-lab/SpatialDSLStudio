@@ -1,37 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  TextField,
-  Typography,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Divider,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Paper,
-  Tooltip,
-  Stack,
-  Chip
-} from '@mui/material';
+import { Box, TextField, Typography, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Paper, Tooltip, Stack, Chip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
 import CodeIcon from '@mui/icons-material/Code';
-import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
 import FunctionsIcon from '@mui/icons-material/Functions';
-import LinkIcon from '@mui/icons-material/Link';
-import { 
-  Expression, 
-  ExpressionType, 
-  ExpressionOperator, 
-  PatternElement,
-  ElementReference
-} from '../../models/types';
+import { Expression, PatternElement } from '../../models/types';
 import { expressionService } from '../../services/constraint';
 
 interface ExpressionEditorProps {
@@ -87,6 +59,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
     
     if (typeof expr === 'string') {
       // Check if it contains any advanced features like references
+      // eslint-disable-next-line no-mixed-operators
       return expr.includes('{') && expr.includes('}') || 
              expr.match(/(increment|decrement|multiply|divide|equals|greater than|less than|AND|OR)/i) !== null;
     }

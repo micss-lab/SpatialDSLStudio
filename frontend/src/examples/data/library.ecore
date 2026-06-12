@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    name="library"
+    nsURI="http://example.org/library"
+    nsPrefix="library">
+  <eClassifiers xsi:type="ecore:EClass" name="Library">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="books" eType="#//Book" upperBound="-1" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="persons" eType="#//Person" upperBound="-1" containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Book">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore/OCL">
+      <details key="positivePages" value="self.pages &gt; 0"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="title" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="pages" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="genre" eType="#//Genre"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="author" eType="#//Person" containment="false" eOpposite="#//Person/books"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Person">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="books" eType="#//Book" upperBound="-1" containment="false" eOpposite="#//Book/author"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="Genre">
+    <eLiterals name="FICTION"/>
+    <eLiterals name="NONFICTION" value="1"/>
+  </eClassifiers>
+</ecore:EPackage>

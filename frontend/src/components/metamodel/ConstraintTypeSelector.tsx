@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Tabs, 
-  Tab, 
-  Box,
-  Typography,
-  Paper,
-  Alert,
-  Chip
-} from '@mui/material';
+import { Tabs, Tab, Box, Alert, Chip } from '@mui/material';
 import JavaScriptIcon from '@mui/icons-material/Javascript';
 import CodeIcon from '@mui/icons-material/Code';
 import OCLConstraintEditor from './OCLConstraintEditor';

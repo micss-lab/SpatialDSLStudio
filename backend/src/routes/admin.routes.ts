@@ -193,6 +193,24 @@ router.post('/users/bulk/delete', async (req: AuthenticatedRequest, res: Respons
   }
 });
 
+/**
+ * POST /api/admin/notifications/broadcast
+ * Send an admin notification to all users. Admins are CC'd; non-admin users are BCC'd.
+ */
+router.post('/notifications/broadcast', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { subject, message, userIds } = req.body;
+    const result = await adminService.sendNotificationToAllUsers({ subject, message, userIds });
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Send notification error:', error);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.statusCode ? error.message : 'Failed to send notification',
+    });
+  }
+});
+
 // ============================================
 // Resource Statistics & Dashboard
 // ============================================

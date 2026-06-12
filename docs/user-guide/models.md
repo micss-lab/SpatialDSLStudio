@@ -34,15 +34,33 @@ A model:
 Supported import format:
 
 - JSON model file
+- XMI instance model (`.xmi`) for an already-imported matching Ecore metamodel
 
 Import checks include:
 
 - model structure validity
 - referenced metamodel existence
+- XMI namespace matching against a metamodel URI
+- enum literal validation when an XMI attribute maps to an enum
 
 Supported export format:
 
 - JSON model file
+- XMI instance model (`.xmi`)
+
+XMI import/export follows EMF conventions:
+
+- containment references are represented as nested XML elements
+- non-containment references are represented as EMF fragment path attributes such as `//@books.0`
+- enum values are serialized by literal name
+- `xmi:id` anchors are read when present
+
+Known XMI limits:
+
+- multi-resource `href` references are not resolved; they are warned and dropped
+- XMI does not carry SpatialDSL layout, so imported models are auto-laid out on a grid
+- presentation, appearance, view membership, bend points, and per-connection attributes are not part of core Ecore XMI and may be warned/dropped on export
+- Sirius `.aird` representation/session data is not read from or written to model XMI
 
 ## Add elements
 
@@ -92,30 +110,11 @@ If a metamodel reference has attributes, they can be filled when creating the re
 
 For visual clarity, references can include bend points in the editor to route edges around dense areas.
 
-## Appearance and style customization
+## Appearance and notation
 
-Element appearance can be customized through the appearance selector.
+Default notation belongs to the metaclass. The metamodel Notation tab defines fallback 2D and 3D representation for every instance of a class. A viewpoint representation can override that fallback for a specific modeling perspective.
 
-Supported appearance types include:
-
-- default
-- square
-- rectangle
-- circle
-- triangle
-- star
-- custom image
-- custom 3D model
-
-Custom asset support:
-
-- image uploads (for custom-image)
-- GLB uploads (for custom-3d-model)
-
-Limits and behavior:
-
-- image uploads use size limits and are stored via file storage service
-- 3D model uploads are expected as GLB and use file storage service
+Model elements can still carry an instance-level override when one instance needs to look different from the class default. Use Reset to metaclass default to clear the override and inherit notation again.
 
 ## Validation behavior
 
@@ -188,8 +187,9 @@ Fix: remove accidental fields or update metamodel to include intended attribute.
 2. Create model and add core elements.
 3. Fill attributes.
 4. Add references.
-5. Adjust appearance where needed.
-6. Run validation and fix issues.
+5. Create views through the appropriate viewpoint representation.
+6. Adjust instance appearance only where needed.
+7. Run validation and fix issues.
 
 ## Relevant files
 
@@ -202,5 +202,7 @@ Fix: remove accidental fields or update metamodel to include intended attribute.
 ## Related docs
 
 - [Metamodels](metamodels.md)
-- [Diagrams (2D and 3D)](diagrams.md)
+- [Viewpoints and Representation Descriptions](viewpoints.md)
+- [Views (2D and 3D)](diagrams.md)
+- [Sirius Desktop Compatibility](../reference/sirius-compatibility.md)
 - [Roles and Sharing](roles-and-sharing.md)

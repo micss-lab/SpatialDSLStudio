@@ -120,6 +120,7 @@ export const useElementHighlighting = ({
     } else {
       onResetHighlight();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStepIndex, executionSteps, diagram]);
 
   return {

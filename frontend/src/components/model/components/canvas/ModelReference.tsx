@@ -1,6 +1,5 @@
 // Model reference (edge) canvas component
 import React from 'react';
-import { Line, Arrow, Group, Text } from 'react-konva';
 import { Model, Metamodel, ModelElement } from '../../../../models/types';
 
 interface ModelReferenceProps {

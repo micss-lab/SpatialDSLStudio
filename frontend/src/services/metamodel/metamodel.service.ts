@@ -1,4 +1,4 @@
-import { MetaClass, Metamodel, MetaAttribute, MetaReference } from '../../models/types';
+import { MetaClass, Metamodel, MetaAttribute, MetaAttributeType, MetaReference } from '../../models/types';
 import { v4 as uuidv4 } from 'uuid';
 import { metaMetamodelService } from '../metametamodel';
 import { exampleDataService } from './exampleData.service';
@@ -115,13 +115,14 @@ class MetamodelService {
     return this.metamodels.find(mm => mm.id === id);
   }
 
-  createMetamodel(name: string): Metamodel {
+  createMetamodel(name: string, description: string = ''): Metamodel {
     const corePackage = metaMetamodelService.getCoreEPackage();
     const ePackageClass = corePackage.classes.find(cls => cls.name === 'EPackage');
     
     const newMetamodel: Metamodel = {
       id: uuidv4(),
       name,
+      description,
       eClass: ePackageClass ? ePackageClass.id : '',
       uri: `http://www.modeling-tool.com/${name.toLowerCase()}`,
       prefix: name.toLowerCase(),
@@ -134,6 +135,31 @@ class MetamodelService {
     this.saveToStorage();
     saveMetamodelToAPI(newMetamodel, this.syncedToDb, this.pendingSaves); // Save to PostgreSQL
     return newMetamodel;
+  }
+
+  importMetamodel(metamodelData: Metamodel): Metamodel {
+    if (!metamodelData.id || !metamodelData.name || !Array.isArray(metamodelData.classes)) {
+      throw new Error('Invalid metamodel format');
+    }
+
+    const corePackage = metaMetamodelService.getCoreEPackage();
+    const importedMetamodel: Metamodel = {
+      ...metamodelData,
+      conformsTo: metamodelData.conformsTo && metamodelData.conformsTo !== 'core-ecore'
+        ? metamodelData.conformsTo
+        : corePackage.id,
+      constraints: metamodelData.constraints || []
+    };
+
+    const existingIndex = this.metamodels.findIndex(m => m.id === importedMetamodel.id);
+    if (existingIndex >= 0) {
+      this.metamodels[existingIndex] = importedMetamodel;
+    } else {
+      this.metamodels.push(importedMetamodel);
+    }
+
+    this.saveToStorage(importedMetamodel.id);
+    return importedMetamodel;
   }
 
   deleteMetamodel(id: string): boolean {
@@ -167,10 +193,10 @@ class MetamodelService {
   }
 
   addMetaAttribute(
-    metamodelId: string, 
-    classId: string, 
-    name: string, 
-    type: 'string' | 'number' | 'boolean' | 'date', 
+    metamodelId: string,
+    classId: string,
+    name: string,
+    type: MetaAttributeType,
     defaultValue?: any,
     required?: boolean,
     many: boolean = false
@@ -238,7 +264,7 @@ class MetamodelService {
     classId: string,
     referenceId: string,
     name: string,
-    type: 'string' | 'number' | 'boolean' | 'date',
+    type: MetaAttributeType,
     defaultValue?: any,
     required?: boolean,
     many: boolean = false

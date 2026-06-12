@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import prisma from '../config/database';
 import { ApiError } from '../middleware';
 import { UserRole, ResourceType } from '../../../shared/types';
+import { sendAdminBroadcastEmail } from './email.service';
 
 const SALT_ROUNDS = 10;
 
@@ -133,6 +134,19 @@ export interface ActivityLogEntry {
   details?: string;
   timestamp: Date;
   ipAddress?: string;
+}
+
+export interface AdminNotificationRequest {
+  subject: string;
+  message: string;
+  userIds?: string[];
+}
+
+export interface AdminNotificationResult {
+  totalUsers: number;
+  ccAdmins: number;
+  bccUsers: number;
+  batches: number;
 }
 
 class AdminService {
@@ -480,6 +494,62 @@ class AdminService {
     });
 
     return result.count;
+  }
+
+  async sendNotificationToAllUsers(data: AdminNotificationRequest): Promise<AdminNotificationResult> {
+    const subject = data.subject?.trim();
+    const message = data.message?.trim();
+
+    if (!subject) {
+      throw new ApiError(400, 'Subject is required');
+    }
+
+    if (!message) {
+      throw new ApiError(400, 'Message is required');
+    }
+
+    if (subject.length > 160) {
+      throw new ApiError(400, 'Subject must be 160 characters or less');
+    }
+
+    if (message.length > 10000) {
+      throw new ApiError(400, 'Message must be 10000 characters or less');
+    }
+
+    const userIds = Array.isArray(data.userIds)
+      ? Array.from(new Set(data.userIds.filter(id => typeof id === 'string' && id.trim()).map(id => id.trim())))
+      : [];
+
+    const users = await prisma.user.findMany({
+      ...(userIds.length > 0 ? { where: { id: { in: userIds } } } : {}),
+      select: {
+        id: true,
+        email: true,
+        role: true,
+      },
+      orderBy: { email: 'asc' },
+    });
+
+    if (users.length === 0) {
+      throw new ApiError(400, 'No users found to notify');
+    }
+
+    if (userIds.length > 0 && users.length !== userIds.length) {
+      throw new ApiError(400, 'One or more selected users could not be found');
+    }
+
+    const adminEmails = users
+      .filter(user => user.role === 'ADMIN')
+      .map(user => user.email);
+    const allEmails = users.map(user => user.email);
+    const sendResult = await sendAdminBroadcastEmail(subject, message, adminEmails, allEmails);
+
+    return {
+      totalUsers: users.length,
+      ccAdmins: sendResult.ccCount,
+      bccUsers: sendResult.bccCount,
+      batches: sendResult.batches,
+    };
   }
 
   /**

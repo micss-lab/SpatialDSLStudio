@@ -1,6 +1,7 @@
 import { 
   Model, 
   ModelElement, 
+  ModelElementPresentation,
   ValidationResult,
   OCLValidationIssue
 } from '../../models/types';
@@ -58,8 +59,30 @@ class ModelService {
       const model = this.getModelById(changedModelId);
       if (model) {
         modelApiSyncService.syncModelToAPI(model);
+        window.dispatchEvent(new CustomEvent('model:changed', { detail: { modelId: changedModelId } }));
+        window.dispatchEvent(new Event('storage'));
       }
     }
+  }
+
+  private normalizeImportedElement(element: any, index: number): ModelElement {
+    const style = {
+      ...(element.properties || {}),
+      ...(element.style || {}),
+    };
+
+    if (!style.position && element.presentation?.position2D) {
+      style.position = element.presentation.position2D;
+    }
+
+    return {
+      ...element,
+      id: element.id || `imported-element-${index}`,
+      modelElementId: element.modelElementId || element.metaClassId || element.typeId,
+      style,
+      references: element.references || {},
+      ...(element.presentation && { presentation: element.presentation }),
+    };
   }
 
   // Model CRUD operations
@@ -75,11 +98,43 @@ class ModelService {
     return modelCrudService.getModelsByMetamodelId(metamodelId);
   }
 
-  createModel(name: string, metamodelId: string): Model {
+  createModel(name: string, metamodelId: string, description: string = ''): Model {
     return modelCrudService.createModel(name, metamodelId, (model) => {
       this.saveToStorage();
       modelApiSyncService.saveModelToAPI(model);
-    });
+    }, description);
+  }
+
+  async importModel(modelData: Model): Promise<Model> {
+    if (!modelData.id || !modelData.name || !Array.isArray(modelData.elements)) {
+      throw new Error('Invalid model format');
+    }
+
+    const metamodelId = modelData.conformsTo || modelData.metamodelId;
+    if (!metamodelId) {
+      throw new Error('Imported model is missing conformsTo/metamodelId');
+    }
+
+    const importedModel: Model = {
+      ...modelData,
+      metamodelId,
+      conformsTo: metamodelId,
+      elements: (modelData.elements || []).map((element, index) => this.normalizeImportedElement(element, index)),
+      connections: modelData.connections || []
+    };
+
+    const models = modelCrudService.getModelsRef();
+    const savedModel = await modelApiSyncService.upsertModelToAPI(importedModel);
+    const savedModelIndex = models.findIndex(model => model.id === savedModel.id);
+    if (savedModelIndex >= 0) {
+      models[savedModelIndex] = savedModel;
+    } else {
+      models.push(savedModel);
+    }
+
+    window.dispatchEvent(new CustomEvent('model:changed', { detail: { modelId: savedModel.id } }));
+    window.dispatchEvent(new Event('storage'));
+    return savedModel;
   }
 
   updateModel(modelId: string, updatedModel: Partial<Model>): Model | undefined {
@@ -165,6 +220,22 @@ class ModelService {
       model,
       elementId,
       position,
+      (id) => this.saveToStorage(id)
+    );
+  }
+
+  updateModelElementPresentation(
+    modelId: string,
+    elementId: string,
+    presentation: ModelElementPresentation
+  ): boolean {
+    const model = this.getModelById(modelId);
+    if (!model) return false;
+
+    return modelElementCrudService.updateModelElementPresentation(
+      model,
+      elementId,
+      presentation,
       (id) => this.saveToStorage(id)
     );
   }

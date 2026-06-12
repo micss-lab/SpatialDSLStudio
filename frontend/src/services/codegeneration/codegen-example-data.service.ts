@@ -1,5 +1,4 @@
-import { codegenTemplateCrudService } from './codegen-template-crud.service';
-import { codegenProjectCrudService } from './codegen-project-crud.service';
+
 
 /**
  * Service for loading example templates and projects

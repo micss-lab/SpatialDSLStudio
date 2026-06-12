@@ -114,7 +114,8 @@ Major interactive domains:
 
 - metamodel visual editor and constraint tooling
 - model visual editor with validation and appearance control
-- 2D/3D diagram editors
+- viewpoint and representation-description management
+- 2D/3D view editors
 - transformation rule/execution dashboard
 - code generation project/template workspace
 
@@ -125,7 +126,7 @@ Major interactive domains:
 Key shared categories:
 
 - user roles and sharing types
-- metamodel/model/diagram structures
+- metamodel/model/view structures
 - transformation and codegen entities
 - testing and file metadata types
 
@@ -157,12 +158,12 @@ Frontend Nginx proxies `/api/*` to backend service inside Compose network.
 5. Prisma persists row and response is returned.
 6. frontend updates local state/cache.
 
-### Example: share diagram
+### Example: share view
 
 1. UI opens share dialog and submits email + permission.
 2. API client calls `POST /api/share/DIAGRAM/:id/share`.
 3. backend verifies sharer role and ownership.
-4. sharing service writes share row and applies cascade rules.
+4. sharing service writes share row and applies cascade rules. `DIAGRAM` remains the compatibility resource type for views.
 5. response includes cascaded shares and warnings.
 
 ## Architecture characteristics
@@ -177,4 +178,5 @@ Frontend Nginx proxies `/api/*` to backend service inside Compose network.
 
 - [API Reference](api.md)
 - [Data Model](data-model.md)
+- [Sirius Desktop Compatibility](sirius-compatibility.md)
 - [Docker Setup](../getting-started/docker-setup.md)

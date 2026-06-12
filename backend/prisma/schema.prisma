@@ -65,6 +65,7 @@ model User {
   codegenProjects     CodeGenerationProject[]
   testCases      TestCase[]
   storedFiles    StoredFile[]
+  viewpoints     Viewpoint[]
   
   // Sharing relations
   ownedShares    SharedResource[] @relation("ShareOwner")
@@ -139,6 +140,7 @@ model EPackage {
 model Metamodel {
   id         String   @id @default(uuid())
   name       String
+  description String?
   uri        String
   prefix     String
   eClass     String?  // ID of corresponding EClass in meta-metamodel
@@ -146,6 +148,7 @@ model Metamodel {
   // Store complex nested data as JSONB
   // classes: MetaClass[] with attributes, references, constraints
   classes    Json     @default("[]")
+  enums      Json     @default("[]")
   
   // Global constraints (OCL and JavaScript)
   constraints Json    @default("[]")
@@ -163,8 +166,40 @@ model Metamodel {
   
   // Relations
   models     Model[]
+  viewpoints Viewpoint[]
   
   @@map("metamodels")
+}
+
+// ===========================================
+// Viewpoint (Sirius-style representation specification)
+// ===========================================
+
+model Viewpoint {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+
+  // Foreign key to semantic metamodel.
+  metamodelId String
+  metamodel   Metamodel @relation(fields: [metamodelId], references: [id], onDelete: Cascade)
+
+  // Embedded RepresentationDescription[] for the first iteration.
+  representationDescriptions Json @default("[]")
+  sharedConcreteSyntax       Json @default("{}")
+  isDefault                  Boolean @default(false)
+
+  // Owner follows metamodel ownership/access.
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  diagrams Diagram[]
+
+  @@unique([metamodelId, name, userId])
+  @@map("viewpoints")
 }
 
 // ===========================================
@@ -174,6 +209,7 @@ model Metamodel {
 model Model {
   id           String   @id @default(uuid())
   name         String
+  description  String?
   metamodelId  String   // Duplicate for easy access
   
   // Store model elements as JSONB
@@ -207,6 +243,7 @@ model Model {
 model Diagram {
   id        String   @id @default(uuid())
   name      String
+  description String?
   
   // Foreign key to model
   modelId   String
@@ -215,6 +252,17 @@ model Diagram {
   // Store diagram elements as JSONB
   // elements: DiagramElement[] with positions, styles, etc.
   elements  Json     @default("[]")
+
+  // Optional Sirius-style specification links. Diagram remains the current
+  // compatibility table for concrete View / representation instances.
+  viewpointId String?
+  viewpoint   Viewpoint? @relation(fields: [viewpointId], references: [id], onDelete: SetNull)
+  representationDescriptionId String?
+
+  // View membership for the model-backed projection contract.
+  includedElementIds Json @default("[]")
+  schemaVersion      Int  @default(2)
+  migrationWarnings  Json @default("[]")
   
   // 3D grid settings
   gridSettings Json  @default("{\"sizeX\": 20000, \"sizeY\": 20000}")

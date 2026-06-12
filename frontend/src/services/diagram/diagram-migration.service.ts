@@ -1,4 +1,4 @@
-import { Diagram, MetaClass, Metamodel } from '../../models/types';
+import { Diagram, MetaClass } from '../../models/types';
 import { metamodelService } from '../metamodel';
 import { modelService } from '../model';
 
@@ -18,6 +18,9 @@ export class DiagramMigrationService {
       if (!diagram.gridSettings) {
         diagram.gridSettings = { sizeX: 20000, sizeY: 20000 };
       }
+      if (!Array.isArray(diagram.includedElementIds)) {
+        diagram.includedElementIds = [];
+      }
       diagram.elements.forEach(element => {
         if ((element as any).properties && !element.style) {
           element.style = (element as any).properties;
@@ -30,7 +33,14 @@ export class DiagramMigrationService {
         if (!element.style) {
           element.style = {};
         }
+        if (element.type === 'node') {
+          const linkedModelElementId = element.style.linkedModelElementId || element.style.modelElementRefId;
+          if (linkedModelElementId && !diagram.includedElementIds?.includes(linkedModelElementId)) {
+            diagram.includedElementIds?.push(linkedModelElementId);
+          }
+        }
       });
+      diagram.schemaVersion = diagram.schemaVersion || 2;
     });
   }
 

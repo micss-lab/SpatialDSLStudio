@@ -1,25 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Box,
-  Typography,
-  Grid,
-  Card,
-  CardContent,
-  CardHeader,
-  LinearProgress,
-  CircularProgress,
-  Tabs,
-  Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  Divider
-} from '@mui/material';
+import { Box, Typography, Grid, Card, CardContent, LinearProgress, CircularProgress, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip } from '@mui/material';
 import { CoverageReport } from '../../services/testing';
 import {
   CheckCircle as CheckCircleIcon,
@@ -28,6 +8,7 @@ import {
 } from '@mui/icons-material';
 
 // Simple chart component to visualize coverage data
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const CoverageBarChart: React.FC<{
   label: string;
   percentage: number;

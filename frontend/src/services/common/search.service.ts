@@ -1,4 +1,4 @@
-import { Metamodel, MetaClass, MetaAttribute, MetaReference, Constraint, Model, ModelElement } from '../../models/types';
+import { Metamodel, Model } from '../../models/types';
 
 // Search entity types
 export type SearchEntityType = 'class' | 'attribute' | 'reference' | 'constraint' | 'element' | 'instance' | 'generic-attribute' | 'generic-reference';
@@ -317,14 +317,14 @@ class SearchService {
               parentName: elementName,
               classId: metaClass.id,
               itemId: attr.id,
-              attributeType: attr.type,
+              attributeType: typeof attr.type === 'object' ? 'enum' : attr.type,
               attributeValues: element.style || {}
             }
           });
 
           // Track for generic attribute entries
           if (!genericAttributes.has(attr.name)) {
-            genericAttributes.set(attr.name, { type: attr.type, count: 0 });
+            genericAttributes.set(attr.name, { type: typeof attr.type === 'object' ? 'enum' : attr.type, count: 0 });
           }
           genericAttributes.get(attr.name)!.count++;
         }
@@ -375,7 +375,7 @@ class SearchService {
                     parentName: elementName,
                     classId: metaClass.id,
                     itemId: attr.id,
-                    attributeType: attr.type,
+                    attributeType: typeof attr.type === 'object' ? 'enum' : attr.type,
                     attributeValues: element.style || {}
                   }
                 });
@@ -383,7 +383,7 @@ class SearchService {
                 // Track for generic attribute entries
                 const fullAttrName = `${ref.name}.${attr.name}`;
                 if (!genericAttributes.has(fullAttrName)) {
-                  genericAttributes.set(fullAttrName, { type: attr.type, count: 0 });
+                  genericAttributes.set(fullAttrName, { type: typeof attr.type === 'object' ? 'enum' : attr.type, count: 0 });
                 }
                 genericAttributes.get(fullAttrName)!.count++;
               }

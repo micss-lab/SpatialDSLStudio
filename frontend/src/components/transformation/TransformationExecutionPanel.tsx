@@ -29,23 +29,13 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import PauseIcon from '@mui/icons-material/Pause';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
-import RefreshIcon from '@mui/icons-material/Refresh';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DownloadIcon from '@mui/icons-material/Download';
-import { Stage, Layer, Rect, Circle, Line, Arrow, Text, Group } from 'react-konva';
-import { 
-  TransformationRule, 
-  TransformationExecution, 
-  TransformationStep,
-  Model,
-  PatternMatch,
-  ModelElement
-} from '../../models/types';
+import { Stage, Layer, Rect, Line, Arrow, Text, Group } from 'react-konva';
+import { TransformationRule, TransformationExecution, TransformationStep, Model, PatternMatch } from '../../models/types';
 import { transformationService } from '../../services/transformation';
 import { modelService } from '../../services/model';
 import { metamodelService } from '../../services/metamodel';
@@ -60,15 +50,6 @@ declare module '../../models/types' {
   interface ModelElement {
     name?: string;
     type?: string;
-  }
-  
-  interface Model {
-    connections?: Array<{
-      id: string;
-      sourceId: string;
-      targetId: string;
-      type?: string;
-    }>;
   }
   
   interface TransformationStep {
@@ -101,8 +82,10 @@ const TransformationExecutionPanel: React.FC<TransformationExecutionPanelProps> 
   const [tabValue, setTabValue] = useState<number>(0);
   const [sourceModel, setSourceModel] = useState<Model | null>(null);
   const [resultModel, setResultModel] = useState<Model | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [visualizationWidth, setVisualizationWidth] = useState<number>(800);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [visualizationHeight, setVisualizationHeight] = useState<number>(400);
   
   // Available data
@@ -128,6 +111,7 @@ const TransformationExecutionPanel: React.FC<TransformationExecutionPanelProps> 
     return () => {
       window.removeEventListener('resize', handleResize);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   // Update source model whenever sourceModelId changes
@@ -260,7 +244,7 @@ const TransformationExecutionPanel: React.FC<TransformationExecutionPanelProps> 
           }
         } else {
           setExecutionStatus('Transformation execution failed.');
-          console.error('Transformation execution failed - check that rules match diagram elements');
+          console.error('Transformation execution failed - check that rules match view elements');
         }
       } catch (error) {
         setExecutionStatus(`Error: ${error instanceof Error ? error.message : String(error)}`);
@@ -377,6 +361,7 @@ const TransformationExecutionPanel: React.FC<TransformationExecutionPanelProps> 
   };
   
   // Reset execution
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const resetExecution = () => {
     setCurrentExecution(null);
     setExecutionSteps([]);
@@ -397,6 +382,7 @@ const TransformationExecutionPanel: React.FC<TransformationExecutionPanelProps> 
   };
   
   // Render the execution steps in a stepper
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const renderExecutionSteps = () => {
     if (!executionSteps || executionSteps.length === 0) {
       return (
@@ -1082,4 +1068,4 @@ const TransformationExecutionPanel: React.FC<TransformationExecutionPanelProps> 
   );
 };
 
-export default TransformationExecutionPanel; 
+export default TransformationExecutionPanel;

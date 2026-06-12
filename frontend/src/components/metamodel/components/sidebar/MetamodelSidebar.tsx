@@ -17,12 +17,14 @@ import {
   ListItem,
   ListItemText,
   IconButton,
-  Button
+  Button,
+  TextField
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ConstraintTypeSelector from '../../ConstraintTypeSelector';
+import MetaClassNotationEditor from '../../MetaClassNotationEditor';
 import { metamodelService } from '../../../../services/metamodel';
 import { MetaClass, Metamodel } from '../../../../models/types';
 
@@ -109,6 +111,44 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
   isConstraintHighlighted,
   getHighlightColor
 }) => {
+  const formatAttributeType = (type: any): string => {
+    if (typeof type === 'object' && type?.enumId) {
+      return metamodel.enums?.find(metaEnum => metaEnum.id === type.enumId)?.name || 'enum';
+    }
+    return String(type);
+  };
+
+  const updateSelectedReference = (updates: Record<string, any>) => {
+    if (!selectedReference) return;
+
+    const success = metamodelService.updateMetaReference(
+      metamodel.id,
+      selectedReference.sourceClass.id,
+      selectedReference.reference.id,
+      updates
+    );
+
+    if (!success) return;
+
+    const updatedMetamodel = metamodelService.getMetamodelById(metamodel.id);
+    if (!updatedMetamodel) return;
+
+    onUpdateMetamodel(updatedMetamodel);
+    const updatedSourceClass = updatedMetamodel.classes.find(
+      (cls: MetaClass) => cls.id === selectedReference.sourceClass.id
+    );
+    const updatedReference = updatedSourceClass?.references.find(
+      (reference: any) => reference.id === selectedReference.reference.id
+    );
+
+    if (updatedSourceClass && updatedReference) {
+      onUpdateSelectedReference({
+        sourceClass: updatedSourceClass,
+        reference: updatedReference,
+      });
+    }
+  };
+
   return (
     <Drawer
       variant="permanent"
@@ -131,6 +171,7 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
         >
           <Tab label="Properties" id="metamodel-tab-0" aria-controls="metamodel-tabpanel-0" />
           <Tab label="Constraints" id="metamodel-tab-1" aria-controls="metamodel-tabpanel-1" />
+          <Tab label="Fallback" id="metamodel-tab-2" aria-controls="metamodel-tabpanel-2" />
         </Tabs>
       </Box>
       
@@ -267,7 +308,7 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
                         </Typography>
                         {supertype.attributes.map((attr: any) => (
                           <Typography key={attr.id} variant="caption" display="block" sx={{ ml: 1, color: 'text.secondary' }}>
-                            • {attr.name}: {attr.type}
+                            • {attr.name}: {formatAttributeType(attr.type)}
                           </Typography>
                         ))}
                       </Box>
@@ -310,7 +351,7 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
                 >
                   <ListItemText
                     primary={attr.name}
-                    secondary={`${attr.type}${attr.required ? ' (required)' : ''}`}
+                    secondary={`${formatAttributeType(attr.type)}${attr.required ? ' (required)' : ''}`}
                   />
                 </ListItem>
               ))}
@@ -368,7 +409,7 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
                   <ListItem key={attr.id}>
                     <ListItemText
                       primary={attr.name}
-                      secondary={`${attr.type}${attr.required ? ' (required)' : ''}`}
+                      secondary={`${formatAttributeType(attr.type)}${attr.required ? ' (required)' : ''}`}
                     />
                   </ListItem>
                 ))}
@@ -416,36 +457,93 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
           <Box sx={{ p: 2 }}>
             <Typography variant="h6">{selectedReference.reference.name}</Typography>
             <Divider sx={{ my: 1 }} />
-            
-            <List dense>
-              <ListItem>
-                <ListItemText primary="Source" secondary={selectedReference.sourceClass.name} />
-              </ListItem>
-              <ListItem>
-                <ListItemText 
-                  primary="Target" 
-                  secondary={metamodel.classes.find((cls: MetaClass) => cls.id === selectedReference.reference.target)?.name || 'Unknown'} 
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2 }}>
+              <TextField
+                label="Name"
+                size="small"
+                value={selectedReference.reference.name}
+                disabled={readOnly}
+                onChange={(event) => updateSelectedReference({ name: event.target.value })}
+              />
+
+              <TextField
+                label="Source"
+                size="small"
+                value={selectedReference.sourceClass.name}
+                disabled
+              />
+
+              <FormControl fullWidth size="small" disabled={readOnly}>
+                <InputLabel>Target</InputLabel>
+                <Select
+                  label="Target"
+                  value={selectedReference.reference.target}
+                  onChange={(event) => updateSelectedReference({ target: event.target.value })}
+                >
+                  {metamodel.classes.map((cls: MetaClass) => (
+                    <MenuItem key={cls.id} value={cls.id}>
+                      {cls.name}{cls.abstract ? ' (abstract)' : ''}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                <TextField
+                  label="Lower Bound"
+                  size="small"
+                  value={String(selectedReference.reference.cardinality?.lowerBound ?? 0)}
+                  disabled={readOnly}
+                  onChange={(event) => {
+                    const lowerBound = Math.max(0, parseInt(event.target.value, 10) || 0);
+                    updateSelectedReference({
+                      cardinality: {
+                        ...(selectedReference.reference.cardinality || {}),
+                        lowerBound,
+                      },
+                    });
+                  }}
                 />
-              </ListItem>
-              <ListItem>
-                <ListItemText 
-                  primary="Cardinality" 
-                  secondary={`${selectedReference.reference.cardinality.lowerBound}..${selectedReference.reference.cardinality.upperBound}`} 
+                <TextField
+                  label="Upper Bound"
+                  size="small"
+                  value={String(selectedReference.reference.cardinality?.upperBound ?? 1)}
+                  disabled={readOnly}
+                  onChange={(event) => {
+                    const rawValue = event.target.value.trim();
+                    const upperBound = rawValue === '*' ? '*' : Math.max(0, parseInt(rawValue, 10) || 0);
+                    updateSelectedReference({
+                      cardinality: {
+                        ...(selectedReference.reference.cardinality || {}),
+                        upperBound,
+                      },
+                    });
+                  }}
                 />
-              </ListItem>
-              <ListItem>
-                <ListItemText 
-                  primary="Containment" 
-                  secondary={selectedReference.reference.containment ? 'Yes' : 'No'} 
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText 
-                  primary="Allow Self Reference" 
-                  secondary={selectedReference.reference.allowSelfReference ? 'Yes' : 'No'} 
-                />
-              </ListItem>
-            </List>
+              </Box>
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={Boolean(selectedReference.reference.containment)}
+                    disabled={readOnly}
+                    onChange={(_, checked) => updateSelectedReference({ containment: checked })}
+                  />
+                }
+                label="Containment"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={selectedReference.reference.allowSelfReference !== false}
+                    disabled={readOnly}
+                    onChange={(_, checked) => updateSelectedReference({ allowSelfReference: checked })}
+                  />
+                }
+                label="Allow self reference"
+              />
+            </Box>
             
             {/* Reference Attributes Section */}
             <Box sx={{ mt: 2 }}>
@@ -506,7 +604,7 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
                     >
                       <ListItemText
                         primary={attr.name}
-                        secondary={`${attr.type}${attr.required ? ' (required)' : ''}`}
+                        secondary={`${formatAttributeType(attr.type)}${attr.required ? ' (required)' : ''}`}
                       />
                     </ListItem>
                   ))
@@ -571,6 +669,17 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
             </Typography>
           </Box>
         )}
+      </TabPanel>
+      <TabPanel value={tabValue} index={2}>
+        <MetaClassNotationEditor
+          metamodel={metamodel}
+          selectedClass={selectedClass}
+          selectedReference={selectedReference}
+          readOnly={readOnly}
+          onUpdateMetamodel={onUpdateMetamodel}
+          onUpdateSelectedClass={onUpdateSelectedClass}
+          onUpdateSelectedReference={onUpdateSelectedReference}
+        />
       </TabPanel>
     </Drawer>
   );

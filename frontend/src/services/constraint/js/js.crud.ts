@@ -1,10 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { 
-  JSConstraint, 
-  Metamodel,
-  MetaClass,
-  Constraint
-} from '../../../models/types';
+import { JSConstraint, MetaClass, Constraint } from '../../../models/types';
 import { JSServiceContext } from './types';
 import { validateJSSyntax } from './js.validation';
 
@@ -111,6 +106,7 @@ export function updateConstraint(
       const found = cls.constraints.find((c: Constraint) => c.id === constraintId && 'type' in c && c.type === 'javascript') as JSConstraint | undefined;
       if (found) {
         constraint = found;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         containerClass = cls;
         break;
       }

@@ -1,0 +1,870 @@
+[
+  {
+    "id": "40000000-0000-4000-8000-000000000101",
+    "name": "Warehouse Operations",
+    "description": "Operational perspectives for warehouse movement, fleet status, charging, and material flow.",
+    "metamodelId": "10000000-0000-4000-8000-000000000100",
+    "isDefault": true,
+    "representationDescriptions": [
+      {
+        "id": "40000000-0000-4000-8000-000000000201",
+        "name": "Warehouse Floor Plan",
+        "description": "Full operational diagram showing all warehouse resources and layout areas in one view.",
+        "viewpointId": "40000000-0000-4000-8000-000000000101",
+        "kind": "diagram",
+        "visibleMetaClassIds": [
+          "10000000-0000-4000-8000-000000000101",
+          "10000000-0000-4000-8000-000000000102",
+          "10000000-0000-4000-8000-000000000103",
+          "10000000-0000-4000-8000-000000000104",
+          "10000000-0000-4000-8000-000000000105",
+          "10000000-0000-4000-8000-000000000106"
+        ],
+        "creatableMetaClassIds": [
+          "10000000-0000-4000-8000-000000000102",
+          "10000000-0000-4000-8000-000000000103",
+          "10000000-0000-4000-8000-000000000104",
+          "10000000-0000-4000-8000-000000000105",
+          "10000000-0000-4000-8000-000000000106"
+        ],
+        "concreteSyntaxByMetaClassId": {
+          "10000000-0000-4000-8000-000000000101": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#f8fafc",
+              "strokeColor": "#334155",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 220,
+                "height": 120
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#e2e8f0",
+              "defaultSizeMm": {
+                "widthMm": 10000,
+                "heightMm": 200,
+                "depthMm": 8000
+              }
+            }
+          },
+          "10000000-0000-4000-8000-000000000102": {
+            "two_d": {
+              "shape": "circle",
+              "fillColor": "#dbeafe",
+              "strokeColor": "#2563eb",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 70,
+                "height": 70
+              }
+            },
+            "three_d": {
+              "fallbackShape": "cylinder",
+              "fallbackColor": "#2563eb",
+              "defaultSizeMm": {
+                "widthMm": 900,
+                "heightMm": 650,
+                "depthMm": 900
+              },
+              "modelUrl": "/models/mobile_robot.glb"
+            }
+          },
+          "10000000-0000-4000-8000-000000000103": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#fef3c7",
+              "strokeColor": "#b45309",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 160,
+                "height": 48
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#d97706",
+              "defaultSizeMm": {
+                "widthMm": 2400,
+                "heightMm": 400,
+                "depthMm": 900
+              },
+              "modelUrl": "/models/conveyor_1.glb"
+            }
+          },
+          "10000000-0000-4000-8000-000000000104": {
+            "two_d": {
+              "shape": "diamond",
+              "fillColor": "#dcfce7",
+              "strokeColor": "#15803d",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 95,
+                "height": 95
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#16a34a",
+              "defaultSizeMm": {
+                "widthMm": 1200,
+                "heightMm": 900,
+                "depthMm": 1200
+              },
+              "modelUrl": "/models/conveyor_2.glb"
+            }
+          },
+          "10000000-0000-4000-8000-000000000105": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#ecfeff",
+              "strokeColor": "#0891b2",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 120,
+                "height": 80
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#06b6d4",
+              "defaultSizeMm": {
+                "widthMm": 3000,
+                "heightMm": 3000,
+                "depthMm": 4000
+              },
+              "modelUrl": "/models/charging_station.glb"
+            }
+          },
+          "10000000-0000-4000-8000-000000000106": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#eef2ff",
+              "strokeColor": "#4f46e5",
+              "strokeWidth": 1,
+              "defaultSize": {
+                "width": 180,
+                "height": 70
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#818cf8",
+              "defaultSizeMm": {
+                "widthMm": 2600,
+                "heightMm": 80,
+                "depthMm": 900
+              },
+              "modelUrl": "/models/pathway_area.glb"
+            }
+          }
+        },
+        "concreteSyntaxByReferenceId": {
+          "f7530f99-1b89-4570-8ca6-6894f56521d6": {
+            "lineColor": "#64748b",
+            "lineWidth": 1,
+            "lineDash": [
+              4,
+              4
+            ],
+            "arrowHead": "open",
+            "labelFormat": "contains"
+          },
+          "d5ee2c04-1ba2-4273-a339-39ba11b203fe": {
+            "lineColor": "#64748b",
+            "lineWidth": 1,
+            "lineDash": [
+              4,
+              4
+            ],
+            "arrowHead": "open",
+            "labelFormat": "contains"
+          },
+          "9c2b6a3a-7a36-4da1-8720-3e4948cfd021": {
+            "lineColor": "#64748b",
+            "lineWidth": 1,
+            "lineDash": [
+              4,
+              4
+            ],
+            "arrowHead": "open",
+            "labelFormat": "contains"
+          },
+          "865fa445-a8a6-4ae6-b171-44d19f36bf62": {
+            "lineColor": "#64748b",
+            "lineWidth": 1,
+            "lineDash": [
+              4,
+              4
+            ],
+            "arrowHead": "open",
+            "labelFormat": "contains"
+          },
+          "84680dfa-f3c8-4641-948f-7a47131cc35a": {
+            "lineColor": "#64748b",
+            "lineWidth": 1,
+            "lineDash": [
+              4,
+              4
+            ],
+            "arrowHead": "open",
+            "labelFormat": "contains"
+          },
+          "5a13acab-c46a-45cd-b2b5-e2ee8d9ba029": {
+            "lineColor": "#0f766e",
+            "lineWidth": 2,
+            "lineDash": [
+              6,
+              4
+            ],
+            "arrowHead": "filled",
+            "labelFormat": "assigned station"
+          }
+        },
+        "edgeMappings": [
+          {
+            "id": "edge-floor-assigned-station",
+            "referenceId": "5a13acab-c46a-45cd-b2b5-e2ee8d9ba029",
+            "referenceName": "assignedStation",
+            "sourceMetaClassIds": [
+              "10000000-0000-4000-8000-000000000102"
+            ],
+            "targetMetaClassIds": [
+              "10000000-0000-4000-8000-000000000105"
+            ],
+            "concreteSyntax": {
+              "lineColor": "#0f766e",
+              "lineWidth": 2,
+              "lineDash": [
+                6,
+                4
+              ],
+              "arrowHead": "filled",
+              "labelFormat": "assigned station"
+            }
+          }
+        ],
+        "toolDefinitions": [
+          {
+            "id": "tool-floor-mobile-robot",
+            "name": "Mobile Robot",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000102"
+          },
+          {
+            "id": "tool-floor-conveyor",
+            "name": "Conveyor",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000103"
+          },
+          {
+            "id": "tool-floor-output-location",
+            "name": "Output Location",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000104"
+          },
+          {
+            "id": "tool-floor-charging-station",
+            "name": "Charging Station",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000105"
+          },
+          {
+            "id": "tool-floor-pathway-area",
+            "name": "Pathway Area",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000106"
+          }
+        ],
+        "isDefault": true
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000202",
+        "name": "Fleet and Charging",
+        "description": "Focused diagram for mobile robots, charging stations, and robot-to-station assignment.",
+        "viewpointId": "40000000-0000-4000-8000-000000000101",
+        "kind": "diagram",
+        "visibleMetaClassIds": [
+          "10000000-0000-4000-8000-000000000102",
+          "10000000-0000-4000-8000-000000000105"
+        ],
+        "creatableMetaClassIds": [
+          "10000000-0000-4000-8000-000000000102",
+          "10000000-0000-4000-8000-000000000105"
+        ],
+        "concreteSyntaxByMetaClassId": {
+          "10000000-0000-4000-8000-000000000102": {
+            "two_d": {
+              "shape": "circle",
+              "fillColor": "#ede9fe",
+              "strokeColor": "#7c3aed",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 76,
+                "height": 76
+              }
+            },
+            "three_d": {
+              "fallbackShape": "cylinder",
+              "fallbackColor": "#7c3aed",
+              "defaultSizeMm": {
+                "widthMm": 900,
+                "heightMm": 650,
+                "depthMm": 900
+              },
+              "modelUrl": "/models/mobile_robot.glb"
+            }
+          },
+          "10000000-0000-4000-8000-000000000105": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#ecfeff",
+              "strokeColor": "#0891b2",
+              "strokeWidth": 3,
+              "defaultSize": {
+                "width": 132,
+                "height": 90
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#06b6d4",
+              "defaultSizeMm": {
+                "widthMm": 3000,
+                "heightMm": 3000,
+                "depthMm": 4000
+              },
+              "modelUrl": "/models/charging_station.glb"
+            }
+          }
+        },
+        "concreteSyntaxByReferenceId": {
+          "5a13acab-c46a-45cd-b2b5-e2ee8d9ba029": {
+            "lineColor": "#7c3aed",
+            "lineWidth": 3,
+            "lineDash": [
+              8,
+              4
+            ],
+            "arrowHead": "filled",
+            "labelFormat": "assigned station"
+          }
+        },
+        "edgeMappings": [
+          {
+            "id": "edge-fleet-assigned-station",
+            "referenceId": "5a13acab-c46a-45cd-b2b5-e2ee8d9ba029",
+            "referenceName": "assignedStation",
+            "sourceMetaClassIds": [
+              "10000000-0000-4000-8000-000000000102"
+            ],
+            "targetMetaClassIds": [
+              "10000000-0000-4000-8000-000000000105"
+            ],
+            "concreteSyntax": {
+              "lineColor": "#7c3aed",
+              "lineWidth": 3,
+              "lineDash": [
+                8,
+                4
+              ],
+              "arrowHead": "filled",
+              "labelFormat": "assigned station"
+            }
+          }
+        ],
+        "toolDefinitions": [
+          {
+            "id": "tool-fleet-mobile-robot",
+            "name": "Mobile Robot",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000102"
+          },
+          {
+            "id": "tool-fleet-charging-station",
+            "name": "Charging Station",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000105"
+          }
+        ]
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000203",
+        "name": "Material Flow",
+        "description": "Flow-oriented diagram for conveyors, output locations, and pathway areas involved in product movement.",
+        "viewpointId": "40000000-0000-4000-8000-000000000101",
+        "kind": "diagram",
+        "visibleMetaClassIds": [
+          "10000000-0000-4000-8000-000000000103",
+          "10000000-0000-4000-8000-000000000104",
+          "10000000-0000-4000-8000-000000000106"
+        ],
+        "creatableMetaClassIds": [
+          "10000000-0000-4000-8000-000000000103",
+          "10000000-0000-4000-8000-000000000104",
+          "10000000-0000-4000-8000-000000000106"
+        ],
+        "concreteSyntaxByMetaClassId": {
+          "10000000-0000-4000-8000-000000000103": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#ffedd5",
+              "strokeColor": "#c2410c",
+              "strokeWidth": 3,
+              "defaultSize": {
+                "width": 180,
+                "height": 54
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#ea580c",
+              "defaultSizeMm": {
+                "widthMm": 2600,
+                "heightMm": 420,
+                "depthMm": 900
+              },
+              "modelUrl": "/models/conveyor_1.glb"
+            }
+          },
+          "10000000-0000-4000-8000-000000000104": {
+            "two_d": {
+              "shape": "diamond",
+              "fillColor": "#dcfce7",
+              "strokeColor": "#15803d",
+              "strokeWidth": 3,
+              "defaultSize": {
+                "width": 104,
+                "height": 104
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#16a34a",
+              "defaultSizeMm": {
+                "widthMm": 1200,
+                "heightMm": 900,
+                "depthMm": 1200
+              },
+              "modelUrl": "/models/conveyor_2.glb"
+            }
+          },
+          "10000000-0000-4000-8000-000000000106": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#e0f2fe",
+              "strokeColor": "#0369a1",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 220,
+                "height": 70
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#38bdf8",
+              "defaultSizeMm": {
+                "widthMm": 3200,
+                "heightMm": 80,
+                "depthMm": 900
+              },
+              "modelUrl": "/models/pathway_area.glb"
+            }
+          }
+        },
+        "concreteSyntaxByReferenceId": {
+          "f7530f99-1b89-4570-8ca6-6894f56521d6": {
+            "lineColor": "#0369a1",
+            "lineWidth": 2,
+            "lineDash": [
+              3,
+              5
+            ],
+            "arrowHead": "open",
+            "labelFormat": "path area"
+          },
+          "9c2b6a3a-7a36-4da1-8720-3e4948cfd021": {
+            "lineColor": "#15803d",
+            "lineWidth": 2,
+            "arrowHead": "filled",
+            "labelFormat": "output"
+          },
+          "865fa445-a8a6-4ae6-b171-44d19f36bf62": {
+            "lineColor": "#c2410c",
+            "lineWidth": 2,
+            "arrowHead": "filled",
+            "labelFormat": "conveyor"
+          }
+        },
+        "edgeMappings": [
+          {
+            "id": "edge-flow-pathway",
+            "referenceId": "f7530f99-1b89-4570-8ca6-6894f56521d6",
+            "referenceName": "contains",
+            "targetMetaClassIds": [
+              "10000000-0000-4000-8000-000000000106"
+            ],
+            "concreteSyntax": {
+              "lineColor": "#0369a1",
+              "lineWidth": 2,
+              "lineDash": [
+                3,
+                5
+              ],
+              "arrowHead": "open",
+              "labelFormat": "path area"
+            }
+          },
+          {
+            "id": "edge-flow-output",
+            "referenceId": "9c2b6a3a-7a36-4da1-8720-3e4948cfd021",
+            "referenceName": "contains",
+            "targetMetaClassIds": [
+              "10000000-0000-4000-8000-000000000104"
+            ],
+            "concreteSyntax": {
+              "lineColor": "#15803d",
+              "lineWidth": 2,
+              "arrowHead": "filled",
+              "labelFormat": "output"
+            }
+          },
+          {
+            "id": "edge-flow-conveyor",
+            "referenceId": "865fa445-a8a6-4ae6-b171-44d19f36bf62",
+            "referenceName": "contains",
+            "targetMetaClassIds": [
+              "10000000-0000-4000-8000-000000000103"
+            ],
+            "concreteSyntax": {
+              "lineColor": "#c2410c",
+              "lineWidth": 2,
+              "arrowHead": "filled",
+              "labelFormat": "conveyor"
+            }
+          }
+        ],
+        "toolDefinitions": [
+          {
+            "id": "tool-flow-conveyor",
+            "name": "Conveyor",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000103"
+          },
+          {
+            "id": "tool-flow-output-location",
+            "name": "Output Location",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000104"
+          },
+          {
+            "id": "tool-flow-pathway-area",
+            "name": "Pathway Area",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000106"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "40000000-0000-4000-8000-000000000102",
+    "name": "Warehouse Diagnostics",
+    "description": "Engineering and monitoring perspectives for analyzing automation assets, infrastructure coverage, and runtime readiness.",
+    "metamodelId": "10000000-0000-4000-8000-000000000100",
+    "isDefault": false,
+    "representationDescriptions": [
+      {
+        "id": "40000000-0000-4000-8000-000000000204",
+        "name": "Automation Health Map",
+        "description": "Diagnostics diagram for checking robots, conveyors, charging stations, and charge assignment readiness.",
+        "viewpointId": "40000000-0000-4000-8000-000000000102",
+        "kind": "diagram",
+        "visibleMetaClassIds": [
+          "10000000-0000-4000-8000-000000000102",
+          "10000000-0000-4000-8000-000000000103",
+          "10000000-0000-4000-8000-000000000105"
+        ],
+        "creatableMetaClassIds": [
+          "10000000-0000-4000-8000-000000000102",
+          "10000000-0000-4000-8000-000000000103",
+          "10000000-0000-4000-8000-000000000105"
+        ],
+        "concreteSyntaxByMetaClassId": {
+          "10000000-0000-4000-8000-000000000102": {
+            "two_d": {
+              "shape": "circle",
+              "fillColor": "#dcfce7",
+              "strokeColor": "#15803d",
+              "strokeWidth": 3,
+              "defaultSize": {
+                "width": 76,
+                "height": 76
+              }
+            },
+            "three_d": {
+              "fallbackShape": "cylinder",
+              "fallbackColor": "#22c55e",
+              "defaultSizeMm": {
+                "widthMm": 900,
+                "heightMm": 650,
+                "depthMm": 900
+              },
+              "modelUrl": "/models/mobile_robot.glb"
+            }
+          },
+          "10000000-0000-4000-8000-000000000103": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#fef9c3",
+              "strokeColor": "#ca8a04",
+              "strokeWidth": 3,
+              "defaultSize": {
+                "width": 170,
+                "height": 52
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#eab308",
+              "defaultSizeMm": {
+                "widthMm": 2600,
+                "heightMm": 420,
+                "depthMm": 900
+              },
+              "modelUrl": "/models/conveyor_1.glb"
+            }
+          },
+          "10000000-0000-4000-8000-000000000105": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#cffafe",
+              "strokeColor": "#0e7490",
+              "strokeWidth": 3,
+              "defaultSize": {
+                "width": 130,
+                "height": 86
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#06b6d4",
+              "defaultSizeMm": {
+                "widthMm": 2200,
+                "heightMm": 1800,
+                "depthMm": 2200
+              },
+              "modelUrl": "/models/charging_station.glb"
+            }
+          }
+        },
+        "concreteSyntaxByReferenceId": {
+          "5a13acab-c46a-45cd-b2b5-e2ee8d9ba029": {
+            "lineColor": "#0f766e",
+            "lineWidth": 3,
+            "lineDash": [
+              2,
+              6
+            ],
+            "arrowHead": "filled",
+            "labelFormat": "charge assignment"
+          }
+        },
+        "edgeMappings": [
+          {
+            "id": "edge-health-charge-assignment",
+            "referenceId": "5a13acab-c46a-45cd-b2b5-e2ee8d9ba029",
+            "referenceName": "assignedStation",
+            "sourceMetaClassIds": [
+              "10000000-0000-4000-8000-000000000102"
+            ],
+            "targetMetaClassIds": [
+              "10000000-0000-4000-8000-000000000105"
+            ],
+            "concreteSyntax": {
+              "lineColor": "#0f766e",
+              "lineWidth": 3,
+              "lineDash": [
+                2,
+                6
+              ],
+              "arrowHead": "filled",
+              "labelFormat": "charge assignment"
+            }
+          }
+        ],
+        "toolDefinitions": [
+          {
+            "id": "tool-health-mobile-robot",
+            "name": "Mobile Robot",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000102"
+          },
+          {
+            "id": "tool-health-conveyor",
+            "name": "Conveyor",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000103"
+          },
+          {
+            "id": "tool-health-charging-station",
+            "name": "Charging Station",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000105"
+          }
+        ],
+        "isDefault": true
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000205",
+        "name": "Infrastructure Coverage",
+        "description": "Engineering diagram for reviewing coverage of warehouse zones, output locations, and pathway infrastructure.",
+        "viewpointId": "40000000-0000-4000-8000-000000000102",
+        "kind": "diagram",
+        "visibleMetaClassIds": [
+          "10000000-0000-4000-8000-000000000101",
+          "10000000-0000-4000-8000-000000000104",
+          "10000000-0000-4000-8000-000000000106"
+        ],
+        "creatableMetaClassIds": [
+          "10000000-0000-4000-8000-000000000104",
+          "10000000-0000-4000-8000-000000000106"
+        ],
+        "concreteSyntaxByMetaClassId": {
+          "10000000-0000-4000-8000-000000000101": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#f8fafc",
+              "strokeColor": "#475569",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 240,
+                "height": 130
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#cbd5e1",
+              "defaultSizeMm": {
+                "widthMm": 11000,
+                "heightMm": 200,
+                "depthMm": 9000
+              }
+            }
+          },
+          "10000000-0000-4000-8000-000000000104": {
+            "two_d": {
+              "shape": "diamond",
+              "fillColor": "#f0fdf4",
+              "strokeColor": "#166534",
+              "strokeWidth": 3,
+              "defaultSize": {
+                "width": 100,
+                "height": 100
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#16a34a",
+              "defaultSizeMm": {
+                "widthMm": 1200,
+                "heightMm": 900,
+                "depthMm": 1200
+              },
+              "modelUrl": "/models/conveyor_2.glb"
+            }
+          },
+          "10000000-0000-4000-8000-000000000106": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#f5f3ff",
+              "strokeColor": "#6d28d9",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 210,
+                "height": 66
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#8b5cf6",
+              "defaultSizeMm": {
+                "widthMm": 3200,
+                "heightMm": 80,
+                "depthMm": 900
+              },
+              "modelUrl": "/models/pathway_area.glb"
+            }
+          }
+        },
+        "concreteSyntaxByReferenceId": {
+          "f7530f99-1b89-4570-8ca6-6894f56521d6": {
+            "lineColor": "#6d28d9",
+            "lineWidth": 2,
+            "lineDash": [
+              6,
+              3
+            ],
+            "arrowHead": "open",
+            "labelFormat": "coverage area"
+          },
+          "9c2b6a3a-7a36-4da1-8720-3e4948cfd021": {
+            "lineColor": "#166534",
+            "lineWidth": 2,
+            "arrowHead": "filled",
+            "labelFormat": "output"
+          }
+        },
+        "edgeMappings": [
+          {
+            "id": "edge-coverage-pathway",
+            "referenceId": "f7530f99-1b89-4570-8ca6-6894f56521d6",
+            "referenceName": "contains",
+            "targetMetaClassIds": [
+              "10000000-0000-4000-8000-000000000106"
+            ],
+            "concreteSyntax": {
+              "lineColor": "#6d28d9",
+              "lineWidth": 2,
+              "lineDash": [
+                6,
+                3
+              ],
+              "arrowHead": "open",
+              "labelFormat": "coverage area"
+            }
+          },
+          {
+            "id": "edge-coverage-output",
+            "referenceId": "9c2b6a3a-7a36-4da1-8720-3e4948cfd021",
+            "referenceName": "contains",
+            "targetMetaClassIds": [
+              "10000000-0000-4000-8000-000000000104"
+            ],
+            "concreteSyntax": {
+              "lineColor": "#166534",
+              "lineWidth": 2,
+              "arrowHead": "filled",
+              "labelFormat": "output"
+            }
+          }
+        ],
+        "toolDefinitions": [
+          {
+            "id": "tool-coverage-output-location",
+            "name": "Output Location",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000104"
+          },
+          {
+            "id": "tool-coverage-pathway-area",
+            "name": "Pathway Area",
+            "type": "node",
+            "metaClassId": "10000000-0000-4000-8000-000000000106"
+          }
+        ]
+      }
+    ]
+  }
+]

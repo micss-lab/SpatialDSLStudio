@@ -38,7 +38,14 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@example.com}
       APP_URL: ${APP_URL:-https://dsl-studio.micss-lab.be}
+      SEED_DATABASE: ${SEED_DATABASE:-false}
     # No ports exposed to host — frontend nginx proxies /api/* internally
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3001/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   frontend:
     build:
@@ -47,9 +54,16 @@ services:
     container_name: spatialdsl-frontend
     restart: always
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "8081:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
 
 volumes:
   db_data:

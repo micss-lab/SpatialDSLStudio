@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<unsupported:Root
+    xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:unsupported="http://example.com/spatialdsl/fixtures/sirius/unsupported"
+    xmi:id="root-unsupported"
+    name="Unsupported Feature Sample">
+  <children xmi:id="child-flagged" name="Flagged Child" flag="true"/>
+  <notes xmi:id="note-review" text="This note is shown by an unsupported additional layer."/>
+</unsupported:Root>

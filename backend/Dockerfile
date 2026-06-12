@@ -22,4 +22,4 @@ RUN npm run build
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/backend/src/server.js"]
+CMD ["sh", "-c", "npm run prisma:migrate:prod && if [ \"$SEED_DATABASE\" = \"true\" ]; then npm run prisma:seed; fi && npm start"]

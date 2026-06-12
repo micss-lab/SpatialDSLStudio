@@ -34,13 +34,20 @@ export class DiagramCrudService {
   createDiagram(
     name: string,
     modelId: string,
-    saveCallback: (diagram: Diagram) => void
+    saveCallback: (diagram: Diagram) => void,
+    options: { viewpointId?: string; representationDescriptionId?: string; description?: string } = {}
   ): Diagram {
     const newDiagram: Diagram = {
       id: uuidv4(),
       name,
+      description: options.description,
       modelId,
+      viewpointId: options.viewpointId,
+      representationDescriptionId: options.representationDescriptionId,
       elements: [],
+      includedElementIds: [],
+      schemaVersion: 2,
+      migrationWarnings: [],
       gridSettings: {
         sizeX: 20000, // Default 20m
         sizeY: 20000  // Default 20m

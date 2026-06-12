@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import { Diagram } from '../../models/types';
 import { modelService } from '../model';
 
@@ -49,34 +48,40 @@ export class DiagramImportExportService {
     
     try {
       const parsedData = JSON.parse(jsonData);
+      const importedDiagrams = Array.isArray(parsedData) ? parsedData : [parsedData];
       
-      // Validate that it's a diagram object
-      if (!parsedData.id || !parsedData.name || !parsedData.modelId || !Array.isArray(parsedData.elements)) {
-        console.error('Invalid diagram data format');
-        return { diagram: null, diagrams };
+      for (const importedDiagram of importedDiagrams) {
+        // Validate that it's a diagram/view object.
+        if (
+          !importedDiagram.id ||
+          !importedDiagram.name ||
+          !importedDiagram.modelId ||
+          !Array.isArray(importedDiagram.elements)
+        ) {
+          console.error('Invalid diagram data format');
+          return { diagram: null, diagrams: [] };
+        }
+
+        // Check if model exists
+        const modelExists = modelService.getModelById(importedDiagram.modelId);
+        if (!modelExists) {
+          console.error('Referenced model does not exist:', importedDiagram.modelId);
+          return { diagram: null, diagrams: [] };
+        }
+
+        const normalizedDiagram: Diagram = {
+          ...importedDiagram,
+          elements: importedDiagram.elements || [],
+          includedElementIds: importedDiagram.includedElementIds || [],
+          schemaVersion: importedDiagram.schemaVersion || 2,
+          migrationWarnings: importedDiagram.migrationWarnings || []
+        };
+
+        diagrams.push(normalizedDiagram);
+        saveCallback(normalizedDiagram);
       }
       
-      // Check if model exists
-      const modelExists = modelService.getModelById(parsedData.modelId);
-      if (!modelExists) {
-        console.error('Referenced model does not exist:', parsedData.modelId);
-        return { diagram: null, diagrams };
-      }
-      
-      // Check if a diagram with this ID already exists
-      const existingDiagramIndex = diagrams.findIndex(d => d.id === parsedData.id);
-      
-      // Generate a new ID if this diagram already exists
-      if (existingDiagramIndex >= 0) {
-        parsedData.id = uuidv4();
-        parsedData.name = `${parsedData.name} (Imported)`;
-      }
-      
-      // Add the diagram to the collection
-      diagrams.push(parsedData);
-      saveCallback(parsedData);
-      
-      return { diagram: parsedData, diagrams };
+      return { diagram: diagrams[0] || null, diagrams };
     } catch (error) {
       console.error('Error importing diagram:', error);
       return { diagram: null, diagrams };

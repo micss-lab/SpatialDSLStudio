@@ -7,7 +7,7 @@ Persistent schema is defined in Prisma and stored in PostgreSQL.
 The data model combines:
 
 - relational ownership and foreign keys for core lineage
-- JSON/JSONB-style fields for flexible metamodel/model/diagram structures
+- JSON/JSONB-style fields for flexible metamodel/model/view structures
 - explicit share records for cross-user collaboration
 
 ## Core entities
@@ -54,9 +54,29 @@ Key fields:
 
 - `name`, `uri`, `prefix`, optional `eClass`
 - `classes` (JSON)
+- `enums` (JSON)
 - `constraints` (JSON)
 - `conformsToId` (EPackage FK)
 - `userId`
+
+Metaclass JSON can include concrete syntax metadata for class-level 2D/3D notation. Reference JSON can include edge notation metadata. This is fallback notation; role-specific or representation-specific notation belongs in a Viewpoint representation description.
+
+### Viewpoint
+
+Definition-level modeling perspective for one metamodel, aligned with Sirius Viewpoint terminology.
+
+Key fields:
+
+- `name`, optional `description`
+- `metamodelId` (Metamodel FK)
+- `representationDescriptions` (JSON)
+- `sharedConcreteSyntax` (JSON)
+- `isDefault`
+- `userId`
+
+Viewpoints are not concrete user views. They define available representation kinds, visible concepts, creatable concepts, notation overrides, edge mappings, pin mappings, and palette/tool definitions. Representation descriptions are embedded JSON in the first implementation.
+
+These records are SpatialDSL specification data. They are aligned with Sirius terminology, but they are not serialized as Sirius `.odesign` files.
 
 ### Model
 
@@ -71,17 +91,36 @@ Key fields:
 - `conformsToId` (Metamodel FK)
 - `userId`
 
-### Diagram
+Model elements own canonical presentation metadata:
 
-Visual representation bound to a model.
+- 2D and 3D position
+- 2D and 3D size
+- rotation
+- optional instance-level appearance override
+- optional attachment metadata for pin-like nodes (`attachedToElementId`, side, offset ratio)
+
+Views project this data rather than duplicating it.
+
+### Diagram / View
+
+Compatibility resource representing a view bound to a model. The database table and API still use `Diagram`; user-facing UI labels increasingly use `View`.
 
 Key fields:
 
 - `name`
 - `modelId` (Model FK)
-- `elements` (JSON)
+- optional `viewpointId`
+- optional `representationDescriptionId`
+- `includedElementIds` (JSON)
 - `gridSettings` (JSON)
+- `schemaVersion`
+- `migrationWarnings`
+- `elements` (legacy JSON kept for compatibility)
 - `userId`
+
+Notation resolution order is instance override, representation description, viewpoint shared defaults, metaclass fallback, then built-in fallback.
+
+Diagram/View records are not Sirius `.aird` representation files. They are SpatialDSL view resources backed by model membership and presentation data.
 
 ### TransformationRule
 
@@ -133,7 +172,7 @@ Key fields:
 ## Enums and domain vocabulary
 
 - `UserRole`: ADMIN, DSL_DESIGNER, MODELER, VIEWER
-- `ResourceType`: METAMODEL, MODEL, DIAGRAM, TRANSFORMATION_RULE, CODEGEN_PROJECT, TEST_CASE
+- `ResourceType`: METAMODEL, MODEL, DIAGRAM, TRANSFORMATION_RULE, CODEGEN_PROJECT, TEST_CASE (`DIAGRAM` is the compatibility resource type for views)
 - `SharePermission`: VIEWER, EDITOR
 - `TestCaseType`: attribute, reference, constraint, reference_attribute
 - `TestCaseStatus`: pending, running, passed, failed
@@ -164,7 +203,9 @@ Semantics:
 
 Main dependency chain:
 
-- `EPackage` -> `Metamodel` -> `Model` -> `Diagram`
+- `EPackage` -> `Metamodel` -> `Viewpoint` -> `RepresentationDescription`
+- `Metamodel` -> `Model` -> `Diagram/View`
+- `Diagram/View` -> optional `Viewpoint` + `RepresentationDescription`
 
 Additional dependency links:
 
@@ -177,7 +218,8 @@ JSON fields are used for flexible domain objects:
 
 - class definitions
 - model elements and connections
-- diagram elements and grid config
+- model element presentation and connections
+- view membership and grid config
 - transformation patterns
 - template collections
 - test values and IO snapshots
@@ -196,8 +238,12 @@ Current migration set:
 - `20260123055303_make_target_metamodel_id_optional`
 - `20260223024320_add_rbac_sharing`
 - `20260321071500_sync_user_schema_for_auth`
+- `20260427000000_add_view_membership_to_diagrams`
+- `20260525000000_add_metamodel_enums`
+- `20260528000000_add_viewpoints`
 
 ## Related docs
 
 - [API Reference](api.md)
 - [Architecture](architecture.md)
+- [Sirius Desktop Compatibility](sirius-compatibility.md)

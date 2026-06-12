@@ -1,5 +1,4 @@
 import {
-  DiagramElement,
   CodeGenerationTemplate,
   CodeGenerationResult,
   CodeGenerationProject
@@ -8,7 +7,6 @@ import { codegenApiSyncService } from './codegen-api-sync.service';
 import { codegenHandlebarsService } from './codegen-handlebars.service';
 import { codegenTemplateCrudService } from './codegen-template-crud.service';
 import { codegenProjectCrudService } from './codegen-project-crud.service';
-import { codegenGenerationEngineService } from './codegen-generation-engine.service';
 import { codegenModelGenerationService } from './codegen-model-generation.service';
 import { codegenExampleDataService } from './codegen-example-data.service';
 
@@ -164,26 +162,6 @@ class CodeGenerationService {
 
   removeTemplateFromProject(projectId: string, templateId: string): boolean {
     return codegenProjectCrudService.removeTemplateFromProject(projectId, templateId);
-  }
-
-  // ==============================
-  // Code Generation (Diagram-based)
-  // ==============================
-  
-  generateCode(diagramId: string, templateId: string, elements: DiagramElement[]): CodeGenerationResult[] {
-    return codegenGenerationEngineService.generateCode(diagramId, templateId, elements);
-  }
-
-  generateProjectCode(diagramId: string, projectId: string): CodeGenerationResult[] {
-    return codegenGenerationEngineService.generateProjectCode(diagramId, projectId);
-  }
-
-  generateCodeFromTemplate(
-    diagramId: string, 
-    template: CodeGenerationTemplate, 
-    elements: DiagramElement[]
-  ): CodeGenerationResult[] {
-    return codegenGenerationEngineService.generateCodeFromTemplate(diagramId, template, elements);
   }
 
   // ==============================

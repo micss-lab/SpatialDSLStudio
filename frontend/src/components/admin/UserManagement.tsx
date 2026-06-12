@@ -48,7 +48,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LockResetIcon from '@mui/icons-material/LockReset';
-import FilterListIcon from '@mui/icons-material/FilterList';
 
 import {
   adminService,
@@ -82,7 +81,9 @@ const UserManagement: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | ''>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [sortBy, setSortBy] = useState<UserListParams['sortBy']>('createdAt');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   // Selection
@@ -421,7 +422,7 @@ const UserManagement: React.FC = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        <Tooltip title={`Metamodels: ${user.resourceCounts.metamodels}, Models: ${user.resourceCounts.models}, Diagrams: ${user.resourceCounts.diagrams}`}>
+                        <Tooltip title={`Metamodels: ${user.resourceCounts.metamodels}, Models: ${user.resourceCounts.models}, Views: ${user.resourceCounts.diagrams}`}>
                           <Typography variant="body2">
                             {user.resourceCounts.metamodels + user.resourceCounts.models + user.resourceCounts.diagrams} resources
                           </Typography>

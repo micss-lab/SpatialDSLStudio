@@ -118,6 +118,7 @@ export const ReferenceLabels: React.FC<ReferenceLabelsProps> = ({
     // Offset cardinality based on the connection edge
     const targetPos = targetClass.position || { x: 0, y: 0 };
     const targetWidth = 200;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const targetHeight = 30 + targetClass.attributes.length * 20 + 10;
     
     if (cardinalityX === targetPos.x) {

@@ -51,7 +51,9 @@ export class DiagramElementQueryService {
     let changed = false;
     affectedDiagrams.forEach(diagram => {
       const initialLength = diagram.elements.length;
+      const initialIncludedLength = diagram.includedElementIds?.length || 0;
       diagram.elements = diagram.elements.filter(e => e.modelElementId !== modelElementId);
+      diagram.includedElementIds = (diagram.includedElementIds || []).filter(id => id !== modelElementId);
       
       // Also remove edges connected to this model element
       diagram.elements = diagram.elements.filter(e => {
@@ -64,7 +66,7 @@ export class DiagramElementQueryService {
         return (sourceElement && targetElement);
       });
       
-      if (initialLength !== diagram.elements.length) {
+      if (initialLength !== diagram.elements.length || initialIncludedLength !== (diagram.includedElementIds?.length || 0)) {
         changed = true;
       }
     });

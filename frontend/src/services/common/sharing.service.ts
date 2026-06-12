@@ -112,7 +112,7 @@ class SharingService {
     const names: Record<ResourceType, string> = {
       METAMODEL: 'Metamodel',
       MODEL: 'Model',
-      DIAGRAM: 'Diagram',
+      DIAGRAM: 'View',
       TRANSFORMATION_RULE: 'Transformation Rule',
       CODEGEN_PROJECT: 'Code Generation Project',
       TEST_CASE: 'Test Case',

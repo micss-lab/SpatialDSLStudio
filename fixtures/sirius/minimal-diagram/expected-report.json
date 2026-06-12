@@ -1,0 +1,15 @@
+{
+  "sourceFormat": "project-zip",
+  "targetFormat": "spatialdsl",
+  "supported": true,
+  "warnings": [
+    {
+      "severity": "info",
+      "code": "SIRIUS_SYNTHETIC_FIXTURE",
+      "message": "Fixture is synthetic and intentionally covers only the minimal supported Sirius subset.",
+      "sourcePath": "fixtures/sirius/minimal-diagram"
+    }
+  ],
+  "droppedFeatures": [],
+  "unresolvedReferences": []
+}

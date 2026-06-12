@@ -1,6 +1,5 @@
 // Temporary reference visualization during creation
 import React from 'react';
-import { Line, Circle } from 'react-konva';
 import { ModelElement } from '../../../../models/types';
 
 interface TempReferenceProps {

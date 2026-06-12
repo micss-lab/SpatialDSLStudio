@@ -2,7 +2,6 @@ import { createCourseMetamodel, createCourseModel, prepareModelForValidation } f
 import { oclService } from '../services/constraint';
 import { modelService } from '../services/model';
 import { metamodelService } from '../services/metamodel';
-import { ModelElement, Metamodel, Model, OCLValidationResult } from '../models/types';
 
 /**
  * Test file for demonstrating OCL constraint validation using OCL.js

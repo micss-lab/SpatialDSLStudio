@@ -1,4 +1,4 @@
-import { Metamodel, MetaReference, MetaAttribute, EPackage } from '../../models/types';
+import { Metamodel, MetaReference, MetaAttribute, MetaAttributeType, EPackage } from '../../models/types';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -142,7 +142,7 @@ export function addReferenceAttribute(
   classId: string,
   referenceId: string,
   name: string,
-  type: 'string' | 'number' | 'boolean' | 'date',
+  type: MetaAttributeType,
   defaultValue: any | undefined,
   required: boolean | undefined,
   many: boolean,

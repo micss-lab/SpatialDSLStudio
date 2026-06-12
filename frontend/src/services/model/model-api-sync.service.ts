@@ -8,6 +8,18 @@ export class ModelApiSyncService {
   private syncedToDb: Set<string> = new Set();
   private pendingSaves: Map<string, Promise<void>> = new Map();
 
+  private buildSaveData(model: Model) {
+    return {
+      id: model.id,
+      name: model.name,
+      description: model.description,
+      metamodelId: model.metamodelId,
+      conformsTo: model.conformsTo,
+      elements: model.elements,
+      connections: model.connections,
+    };
+  }
+
   /**
    * Load models from API
    */
@@ -25,14 +37,7 @@ export class ModelApiSyncService {
    * Sync a model to API using upsert pattern (handles race conditions)
    */
   syncModelToAPI(model: Model): void {
-    const saveData = {
-      id: model.id,
-      name: model.name,
-      metamodelId: model.metamodelId,
-      conformsTo: model.conformsTo,
-      elements: model.elements,
-      connections: model.connections,
-    };
+    const saveData = this.buildSaveData(model);
 
     // Check if there's a pending save for this model, wait for it first
     const pendingSave = this.pendingSaves.get(model.id);
@@ -49,6 +54,7 @@ export class ModelApiSyncService {
             `${API_ENDPOINTS.MODELS}/${model.id}`,
             {
               name: model.name,
+              description: model.description,
               elements: model.elements,
               connections: model.connections,
             }
@@ -83,14 +89,7 @@ export class ModelApiSyncService {
    * Save a single model to API (for initial creation)
    */
   saveModelToAPI(model: Model): void {
-    const saveData = {
-      id: model.id,
-      name: model.name,
-      metamodelId: model.metamodelId,
-      conformsTo: model.conformsTo,
-      elements: model.elements,
-      connections: model.connections,
-    };
+    const saveData = this.buildSaveData(model);
 
     const savePromise = (async () => {
       try {
@@ -104,6 +103,54 @@ export class ModelApiSyncService {
     })();
     
     this.pendingSaves.set(model.id, savePromise);
+  }
+
+  async upsertModelToAPI(model: Model): Promise<Model> {
+    const saveData = this.buildSaveData(model);
+    const pendingSave = this.pendingSaves.get(model.id);
+    if (pendingSave) {
+      await pendingSave.catch(() => {});
+    }
+
+    try {
+      const savedModel = this.syncedToDb.has(model.id)
+        ? await apiClient.put<Model>(
+            `${API_ENDPOINTS.MODELS}/${model.id}`,
+            {
+             name: model.name,
+              description: model.description,
+             elements: model.elements,
+              connections: model.connections,
+            }
+          )
+        : await apiClient.post<Model>(API_ENDPOINTS.MODELS, saveData);
+
+      this.syncedToDb.add(model.id);
+      return savedModel;
+    } catch (error: any) {
+      const message = error?.message || '';
+      if (message.includes('not found') || message.includes('404')) {
+        const savedModel = await apiClient.post<Model>(API_ENDPOINTS.MODELS, saveData);
+        this.syncedToDb.add(model.id);
+        return savedModel;
+      }
+
+      if (message.includes('Unique constraint') || message.includes('already exists')) {
+        const savedModel = await apiClient.put<Model>(
+          `${API_ENDPOINTS.MODELS}/${model.id}`,
+          {
+            name: model.name,
+            description: model.description,
+            elements: model.elements,
+            connections: model.connections,
+          }
+        );
+        this.syncedToDb.add(model.id);
+        return savedModel;
+      }
+
+      throw error;
+    }
   }
 
   /**
