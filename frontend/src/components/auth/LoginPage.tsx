@@ -97,8 +97,14 @@ const LoginPage: React.FC = () => {
       } else {
         await verifyEmail((pendingVerificationEmail || email).trim(), verificationCode.trim());
       }
-    } catch (err) {
-      // Error is already handled in context
+    } catch (err: any) {
+      if (mode === 'login' && err?.message === 'Email verification required') {
+        clearError();
+        setPendingVerificationEmail(email.trim());
+        setVerificationCode('');
+        setSuccessMessage('Enter the verification code sent to your email.');
+        setMode('verify');
+      }
     }
   };
 

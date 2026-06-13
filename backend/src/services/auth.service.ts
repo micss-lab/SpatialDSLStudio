@@ -220,17 +220,7 @@ class AuthService {
     }
 
     if (user.emailVerified) {
-      const token = this.generateToken(user);
-      return {
-        user: {
-          id: user.id,
-          email: user.email,
-          role: user.role as UserRole,
-          createdAt: user.createdAt,
-        },
-        token,
-        expiresIn: config.jwt.expiresIn,
-      };
+      throw new Error('Email is already verified');
     }
 
     const codeHash = this.hashToken(normalizedCode);

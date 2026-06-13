@@ -49,6 +49,7 @@ describe('EmailService', () => {
         ],
         [
           'admin1@example.com',
+          'ADMIN2@example.com',
           'user1@example.com',
           'user2@example.com',
           'user3@example.com',

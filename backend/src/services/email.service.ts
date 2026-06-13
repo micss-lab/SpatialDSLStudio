@@ -223,7 +223,7 @@ export async function sendAdminBroadcastEmail(
   const uniqueAdminEmails = uniqueEmails(adminEmails);
   const uniqueUserEmails = uniqueEmails(userEmails);
   const adminEmailSet = new Set(uniqueAdminEmails.map(email => email.toLowerCase()));
-  const bccEmails = uniqueUserEmails.filter(email => !adminEmailSet.has(email));
+  const bccEmails = uniqueUserEmails.filter(email => !adminEmailSet.has(email.toLowerCase()));
   const adminChunks = chunkEmails(uniqueAdminEmails, BROADCAST_BATCH_SIZE);
   const bccChunks = chunkEmails(bccEmails, BROADCAST_BATCH_SIZE);
   const emailIds: string[] = [];

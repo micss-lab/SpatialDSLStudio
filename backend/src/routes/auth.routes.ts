@@ -61,6 +61,7 @@ router.post('/verify-email', authLimiter, async (req: Request, res: Response) =>
     console.error('Verify email error:', error);
 
     if (error.message === 'Invalid email format' ||
+        error.message === 'Email is already verified' ||
         error.message.includes('Verification code') ||
         error.message.includes('Invalid or expired')) {
       return res.status(400).json({ error: error.message });

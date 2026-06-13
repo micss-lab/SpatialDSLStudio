@@ -236,6 +236,17 @@ describe('AuthService', () => {
         authService.verifyEmail('test@example.com', '123')
       ).rejects.toThrow('Verification code must be 6 digits');
     });
+
+    it('does not mint a token for already verified users', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(mockUser);
+
+      await expect(
+        authService.verifyEmail('test@example.com', '123456')
+      ).rejects.toThrow('Email is already verified');
+
+      expect(prismaMock.emailVerificationCode.findFirst).not.toHaveBeenCalled();
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
   });
 
   describe('resendVerificationCode', () => {
