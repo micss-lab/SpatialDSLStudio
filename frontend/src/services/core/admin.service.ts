@@ -143,6 +143,7 @@ export interface AdminNotificationResult {
   ccAdmins: number;
   bccUsers: number;
   batches: number;
+  emailIds?: string[];
 }
 
 class AdminService {

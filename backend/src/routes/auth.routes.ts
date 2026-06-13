@@ -44,6 +44,59 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/auth/verify-email
+ * Verify a newly registered user's email code and return an auth token
+ */
+router.post('/verify-email', authLimiter, async (req: Request, res: Response) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ error: 'Email and verification code are required' });
+    }
+
+    const result = await authService.verifyEmail(email, code);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Verify email error:', error);
+
+    if (error.message === 'Invalid email format' ||
+        error.message === 'Email is already verified' ||
+        error.message.includes('Verification code') ||
+        error.message.includes('Invalid or expired')) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.status(500).json({ error: 'Email verification failed' });
+  }
+});
+
+/**
+ * POST /api/auth/resend-verification-code
+ * Resend a pending registration verification code
+ */
+router.post('/resend-verification-code', authLimiter, async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    await authService.resendVerificationCode(email);
+    res.json({ message: 'If this email has a pending account, a verification code has been sent.' });
+  } catch (error: any) {
+    console.error('Resend verification code error:', error);
+
+    if (error.message === 'Invalid email format') {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ message: 'If this email has a pending account, a verification code has been sent.' });
+  }
+});
+
+/**
  * POST /api/auth/login
  * Login existing user
  */
@@ -62,6 +115,9 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
     
     if (error.message === 'Invalid email or password') {
       return res.status(401).json({ error: error.message });
+    }
+    if (error.message === 'Email verification required') {
+      return res.status(403).json({ error: error.message, verificationRequired: true });
     }
     
     res.status(500).json({ error: 'Login failed' });

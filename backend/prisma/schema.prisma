@@ -50,6 +50,7 @@ model User {
   email       String    @unique
   password    String    // Hashed with bcrypt
   role        UserRole  @default(VIEWER)
+  emailVerified Boolean @default(false)
   isSuspended Boolean   @default(false)
   lastLogin   DateTime?
   
@@ -73,6 +74,7 @@ model User {
 
   // Password reset & role request relations
   passwordResetTokens  PasswordResetToken[]
+  emailVerificationCodes EmailVerificationCode[]
   roleRequests         RoleRequest[]
   reviewedRoleRequests RoleRequest[] @relation("RoleRequestReviewer")
 
@@ -446,6 +448,19 @@ model PasswordResetToken {
   usedAt    DateTime?
   createdAt DateTime  @default(now())
   @@map("password_reset_tokens")
+}
+
+model EmailVerificationCode {
+  id        String    @id @default(uuid())
+  codeHash  String    @map("code_hash")
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, usedAt])
+  @@map("email_verification_codes")
 }
 
 // ===========================================

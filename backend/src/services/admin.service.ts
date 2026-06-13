@@ -147,6 +147,7 @@ export interface AdminNotificationResult {
   ccAdmins: number;
   bccUsers: number;
   batches: number;
+  emailIds?: string[];
 }
 
 class AdminService {
@@ -549,6 +550,7 @@ class AdminService {
       ccAdmins: sendResult.ccCount,
       bccUsers: sendResult.bccCount,
       batches: sendResult.batches,
+      ...(sendResult.emailIds ? { emailIds: sendResult.emailIds } : {}),
     };
   }
 

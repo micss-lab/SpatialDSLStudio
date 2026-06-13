@@ -24,29 +24,33 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import logoImage from '../../assets/logo.webp';
 
-type AuthMode = 'login' | 'register';
+type AuthMode = 'login' | 'register' | 'verify';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login, register, error, clearError, isLoading, registrationSuccess, clearRegistrationSuccess } = useAuth();
+  const { login, register, verifyEmail, resendVerificationCode, error, clearError, isLoading, registrationSuccess, clearRegistrationSuccess } = useAuth();
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Handle registration success - switch to login mode
+  // Handle registration success - switch to email verification mode
   useEffect(() => {
     if (registrationSuccess) {
-      setSuccessMessage('Account created successfully! Please sign in.');
-      setMode('login');
+      setSuccessMessage('Account created. Enter the verification code sent to your email.');
+      setPendingVerificationEmail(email.trim());
+      setMode('verify');
       setPassword('');
       setConfirmPassword('');
+      setVerificationCode('');
       clearRegistrationSuccess();
     }
-  }, [registrationSuccess, clearRegistrationSuccess]);
+  }, [registrationSuccess, clearRegistrationSuccess, email]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +64,16 @@ const LoginPage: React.FC = () => {
       return;
     }
 
-    if (!password) {
+    if (mode === 'verify') {
+      if (!verificationCode.trim()) {
+        setLocalError('Verification code is required');
+        return;
+      }
+      if (!/^\d{6}$/.test(verificationCode.trim())) {
+        setLocalError('Verification code must be 6 digits');
+        return;
+      }
+    } else if (!password) {
       setLocalError('Password is required');
       return;
     }
@@ -79,20 +92,47 @@ const LoginPage: React.FC = () => {
     try {
       if (mode === 'login') {
         await login(email.trim(), password);
-      } else {
+      } else if (mode === 'register') {
         await register(email.trim(), password);
+      } else {
+        await verifyEmail((pendingVerificationEmail || email).trim(), verificationCode.trim());
       }
-    } catch (err) {
-      // Error is already handled in context
+    } catch (err: any) {
+      if (mode === 'login' && err?.message === 'Email verification required') {
+        clearError();
+        setPendingVerificationEmail(email.trim());
+        setVerificationCode('');
+        setSuccessMessage('Enter the verification code sent to your email.');
+        setMode('verify');
+      }
     }
   };
 
   const switchMode = () => {
-    setMode(mode === 'login' ? 'register' : 'login');
+    setMode(mode === 'login' || mode === 'verify' ? 'register' : 'login');
     clearError();
     setLocalError(null);
     setSuccessMessage(null);
     setConfirmPassword('');
+    setVerificationCode('');
+  };
+
+  const handleResendVerificationCode = async () => {
+    clearError();
+    setLocalError(null);
+    setSuccessMessage(null);
+    const targetEmail = (pendingVerificationEmail || email).trim();
+    if (!targetEmail) {
+      setLocalError('Email is required');
+      return;
+    }
+
+    try {
+      await resendVerificationCode(targetEmail);
+      setSuccessMessage('A new verification code has been sent if the account is pending verification.');
+    } catch (err) {
+      // Error is already handled in context
+    }
   };
 
   const displayError = localError || error;
@@ -156,7 +196,11 @@ const LoginPage: React.FC = () => {
               </Typography>
             )}
             <Typography variant="body2" color="text.secondary">
-              {mode === 'login' ? 'Sign in to start working on your models.' : 'Use your email and password to get started.'}
+              {mode === 'login'
+                ? 'Sign in to start working on your models.'
+                : mode === 'register'
+                  ? 'Use your email and password to get started.'
+                  : `Enter the 6-digit code sent to ${pendingVerificationEmail || email}.`}
             </Typography>
           </Box>
 
@@ -184,60 +228,90 @@ const LoginPage: React.FC = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit}>
-            <TextField
-              fullWidth
-              label="Email Address"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              margin="normal"
-              autoComplete="email"
-              autoFocus
-              disabled={isLoading}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '&:hover fieldset': {
-                    borderColor: 'primary.main',
-                  },
-                },
-              }}
-            />
+            {mode === 'verify' ? (
+              <>
+                <TextField
+                  fullWidth
+                  label="Verification Code"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  margin="normal"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  disabled={isLoading}
+                  inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 6 }}
+                />
+                <Box sx={{ textAlign: 'right', mt: 1 }}>
+                  <Link
+                    component="button"
+                    type="button"
+                    variant="body2"
+                    onClick={handleResendVerificationCode}
+                    disabled={isLoading}
+                    sx={{ fontWeight: 500, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                  >
+                    Resend code
+                  </Link>
+                </Box>
+              </>
+            ) : (
+              <>
+                <TextField
+                  fullWidth
+                  label="Email Address"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  margin="normal"
+                  autoComplete="email"
+                  autoFocus
+                  disabled={isLoading}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '&:hover fieldset': {
+                        borderColor: 'primary.main',
+                      },
+                    },
+                  }}
+                />
 
-            <TextField
-              fullWidth
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              margin="normal"
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              disabled={isLoading}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                      disabled={isLoading}
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
+                <TextField
+                  fullWidth
+                  label="Password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  margin="normal"
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                  disabled={isLoading}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          disabled={isLoading}
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
 
-            {mode === 'register' && (
-              <TextField
-                fullWidth
-                label="Confirm Password"
-                type={showPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                margin="normal"
-                autoComplete="new-password"
-                disabled={isLoading}
-              />
+                {mode === 'register' && (
+                  <TextField
+                    fullWidth
+                    label="Confirm Password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    margin="normal"
+                    autoComplete="new-password"
+                    disabled={isLoading}
+                  />
+                )}
+              </>
             )}
 
             <Button
@@ -247,7 +321,7 @@ const LoginPage: React.FC = () => {
               size="large"
               disabled={isLoading}
               startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : 
-                (mode === 'login' ? <LoginIcon /> : <RegisterIcon />)}
+                (mode === 'login' ? <LoginIcon /> : mode === 'register' ? <RegisterIcon /> : <CheckCircleIcon />)}
               sx={{
                 mt: 3,
                 mb: 2,
@@ -265,8 +339,8 @@ const LoginPage: React.FC = () => {
               }}
             >
               {isLoading
-                ? (mode === 'login' ? 'Signing in...' : 'Creating account...')
-                : (mode === 'login' ? 'Sign In' : 'Create Account')}
+                ? (mode === 'login' ? 'Signing in...' : mode === 'register' ? 'Creating account...' : 'Verifying...')
+                : (mode === 'login' ? 'Sign In' : mode === 'register' ? 'Create Account' : 'Verify Email')}
             </Button>
           </form>
 
@@ -293,7 +367,7 @@ const LoginPage: React.FC = () => {
           {/* Switch Mode */}
           <Box sx={{ textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+              {mode === 'login' ? "Don't have an account? " : mode === 'register' ? 'Already have an account? ' : 'Need to use a different email? '}
               <Link
                 component="button"
                 type="button"
@@ -307,7 +381,7 @@ const LoginPage: React.FC = () => {
                   },
                 }}
               >
-                {mode === 'login' ? 'Create Account' : 'Sign in'}
+                {mode === 'login' ? 'Create Account' : mode === 'register' ? 'Sign in' : 'Back to registration'}
               </Link>
             </Typography>
           </Box>

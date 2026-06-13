@@ -232,9 +232,9 @@ describe('authApi', () => {
   describe('register', () => {
     it('sends register request', async () => {
       const mockResponse = {
-        user: { id: '1', email: 'new@example.com', role: 'DSL_DESIGNER', createdAt: '2024-01-01' },
-        token: 'jwt-token',
-        expiresIn: '7d',
+        email: 'new@example.com',
+        verificationRequired: true,
+        message: 'Account created. Enter the verification code sent to your email to finish registration.',
       };
       mockFetch.mockResolvedValue({
         ok: true,
@@ -243,6 +243,26 @@ describe('authApi', () => {
       });
 
       const result = await authApi.register({ email: 'new@example.com', password: 'password123' });
+
+      expect(result).toEqual(mockResponse);
+      expect(result.verificationRequired).toBe(true);
+    });
+  });
+
+  describe('verifyEmail', () => {
+    it('returns auth response after email verification', async () => {
+      const mockResponse = {
+        user: { id: '1', email: 'new@example.com', role: 'VIEWER', createdAt: '2024-01-01' },
+        token: 'jwt-token',
+        expiresIn: '7d',
+      };
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => mockResponse,
+      });
+
+      const result = await authApi.verifyEmail({ email: 'new@example.com', code: '123456' });
 
       expect(result.token).toBe('jwt-token');
     });
