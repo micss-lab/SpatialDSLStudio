@@ -475,10 +475,15 @@ class SharingService {
     resourceId: string,
     userId: string
   ): Promise<AccessCheckResult> {
-    // First check if user is the owner
-    const isOwner = await this.checkResourceOwnership(resourceType, resourceId, userId);
-    
-    if (isOwner) {
+    // Resolve the owner once and reuse it for the ownership check, the missing-
+    // resource short-circuit, and the admin bypass below.
+    const ownerId = await this.getResourceOwnerId(resourceType, resourceId);
+
+    if (ownerId === null) {
+      return { hasAccess: false, isOwner: false };
+    }
+
+    if (ownerId === userId) {
       return { hasAccess: true, isOwner: true };
     }
 
@@ -505,7 +510,34 @@ class SharingService {
       };
     }
 
+    // Platform admins can view and edit every resource, even ones not owned by
+    // or shared with them (EDITOR-equivalent). Delete and share stay
+    // owner-restricted, since those paths gate on ownership directly.
+    if (await this.isAdmin(userId)) {
+      const owner = await prisma.user.findUnique({
+        where: { id: ownerId },
+        select: { email: true },
+      });
+      return {
+        hasAccess: true,
+        isOwner: false,
+        permission: 'EDITOR',
+        ownerEmail: owner?.email,
+      };
+    }
+
     return { hasAccess: false, isOwner: false };
+  }
+
+  /**
+   * Whether the user holds the platform-wide ADMIN role.
+   */
+  async isAdmin(userId: string): Promise<boolean> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    return user?.role === 'ADMIN';
   }
 
   /**
@@ -516,6 +548,17 @@ class SharingService {
     resourceId: string,
     userId: string
   ): Promise<boolean> {
+    const ownerId = await this.getResourceOwnerId(resourceType, resourceId);
+    return ownerId !== null && ownerId === userId;
+  }
+
+  /**
+   * Resolve the owner's userId for a resource, or null if it doesn't exist.
+   */
+  private async getResourceOwnerId(
+    resourceType: ResourceType,
+    resourceId: string
+  ): Promise<string | null> {
     let resource: { userId: string } | null = null;
 
     switch (resourceType) {
@@ -557,7 +600,7 @@ class SharingService {
         break;
     }
 
-    return resource?.userId === userId;
+    return resource?.userId ?? null;
   }
 
   /**

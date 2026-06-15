@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 
 const sharingServiceMock = {
   checkAccess: jest.fn(),
+  isAdmin: jest.fn(),
   deleteResourceShares: jest.fn(),
 };
 jest.mock('../../services/sharing.service', () => ({
@@ -52,6 +53,22 @@ describe('ModelService', () => {
       const result = await modelService.getAll('user-uuid-1');
 
       expect(result).toHaveLength(0);
+    });
+
+    it('returns every model platform-wide for an ADMIN', async () => {
+      sharingServiceMock.isAdmin.mockResolvedValue(true);
+      prismaMock.model.findMany.mockResolvedValue([
+        { ...mockModelRow, userId: 'admin-uuid', user: { email: 'admin@example.com' } },
+        { ...mockModelRow, id: 'model-uuid-2', userId: 'other-user', user: { email: 'other@example.com' } },
+      ] as any);
+
+      const result = await modelService.getAll('admin-uuid');
+
+      expect(result).toHaveLength(2);
+      const others = result.find(m => m.id === 'model-uuid-2');
+      expect(others?.isOwner).toBe(false);
+      expect(others?.permission).toBe('EDITOR');
+      expect(others?.ownerEmail).toBe('other@example.com');
     });
   });
 

@@ -47,6 +47,20 @@ class TestService {
    * Get all test cases accessible by a user (owned + shared)
    */
   async getAll(userId: string): Promise<TestCaseWithPermission[]> {
+    // Platform admins see and can edit every test case on the platform.
+    if (await sharingService.isAdmin(userId)) {
+      const all = await prisma.testCase.findMany({
+        orderBy: { name: 'asc' },
+        include: { user: { select: { email: true } } },
+      });
+      return all.map(tc => ({
+        ...this.mapToTestCase(tc),
+        isOwner: tc.userId === userId,
+        permission: tc.userId === userId ? undefined : 'EDITOR',
+        ownerEmail: tc.userId === userId ? undefined : tc.user.email,
+      }));
+    }
+
     const ownedTestCases = await prisma.testCase.findMany({
       where: { userId },
       orderBy: { name: 'asc' },

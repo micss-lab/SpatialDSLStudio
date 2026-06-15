@@ -3,6 +3,7 @@ import { mockReset } from 'jest-mock-extended';
 
 const sharingServiceMock = {
   checkAccess: jest.fn(),
+  isAdmin: jest.fn(),
 };
 
 jest.mock('../../services/sharing.service', () => ({
@@ -67,6 +68,21 @@ const mockViewpointRow = {
 };
 
 describe('ViewpointService', () => {
+  describe('getAll', () => {
+    it('returns every viewpoint platform-wide for an ADMIN', async () => {
+      sharingServiceMock.isAdmin.mockResolvedValue(true);
+      prismaMock.viewpoint.findMany.mockResolvedValue([
+        mockViewpointRow,
+        { ...mockViewpointRow, id: 'viewpoint-uuid-2', userId: 'other-user' },
+      ] as any);
+
+      const result = await viewpointService.getAll('admin-uuid');
+
+      expect(result).toHaveLength(2);
+      expect(result.map(v => v.id)).toContain('viewpoint-uuid-2');
+    });
+  });
+
   describe('create', () => {
     it('creates shared-editor viewpoints under the metamodel owner and clears competing defaults', async () => {
       sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: false, permission: 'EDITOR' });

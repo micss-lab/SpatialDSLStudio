@@ -21,6 +21,20 @@ class MetamodelService {
    * Get all metamodels accessible by a user (owned + shared)
    */
   async getAll(userId: string): Promise<MetamodelWithPermission[]> {
+    // Platform admins see and can edit every metamodel on the platform.
+    if (await sharingService.isAdmin(userId)) {
+      const all = await prisma.metamodel.findMany({
+        orderBy: { name: 'asc' },
+        include: { user: { select: { email: true } } },
+      });
+      return all.map(mm => ({
+        ...this.mapToMetamodel(mm),
+        isOwner: mm.userId === userId,
+        permission: mm.userId === userId ? undefined : 'EDITOR',
+        ownerEmail: mm.userId === userId ? undefined : mm.user.email,
+      }));
+    }
+
     // Get owned metamodels
     const ownedMetamodels = await prisma.metamodel.findMany({
       where: { userId },
