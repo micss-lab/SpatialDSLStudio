@@ -3,6 +3,7 @@ import { mockReset } from 'jest-mock-extended';
 
 const sharingServiceMock = {
   checkAccess: jest.fn(),
+  isAdmin: jest.fn(),
 };
 
 jest.mock('../../services/sharing.service', () => ({

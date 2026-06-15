@@ -18,6 +18,21 @@ class CodeGenerationService {
    * Get all projects accessible by a user (owned + shared)
    */
   async getAllProjects(userId: string): Promise<CodegenProjectWithPermission[]> {
+    // Platform admins see every project on the platform (read-only for those
+    // they don't own).
+    if (await sharingService.isAdmin(userId)) {
+      const all = await prisma.codeGenerationProject.findMany({
+        orderBy: { name: 'asc' },
+        include: { user: { select: { email: true } } },
+      });
+      return all.map(p => ({
+        ...this.mapToProject(p),
+        isOwner: p.userId === userId,
+        permission: p.userId === userId ? undefined : 'VIEWER',
+        ownerEmail: p.userId === userId ? undefined : p.user.email,
+      }));
+    }
+
     const ownedProjects = await prisma.codeGenerationProject.findMany({
       where: { userId },
       orderBy: { name: 'asc' },

@@ -505,7 +505,36 @@ class SharingService {
       };
     }
 
+    // Platform admins can view every resource, even ones not owned by or shared
+    // with them. Access is read-only — edit/delete/share stay owner-restricted.
+    if (await this.isAdmin(userId)) {
+      const ownerId = await this.getResourceOwnerId(resourceType, resourceId);
+      if (ownerId) {
+        const owner = await prisma.user.findUnique({
+          where: { id: ownerId },
+          select: { email: true },
+        });
+        return {
+          hasAccess: true,
+          isOwner: false,
+          permission: 'VIEWER',
+          ownerEmail: owner?.email,
+        };
+      }
+    }
+
     return { hasAccess: false, isOwner: false };
+  }
+
+  /**
+   * Whether the user holds the platform-wide ADMIN role.
+   */
+  async isAdmin(userId: string): Promise<boolean> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    return user?.role === 'ADMIN';
   }
 
   /**
@@ -516,6 +545,17 @@ class SharingService {
     resourceId: string,
     userId: string
   ): Promise<boolean> {
+    const ownerId = await this.getResourceOwnerId(resourceType, resourceId);
+    return ownerId !== null && ownerId === userId;
+  }
+
+  /**
+   * Resolve the owner's userId for a resource, or null if it doesn't exist.
+   */
+  private async getResourceOwnerId(
+    resourceType: ResourceType,
+    resourceId: string
+  ): Promise<string | null> {
     let resource: { userId: string } | null = null;
 
     switch (resourceType) {
@@ -557,7 +597,7 @@ class SharingService {
         break;
     }
 
-    return resource?.userId === userId;
+    return resource?.userId ?? null;
   }
 
   /**

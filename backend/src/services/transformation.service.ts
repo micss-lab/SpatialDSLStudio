@@ -43,6 +43,21 @@ class TransformationService {
    * Get all rules accessible by a user (owned + shared)
    */
   async getAllRules(userId: string): Promise<TransformationRuleWithPermission[]> {
+    // Platform admins see every rule on the platform (read-only for those they
+    // don't own).
+    if (await sharingService.isAdmin(userId)) {
+      const all = await prisma.transformationRule.findMany({
+        orderBy: [{ priority: 'desc' }, { name: 'asc' }],
+        include: { user: { select: { email: true } } },
+      });
+      return all.map(r => ({
+        ...this.mapToRule(r),
+        isOwner: r.userId === userId,
+        permission: r.userId === userId ? undefined : 'VIEWER',
+        ownerEmail: r.userId === userId ? undefined : r.user.email,
+      }));
+    }
+
     const ownedRules = await prisma.transformationRule.findMany({
       where: { userId },
       orderBy: [{ priority: 'desc' }, { name: 'asc' }],

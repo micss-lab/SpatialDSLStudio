@@ -110,6 +110,34 @@ describe('SharingService', () => {
 
       expect(result.hasAccess).toBe(false);
     });
+
+    it('grants read-only access to a platform ADMIN for any resource', async () => {
+      prismaMock.metamodel.findFirst.mockResolvedValue({
+        id: 'mm-uuid-1',
+        userId: 'other-owner',
+      } as any);
+      prismaMock.sharedResource.findUnique.mockResolvedValue(null);
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce({ role: 'ADMIN' } as any) // isAdmin lookup
+        .mockResolvedValueOnce({ email: 'other@example.com' } as any); // owner email
+
+      const result = await sharingService.checkAccess('METAMODEL', 'mm-uuid-1', 'admin-uuid');
+
+      expect(result.hasAccess).toBe(true);
+      expect(result.isOwner).toBe(false);
+      expect(result.permission).toBe('VIEWER');
+      expect(result.ownerEmail).toBe('other@example.com');
+    });
+
+    it('denies a platform ADMIN when the resource does not exist', async () => {
+      prismaMock.metamodel.findFirst.mockResolvedValue(null);
+      prismaMock.sharedResource.findUnique.mockResolvedValue(null);
+      prismaMock.user.findUnique.mockResolvedValue({ role: 'ADMIN' } as any);
+
+      const result = await sharingService.checkAccess('METAMODEL', 'missing-uuid', 'admin-uuid');
+
+      expect(result.hasAccess).toBe(false);
+    });
   });
 
   describe('shareResource', () => {

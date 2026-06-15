@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 
 const sharingServiceMock = {
   checkAccess: jest.fn(),
+  isAdmin: jest.fn(),
   deleteResourceShares: jest.fn(),
 };
 jest.mock('../../services/sharing.service', () => ({

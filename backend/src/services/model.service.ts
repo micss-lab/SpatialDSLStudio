@@ -20,6 +20,21 @@ class ModelService {
    * Get all models accessible by a user (owned + shared)
    */
   async getAll(userId: string): Promise<ModelWithPermission[]> {
+    // Platform admins see every model on the platform (read-only for those they
+    // don't own).
+    if (await sharingService.isAdmin(userId)) {
+      const all = await prisma.model.findMany({
+        orderBy: { name: 'asc' },
+        include: { user: { select: { email: true } } },
+      });
+      return all.map(m => ({
+        ...this.mapToModel(m),
+        isOwner: m.userId === userId,
+        permission: m.userId === userId ? undefined : 'VIEWER',
+        ownerEmail: m.userId === userId ? undefined : m.user.email,
+      }));
+    }
+
     // Get owned models
     const ownedModels = await prisma.model.findMany({
       where: { userId },

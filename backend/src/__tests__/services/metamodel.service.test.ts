@@ -6,6 +6,7 @@ import { PrismaClient } from '@prisma/client';
 // Mock sharing service
 const sharingServiceMock = {
   checkAccess: jest.fn(),
+  isAdmin: jest.fn(),
   deleteResourceShares: jest.fn(),
 };
 jest.mock('../../services/sharing.service', () => ({
@@ -80,6 +81,24 @@ describe('MetamodelService', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].isOwner).toBe(false);
+    });
+
+    it('returns every metamodel platform-wide for an ADMIN', async () => {
+      sharingServiceMock.isAdmin.mockResolvedValue(true);
+      prismaMock.metamodel.findMany.mockResolvedValue([
+        { ...mockMetamodelRow, userId: 'admin-uuid', user: { email: 'admin@example.com' } },
+        { ...mockMetamodelRow, id: 'mm-uuid-2', userId: 'other-user', user: { email: 'other@example.com' } },
+      ] as any);
+
+      const result = await metamodelService.getAll('admin-uuid');
+
+      expect(result).toHaveLength(2);
+      const own = result.find(m => m.id === 'mm-uuid-1');
+      const others = result.find(m => m.id === 'mm-uuid-2');
+      expect(own?.isOwner).toBe(true);
+      expect(others?.isOwner).toBe(false);
+      expect(others?.permission).toBe('VIEWER');
+      expect(others?.ownerEmail).toBe('other@example.com');
     });
   });
 
