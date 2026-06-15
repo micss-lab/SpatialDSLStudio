@@ -48,6 +48,22 @@ describe('TransformationService', () => {
       expect(result[0].name).toBe('TestRule');
       expect(result[0].isOwner).toBe(true);
     });
+
+    it('returns every rule platform-wide for an ADMIN', async () => {
+      sharingServiceMock.isAdmin.mockResolvedValue(true);
+      prismaMock.transformationRule.findMany.mockResolvedValue([
+        { ...mockRuleRow, userId: 'admin-uuid', user: { email: 'admin@example.com' } },
+        { ...mockRuleRow, id: 'rule-uuid-2', userId: 'other-user', user: { email: 'other@example.com' } },
+      ] as any);
+
+      const result = await transformationService.getAllRules('admin-uuid');
+
+      expect(result).toHaveLength(2);
+      const others = result.find(r => r.id === 'rule-uuid-2');
+      expect(others?.isOwner).toBe(false);
+      expect(others?.permission).toBe('EDITOR');
+      expect(others?.ownerEmail).toBe('other@example.com');
+    });
   });
 
   describe('getRuleById', () => {

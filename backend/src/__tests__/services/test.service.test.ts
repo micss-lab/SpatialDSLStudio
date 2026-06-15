@@ -53,6 +53,22 @@ describe('TestService', () => {
       expect(result).toHaveLength(1);
       expect(result[0].isOwner).toBe(true);
     });
+
+    it('returns every test case platform-wide for an ADMIN', async () => {
+      sharingServiceMock.isAdmin.mockResolvedValue(true);
+      prismaMock.testCase.findMany.mockResolvedValue([
+        { ...mockTestCaseRow, userId: 'admin-uuid', user: { email: 'admin@example.com' } },
+        { ...mockTestCaseRow, id: 'tc-uuid-2', userId: 'other-user', user: { email: 'other@example.com' } },
+      ] as any);
+
+      const result = await testService.getAll('admin-uuid');
+
+      expect(result).toHaveLength(2);
+      const others = result.find(tc => tc.id === 'tc-uuid-2');
+      expect(others?.isOwner).toBe(false);
+      expect(others?.permission).toBe('EDITOR');
+      expect(others?.ownerEmail).toBe('other@example.com');
+    });
   });
 
   describe('getById', () => {

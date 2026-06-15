@@ -475,10 +475,15 @@ class SharingService {
     resourceId: string,
     userId: string
   ): Promise<AccessCheckResult> {
-    // First check if user is the owner
-    const isOwner = await this.checkResourceOwnership(resourceType, resourceId, userId);
-    
-    if (isOwner) {
+    // Resolve the owner once and reuse it for the ownership check, the missing-
+    // resource short-circuit, and the admin bypass below.
+    const ownerId = await this.getResourceOwnerId(resourceType, resourceId);
+
+    if (ownerId === null) {
+      return { hasAccess: false, isOwner: false };
+    }
+
+    if (ownerId === userId) {
       return { hasAccess: true, isOwner: true };
     }
 
@@ -509,19 +514,16 @@ class SharingService {
     // or shared with them (EDITOR-equivalent). Delete and share stay
     // owner-restricted, since those paths gate on ownership directly.
     if (await this.isAdmin(userId)) {
-      const ownerId = await this.getResourceOwnerId(resourceType, resourceId);
-      if (ownerId) {
-        const owner = await prisma.user.findUnique({
-          where: { id: ownerId },
-          select: { email: true },
-        });
-        return {
-          hasAccess: true,
-          isOwner: false,
-          permission: 'EDITOR',
-          ownerEmail: owner?.email,
-        };
-      }
+      const owner = await prisma.user.findUnique({
+        where: { id: ownerId },
+        select: { email: true },
+      });
+      return {
+        hasAccess: true,
+        isOwner: false,
+        permission: 'EDITOR',
+        ownerEmail: owner?.email,
+      };
     }
 
     return { hasAccess: false, isOwner: false };
