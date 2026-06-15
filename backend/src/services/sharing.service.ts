@@ -505,8 +505,9 @@ class SharingService {
       };
     }
 
-    // Platform admins can view every resource, even ones not owned by or shared
-    // with them. Access is read-only — edit/delete/share stay owner-restricted.
+    // Platform admins can view and edit every resource, even ones not owned by
+    // or shared with them (EDITOR-equivalent). Delete and share stay
+    // owner-restricted, since those paths gate on ownership directly.
     if (await this.isAdmin(userId)) {
       const ownerId = await this.getResourceOwnerId(resourceType, resourceId);
       if (ownerId) {
@@ -517,7 +518,7 @@ class SharingService {
         return {
           hasAccess: true,
           isOwner: false,
-          permission: 'VIEWER',
+          permission: 'EDITOR',
           ownerEmail: owner?.email,
         };
       }

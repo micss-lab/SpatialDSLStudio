@@ -343,7 +343,7 @@ class ViewpointService {
       await this.assertCanReadMetamodel(metamodelId, userId);
     }
 
-    // Platform admins see every viewpoint on the platform.
+    // Platform admins see and can edit every viewpoint on the platform.
     if (await sharingService.isAdmin(userId)) {
       const allViewpoints = await prisma.viewpoint.findMany({
         where: metamodelId ? { metamodelId } : {},

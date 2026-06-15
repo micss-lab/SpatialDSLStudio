@@ -445,8 +445,7 @@ class DiagramService {
    * Get all diagrams accessible by a user (owned + shared)
    */
   async getAll(userId: string): Promise<DiagramWithPermission[]> {
-    // Platform admins see every diagram on the platform (read-only for those
-    // they don't own).
+    // Platform admins see and can edit every diagram on the platform.
     if (await sharingService.isAdmin(userId)) {
       const all = await prisma.diagram.findMany({
         orderBy: { name: 'asc' },
@@ -457,7 +456,7 @@ class DiagramService {
         return {
           ...diagram,
           isOwner: d.userId === userId,
-          permission: d.userId === userId ? undefined : 'VIEWER' as const,
+          permission: d.userId === userId ? undefined : 'EDITOR' as const,
           ownerEmail: d.userId === userId ? undefined : d.user.email,
         };
       }));

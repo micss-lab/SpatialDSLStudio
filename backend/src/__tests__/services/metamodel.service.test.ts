@@ -97,7 +97,7 @@ describe('MetamodelService', () => {
       const others = result.find(m => m.id === 'mm-uuid-2');
       expect(own?.isOwner).toBe(true);
       expect(others?.isOwner).toBe(false);
-      expect(others?.permission).toBe('VIEWER');
+      expect(others?.permission).toBe('EDITOR');
       expect(others?.ownerEmail).toBe('other@example.com');
     });
   });

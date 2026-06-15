@@ -111,7 +111,7 @@ describe('SharingService', () => {
       expect(result.hasAccess).toBe(false);
     });
 
-    it('grants read-only access to a platform ADMIN for any resource', async () => {
+    it('grants EDITOR access to a platform ADMIN for any resource', async () => {
       prismaMock.metamodel.findFirst.mockResolvedValue({
         id: 'mm-uuid-1',
         userId: 'other-owner',
@@ -125,7 +125,7 @@ describe('SharingService', () => {
 
       expect(result.hasAccess).toBe(true);
       expect(result.isOwner).toBe(false);
-      expect(result.permission).toBe('VIEWER');
+      expect(result.permission).toBe('EDITOR');
       expect(result.ownerEmail).toBe('other@example.com');
     });
 
