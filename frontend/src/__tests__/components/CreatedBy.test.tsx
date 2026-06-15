@@ -19,6 +19,10 @@ describe('resolveOwnerEmail', () => {
   it('falls back to the current user when ownerEmail is absent', () => {
     expect(resolveOwnerEmail({ isOwner: true }, 'me@example.com')).toBe('me@example.com');
   });
+
+  it('does not attribute to the current user when explicitly not owned and email is unknown', () => {
+    expect(resolveOwnerEmail({ isOwner: false }, 'me@example.com')).toBeUndefined();
+  });
 });
 
 describe('CreatedBy', () => {

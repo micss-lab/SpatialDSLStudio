@@ -26,18 +26,20 @@ export const OwnerFilterProvider: React.FC<{ children: React.ReactNode }> = ({ c
 export const useOwnerFilter = (): OwnerFilterContextValue => useContext(OwnerFilterContext);
 
 /**
- * Predicate that keeps only resources owned by the selected owners. When no
- * owner is selected it keeps everything, so non-admin users are unaffected.
+ * Predicate that keeps only resources owned by the selected owners. The filter
+ * applies to admins only (the control is admin-only) and keeps everything when
+ * no owner is selected, so a stale selection can never affect a non-admin who
+ * signs in on the same session.
  */
 export const useOwnerFilterMatcher = (): ((resource: ResourceOwnership) => boolean) => {
   const { selectedOwnerEmails } = useOwnerFilter();
   const { user } = useAuth();
   return useCallback(
     (resource: ResourceOwnership) => {
-      if (selectedOwnerEmails.length === 0) return true;
+      if (user?.role !== 'ADMIN' || selectedOwnerEmails.length === 0) return true;
       const email = resolveOwnerEmail(resource, user?.email);
       return email !== undefined && selectedOwnerEmails.includes(email);
     },
-    [selectedOwnerEmails, user?.email]
+    [selectedOwnerEmails, user?.email, user?.role]
   );
 };
