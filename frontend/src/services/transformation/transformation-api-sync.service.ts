@@ -60,6 +60,8 @@ export class TransformationApiSyncService {
             conditions: r.conditions || [],
             priority: r.priority || 0,
             enabled: r.enabled !== false,
+            isOwner: r.isOwner,
+            ownerEmail: r.ownerEmail,
           };
           
           rules.push(rule);
