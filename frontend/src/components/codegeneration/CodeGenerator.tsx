@@ -264,6 +264,7 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ modelId }) => {
               templateManagement.setActiveTemplateTab(0);
               projectManagement.setIsProjectDialogOpen(true);
             }}
+            onImportProject={projectManagement.handleImportProject}
             canCreate={canCreate}
             canDelete={canDelete}
             canShare={canShare}

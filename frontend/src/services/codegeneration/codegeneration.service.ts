@@ -132,6 +132,10 @@ class CodeGenerationService {
     return codegenProjectCrudService.deleteProject(id);
   }
 
+  importProject(projectData: unknown): CodeGenerationProject {
+    return codegenProjectCrudService.importProject(projectData);
+  }
+
   addTemplateToProject(
     projectId: string, 
     name: string,

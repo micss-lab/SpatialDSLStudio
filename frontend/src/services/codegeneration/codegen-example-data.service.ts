@@ -1,5 +1,8 @@
 
 
+import { exampleDataService } from '../metamodel/exampleData.service';
+import { codegenProjectCrudService } from './codegen-project-crud.service';
+
 /**
  * Service for loading example templates and projects
  * Note: Example data should be seeded through backend. This is kept for backward compatibility.
@@ -17,8 +20,17 @@ export class CodegenExampleDataService {
    * Load example projects (deprecated - should use backend seed)
    */
   loadExampleProjects(): void {
-    console.log('Example data projects should be loaded via backend seed command');
-    // Example data loading moved to backend seeding
+    const existingProjects = codegenProjectCrudService.getAllProjects();
+    const exampleProjects = exampleDataService.getExampleProjects();
+    const projectsToAdd = exampleProjects.filter(
+      exampleProject => !existingProjects.some(project => project.id === exampleProject.id)
+    );
+
+    if (projectsToAdd.length === 0) {
+      return;
+    }
+
+    codegenProjectCrudService.setProjects([...existingProjects, ...projectsToAdd]);
   }
 }
 
