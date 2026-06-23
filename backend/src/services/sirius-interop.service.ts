@@ -5,12 +5,19 @@ import {
   ConcreteSyntax,
   ConcreteSyntax2D,
   ConcreteSyntaxEdge,
+  Diagram,
+  DiagramElement,
   MetaClass,
   MetaReference,
   Metamodel,
+  Model,
+  ModelElement,
   RepresentationDescription,
   RepresentationEdgeMapping,
   RepresentationPinMapping,
+  SiriusAirdDiagramPreview,
+  SiriusAirdImportResult,
+  SiriusAirdPreview,
   SiriusCompatibilityReport,
   SiriusExportOptions,
   SiriusExportResult,
@@ -24,6 +31,8 @@ import {
 } from '../../../shared/types';
 import { metamodelService } from './metamodel.service';
 import { viewpointService } from './viewpoint.service';
+import { modelService } from './model.service';
+import { diagramService } from './diagram.service';
 
 interface XmlNode {
   name: string;
@@ -40,6 +49,18 @@ interface ParseContext {
   preserveSiriusIds: boolean;
 }
 
+interface AirdBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface AirdLayout {
+  bounds?: AirdBounds;
+  points?: Array<{ x: number; y: number }>;
+}
+
 interface ImportOdesignInput {
   content: string;
   metamodelId: string;
@@ -50,6 +71,15 @@ interface ValidateInput {
   content: string;
   sourceFormat?: SiriusSourceFormat;
   metamodelId?: string;
+  modelId?: string;
+  viewpointId?: string;
+  options?: Partial<SiriusImportOptions>;
+}
+
+interface ImportAirdInput {
+  content: string;
+  modelId: string;
+  viewpointId?: string;
   options?: Partial<SiriusImportOptions>;
 }
 
@@ -118,11 +148,17 @@ class SiriusInteropService {
       return this.validateProjectZip(input.content, metamodel, options);
     }
 
-    if (sourceFormat === 'aird') {
-      return this.validateAird(input.content);
-    }
-
     return this.validateSemanticXml(input.content, sourceFormat);
+  }
+
+  /** Validate a Sirius `.aird` session against an already-imported model and viewpoint. */
+  async validateAirdView(input: ValidateInput, userId: string): Promise<SiriusAirdPreview> {
+    const options = { ...DEFAULT_IMPORT_OPTIONS, importAird: true, ...input.options };
+    const model = input.modelId ? await this.getReadableModel(input.modelId, userId) : undefined;
+    const viewpoint = input.viewpointId
+      ? await this.getViewpointForModel(input.viewpointId, model, userId)
+      : undefined;
+    return this.parseAird(input.content, model, viewpoint, options);
   }
 
   async importOdesign(input: ImportOdesignInput, userId: string, userRole: UserRole): Promise<SiriusImportResult> {
@@ -151,6 +187,43 @@ class SiriusInteropService {
       viewpoints: created,
       report: preview.report,
     };
+  }
+
+  async importAird(input: ImportAirdInput, userId: string, userRole: UserRole): Promise<SiriusAirdImportResult> {
+    const options = { ...DEFAULT_IMPORT_OPTIONS, importAird: true, ...input.options };
+    if (!options.importAird) {
+      throw new ApiError(400, 'importAird must be enabled to import .aird content');
+    }
+
+    const model = await this.getReadableModel(input.modelId, userId);
+    const viewpoint = input.viewpointId
+      ? await this.getViewpointForModel(input.viewpointId, model, userId)
+      : undefined;
+
+    const preview = this.parseAird(input.content, model, viewpoint, options);
+    if (!preview.report.supported) {
+      throw new ApiError(400, 'Sirius .aird is not supported for import');
+    }
+    if (options.failOnUnsupportedFeatures && preview.report.droppedFeatures.length > 0) {
+      throw new ApiError(400, 'Sirius .aird contains unsupported features');
+    }
+    if (preview.diagrams.length === 0) {
+      throw new ApiError(400, 'Sirius .aird does not contain any importable diagram representations');
+    }
+
+    const created: Diagram[] = [];
+    for (const diagram of preview.diagrams) {
+      created.push(await diagramService.create({
+        name: diagram.name,
+        modelId: diagram.modelId,
+        viewpointId: diagram.viewpointId,
+        representationDescriptionId: diagram.representationDescriptionId,
+        elements: diagram.elements,
+        includedElementIds: diagram.elements.map(element => element.modelElementId),
+      }, userId, userRole));
+    }
+
+    return { diagrams: created, report: preview.report };
   }
 
   async exportOdesign(input: ExportInput, userId: string): Promise<SiriusExportResult> {
@@ -196,6 +269,28 @@ class SiriusInteropService {
       throw new ApiError(404, 'Metamodel not found');
     }
     return metamodel;
+  }
+
+  private async getReadableModel(modelId: string, userId: string): Promise<Model> {
+    const model = await modelService.getById(modelId, userId);
+    if (!model) {
+      throw new ApiError(404, 'Model not found');
+    }
+    return model;
+  }
+
+  /** Resolve the target viewpoint, preferring one already attached to the model's metamodel. */
+  private async getViewpointForModel(
+    viewpointId: string,
+    model: Model | undefined,
+    userId: string
+  ): Promise<Viewpoint | undefined> {
+    const viewpoints = await viewpointService.getAll(userId, model?.metamodelId);
+    const match = viewpoints.find(viewpoint => viewpoint.id === viewpointId);
+    if (!match) {
+      throw new ApiError(404, 'Viewpoint not found for the supplied model');
+    }
+    return match;
   }
 
   private parseOdesign(
@@ -329,29 +424,309 @@ class SiriusInteropService {
     };
   }
 
-  private validateAird(content: string): SiriusOdesignPreview {
+  private parseAird(
+    content: string,
+    model: Model | undefined,
+    viewpoint: Viewpoint | undefined,
+    _options: SiriusImportOptions
+  ): SiriusAirdPreview {
     const report = this.createReport('aird', 'spatialdsl');
     const root = this.parseXml(content);
-    const documentRoot = root.children[0];
+    const allNodes = this.walk(root);
 
-    if (!documentRoot || !['DAnalysis', 'analysis'].includes(documentRoot.localName)) {
+    const hasAnalysis = allNodes.some(node => ['DAnalysis', 'analysis'].includes(node.localName));
+    if (!hasAnalysis) {
       this.addWarning(report, 'warnings', {
         severity: 'warning',
         code: 'SIRIUS_AIRD_ROOT_UNEXPECTED',
-        message: 'The .aird XML was parsed, but the expected Sirius DAnalysis root was not found.',
+        message: 'The .aird XML was parsed, but no Sirius DAnalysis element was found.',
       });
     }
 
-    this.addWarning(report, 'droppedFeatures', {
-      severity: 'warning',
-      code: 'SIRIUS_DEFERRED_AIRD',
-      message: 'Sirius .aird session and representation data is recognized but not imported in this compatibility slice.',
-      sourcePath: documentRoot ? this.nodePath(documentRoot) : undefined,
-      sourceElementId: documentRoot ? this.getSourceId(documentRoot) : undefined,
-    });
+    if (!model) {
+      this.addWarning(report, 'unresolvedReferences', {
+        severity: 'error',
+        code: 'SIRIUS_AIRD_MODEL_REQUIRED',
+        message: 'Importing a Sirius .aird view requires an already-imported SpatialDSL model to resolve semantic targets.',
+      });
+      this.finalizeReport(report);
+      return { diagrams: [], report };
+    }
+
+    if (!viewpoint) {
+      this.addWarning(report, 'warnings', {
+        severity: 'warning',
+        code: 'SIRIUS_AIRD_VIEWPOINT_NOT_SUPPLIED',
+        message: 'No viewpoint was supplied; imported views will not be linked to a representation description.',
+      });
+    }
+
+    const layoutByElementId = this.indexAirdLayout(allNodes);
+    const semanticDiagrams = allNodes.filter(node => this.isSemanticDiagram(node));
+    if (semanticDiagrams.length === 0) {
+      this.addWarning(report, 'unresolvedReferences', {
+        severity: 'error',
+        code: 'SIRIUS_AIRD_NO_DIAGRAMS',
+        message: 'No DSemanticDiagram representations were found in the .aird session.',
+      });
+    }
+
+    const diagrams = semanticDiagrams.map((diagramNode, index) =>
+      this.buildAirdDiagram(diagramNode, index, model, viewpoint, layoutByElementId, report)
+    );
 
     this.finalizeReport(report);
-    return { viewpoints: [], report };
+    return { diagrams, report };
+  }
+
+  private buildAirdDiagram(
+    diagramNode: XmlNode,
+    index: number,
+    model: Model,
+    viewpoint: Viewpoint | undefined,
+    layoutByElementId: Map<string, AirdLayout>,
+    report: SiriusCompatibilityReport
+  ): SiriusAirdDiagramPreview {
+    const sourceRepresentationId = this.getSourceId(diagramNode) || this.getAttr(diagramNode, 'uid') || `diagram-${index + 1}`;
+    const name = this.getAttr(diagramNode, 'name') || `Imported View ${index + 1}`;
+    const representationDescriptionId = this.resolveRepresentationDescriptionId(diagramNode, viewpoint, report);
+
+    const ddeNodes = this.descendantsByLocal(diagramNode, 'ownedDiagramElements');
+    const usedElementIds = new Set<string>();
+    const ddeIdToElementId = new Map<string, string>();
+    const elements: DiagramElement[] = [];
+
+    // Nodes first so edges can resolve their endpoints to created element ids.
+    ddeNodes
+      .filter(dde => !this.isDiagramElementEdge(dde, viewpoint))
+      .forEach((dde, nodeIndex) => {
+        const ddeId = this.getSourceId(dde) || `node-${nodeIndex + 1}`;
+        const modelElementId = this.resolveSemanticTarget(this.getAttr(dde, 'target'), dde, model, report);
+        if (!modelElementId) return;
+
+        const elementId = this.uniqueId(this.toStableId(ddeId), usedElementIds);
+        ddeIdToElementId.set(ddeId, elementId);
+        const bounds = layoutByElementId.get(ddeId)?.bounds;
+        elements.push({
+          id: elementId,
+          type: 'node',
+          modelElementId,
+          ...(bounds && { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height }),
+          style: {},
+        });
+      });
+
+    ddeNodes
+      .filter(dde => this.isDiagramElementEdge(dde, viewpoint))
+      .forEach((dde, edgeIndex) => {
+        const ddeId = this.getSourceId(dde) || `edge-${edgeIndex + 1}`;
+        const modelElementId = this.resolveSemanticTarget(this.getAttr(dde, 'target'), dde, model, report);
+        if (!modelElementId) return;
+
+        const sourceRef = this.fragmentOf(this.getAttr(dde, 'sourceNode') || this.getAttr(dde, 'source'));
+        const targetRef = this.fragmentOf(this.getAttr(dde, 'targetNode'));
+        const sourceId = sourceRef ? ddeIdToElementId.get(sourceRef) : undefined;
+        const targetId = targetRef ? ddeIdToElementId.get(targetRef) : undefined;
+        if (!sourceId || !targetId) {
+          this.addWarning(report, 'unresolvedReferences', {
+            severity: 'warning',
+            code: 'SIRIUS_AIRD_EDGE_ENDPOINT_UNRESOLVED',
+            message: `Edge "${this.getAttr(dde, 'name') || ddeId}" could not resolve its source/target node and was dropped.`,
+            sourcePath: this.nodePath(dde),
+            sourceElementId: ddeId,
+          });
+          return;
+        }
+
+        const elementId = this.uniqueId(this.toStableId(ddeId), usedElementIds);
+        const points = layoutByElementId.get(ddeId)?.points;
+        elements.push({
+          id: elementId,
+          type: 'edge',
+          modelElementId,
+          sourceId,
+          targetId,
+          ...(points && points.length > 0 && { points }),
+          style: {},
+        });
+      });
+
+    return {
+      name,
+      modelId: model.id,
+      viewpointId: viewpoint?.id,
+      ...(representationDescriptionId && { representationDescriptionId }),
+      elements,
+      sourceRepresentationId,
+    };
+  }
+
+  private resolveRepresentationDescriptionId(
+    diagramNode: XmlNode,
+    viewpoint: Viewpoint | undefined,
+    report: SiriusCompatibilityReport
+  ): string | undefined {
+    if (!viewpoint) return undefined;
+    const ref = this.fragmentOf(this.getAttr(diagramNode, 'description'));
+    const descriptions = viewpoint.representationDescriptions || [];
+    if (!ref) {
+      return descriptions[0]?.id;
+    }
+
+    const normalizedRef = this.normalizeQualifiedName(ref);
+    const match = descriptions.find(description => (
+      description.id === ref
+      || description.id === this.toStableId(ref)
+      || this.normalizeQualifiedName(description.name) === normalizedRef
+    ));
+    if (match) return match.id;
+
+    this.addWarning(report, 'unresolvedReferences', {
+      severity: 'warning',
+      code: 'SIRIUS_AIRD_REPRESENTATION_UNRESOLVED',
+      message: `Could not resolve Sirius diagram description "${ref}" in viewpoint "${viewpoint.name}".`,
+      sourcePath: this.nodePath(diagramNode),
+      sourceElementId: this.getSourceId(diagramNode),
+    });
+    return descriptions[0]?.id;
+  }
+
+  private resolveSemanticTarget(
+    targetRef: string | undefined,
+    node: XmlNode,
+    model: Model,
+    report: SiriusCompatibilityReport
+  ): string | undefined {
+    const frag = this.fragmentOf(targetRef);
+    if (!frag) {
+      this.addWarning(report, 'unresolvedReferences', {
+        severity: 'warning',
+        code: 'SIRIUS_AIRD_TARGET_MISSING',
+        message: `Diagram element "${this.getAttr(node, 'name') || this.getSourceId(node) || 'unnamed'}" has no semantic target and was dropped.`,
+        sourcePath: this.nodePath(node),
+        sourceElementId: this.getSourceId(node),
+      });
+      return undefined;
+    }
+
+    const byId = model.elements.find((element: ModelElement) => element.id === frag);
+    if (byId) return byId.id;
+
+    const name = this.getAttr(node, 'name');
+    if (name) {
+      const byName = model.elements.filter((element: ModelElement) => element.name === name);
+      if (byName.length === 1) return byName[0].id;
+      if (byName.length > 1) {
+        this.addWarning(report, 'unresolvedReferences', {
+          severity: 'warning',
+          code: 'SIRIUS_AIRD_TARGET_AMBIGUOUS',
+          message: `Semantic target "${frag}" matched multiple model elements named "${name}"; the element was dropped.`,
+          sourcePath: this.nodePath(node),
+          sourceElementId: this.getSourceId(node),
+        });
+        return undefined;
+      }
+    }
+
+    this.addWarning(report, 'unresolvedReferences', {
+      severity: 'warning',
+      code: 'SIRIUS_AIRD_TARGET_UNRESOLVED',
+      message: `Could not resolve Sirius semantic target "${frag}" in model "${model.name}"; the element was dropped.`,
+      sourcePath: this.nodePath(node),
+      sourceElementId: this.getSourceId(node),
+    });
+    return undefined;
+  }
+
+  private indexAirdLayout(allNodes: XmlNode[]): Map<string, AirdLayout> {
+    const layout = new Map<string, AirdLayout>();
+    for (const node of allNodes) {
+      const type = this.getAttrByLocal(node, 'type') || node.name;
+      const isGmfNode = /notation:Node|Node$/.test(type) && node.localName !== 'ownedDiagramElements';
+      const isGmfEdge = /notation:Edge|Edge$/.test(type) && node.localName !== 'ownedDiagramElements';
+      if (!isGmfNode && !isGmfEdge) continue;
+
+      const elementRef = this.fragmentOf(this.getAttr(node, 'element'));
+      if (!elementRef) continue;
+
+      const entry = layout.get(elementRef) || {};
+      if (isGmfNode) {
+        const bounds = this.parseAirdBounds(node);
+        if (bounds) entry.bounds = bounds;
+      } else {
+        const points = this.parseAirdWaypoints(node);
+        if (points.length > 0) entry.points = points;
+      }
+      layout.set(elementRef, entry);
+    }
+    return layout;
+  }
+
+  private parseAirdBounds(gmfNode: XmlNode): AirdBounds | undefined {
+    const constraint = this.children(gmfNode).find(child => child.localName === 'layoutConstraint') || gmfNode;
+    const x = this.parseCoordinate(this.getAttr(constraint, 'x'));
+    const y = this.parseCoordinate(this.getAttr(constraint, 'y'));
+    const width = this.parseNumber(this.getAttr(constraint, 'width'));
+    const height = this.parseNumber(this.getAttr(constraint, 'height'));
+    if (x === undefined && y === undefined && width === undefined && height === undefined) {
+      return undefined;
+    }
+    return { x: x ?? 0, y: y ?? 0, width: width ?? 120, height: height ?? 80 };
+  }
+
+  private parseAirdWaypoints(gmfEdge: XmlNode): Array<{ x: number; y: number }> {
+    return this.descendantsByLocal(gmfEdge, 'points')
+      .concat(this.descendantsByLocal(gmfEdge, 'waypoints'))
+      .map(point => ({
+        x: this.parseCoordinate(this.getAttr(point, 'x')),
+        y: this.parseCoordinate(this.getAttr(point, 'y')),
+      }))
+      .filter((point): point is { x: number; y: number } => point.x !== undefined && point.y !== undefined);
+  }
+
+  private isSemanticDiagram(node: XmlNode): boolean {
+    if (node.localName === 'DSemanticDiagram') return true;
+    const type = this.getAttrByLocal(node, 'type');
+    return Boolean(type && type.includes('DSemanticDiagram'));
+  }
+
+  private isDiagramElementEdge(node: XmlNode, viewpoint: Viewpoint | undefined): boolean {
+    if (this.getAttr(node, 'sourceNode') || this.getAttr(node, 'targetNode')) return true;
+    const type = this.getAttrByLocal(node, 'type') || node.name;
+    if (/edge/i.test(type)) return true;
+
+    const mappingFrag = this.fragmentOf(this.getAttr(node, 'mapping'));
+    if (mappingFrag && viewpoint) {
+      return (viewpoint.representationDescriptions || []).some(description =>
+        (description.edgeMappings || []).some(edgeMapping => (
+          edgeMapping.id === mappingFrag
+          || edgeMapping.id === this.toStableId(mappingFrag)
+          || edgeMapping.referenceName === mappingFrag
+        ))
+      );
+    }
+    return false;
+  }
+
+  private fragmentOf(ref?: string): string | undefined {
+    if (!ref) return undefined;
+    const trimmed = ref.trim();
+    if (!trimmed) return undefined;
+    if (trimmed.includes('#')) {
+      const fragment = trimmed.slice(trimmed.lastIndexOf('#') + 1);
+      return fragment || undefined;
+    }
+    if (trimmed.startsWith('//')) {
+      // GMF structural paths (e.g. //@ownedDiagramElements.0) are not resolvable here.
+      return undefined;
+    }
+    return trimmed;
+  }
+
+  private parseCoordinate(value?: string): number | undefined {
+    if (value === undefined || value === '') return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
   }
 
   private validateSemanticXml(content: string, sourceFormat: SiriusSourceFormat): SiriusOdesignPreview {

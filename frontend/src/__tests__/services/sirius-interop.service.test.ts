@@ -9,6 +9,7 @@ jest.mock('../../services/core', () => ({
   API_ENDPOINTS: {
     SIRIUS_VALIDATE: '/interoperability/sirius/validate',
     SIRIUS_IMPORT: '/interoperability/sirius/import',
+    SIRIUS_AIRD_IMPORT: '/interoperability/sirius/aird/import',
     SIRIUS_EXPORT: '/interoperability/sirius/export',
   },
 }));
@@ -90,5 +91,40 @@ describe('siriusInteropService', () => {
       expect.objectContaining({ code: 'SIRIUS_DEFERRED_AIRD_EXPORT' }),
     ]));
     expect(result.blob.size).toBeGreaterThan(0);
+  });
+
+  it('validates an .aird view with the model and viewpoint context', async () => {
+    mockedApiClient.post.mockResolvedValue({
+      diagrams: [],
+      report: { supported: true, warnings: [], droppedFeatures: [], unresolvedReferences: [] },
+    });
+
+    await siriusInteropService.validateAird('<viewpoint:DAnalysis/>', 'model-1', 'viewpoint-1');
+
+    expect(mockedApiClient.post).toHaveBeenCalledWith('/interoperability/sirius/validate', {
+      content: '<viewpoint:DAnalysis/>',
+      sourceFormat: 'aird',
+      modelId: 'model-1',
+      viewpointId: 'viewpoint-1',
+      options: undefined,
+    });
+  });
+
+  it('imports an .aird view through the dedicated endpoint', async () => {
+    mockedApiClient.post.mockResolvedValue({
+      diagrams: [{ id: 'diagram-1' }],
+      report: { supported: true, warnings: [], droppedFeatures: [], unresolvedReferences: [] },
+    });
+
+    const file = { text: () => Promise.resolve('<viewpoint:DAnalysis/>') } as unknown as File;
+    const result = await siriusInteropService.importAirdFile(file, 'model-1', 'viewpoint-1');
+
+    expect(result.diagrams).toHaveLength(1);
+    expect(mockedApiClient.post).toHaveBeenCalledWith('/interoperability/sirius/aird/import', {
+      content: '<viewpoint:DAnalysis/>',
+      modelId: 'model-1',
+      viewpointId: 'viewpoint-1',
+      options: undefined,
+    });
   });
 });

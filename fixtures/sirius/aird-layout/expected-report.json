@@ -1,0 +1,15 @@
+{
+  "sourceFormat": "aird",
+  "targetFormat": "spatialdsl",
+  "supported": true,
+  "warnings": [
+    {
+      "severity": "info",
+      "code": "SIRIUS_SYNTHETIC_FIXTURE",
+      "message": "Fixture is synthetic and covers the minimal supported .aird subset: one DSemanticDiagram, two nodes, one edge, with GMF notation layout.",
+      "sourcePath": "fixtures/sirius/aird-layout"
+    }
+  ],
+  "droppedFeatures": [],
+  "unresolvedReferences": []
+}

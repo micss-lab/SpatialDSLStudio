@@ -246,6 +246,22 @@ export interface SiriusImportResult {
     viewpoints: Viewpoint[];
     report: SiriusCompatibilityReport;
 }
+export interface SiriusAirdDiagramPreview {
+    name: string;
+    modelId: string;
+    viewpointId?: string;
+    representationDescriptionId?: string;
+    elements: DiagramElement[];
+    sourceRepresentationId?: string;
+}
+export interface SiriusAirdPreview {
+    diagrams: SiriusAirdDiagramPreview[];
+    report: SiriusCompatibilityReport;
+}
+export interface SiriusAirdImportResult {
+    diagrams: Diagram[];
+    report: SiriusCompatibilityReport;
+}
 export interface SiriusExportResult {
     filename: string;
     content: string;

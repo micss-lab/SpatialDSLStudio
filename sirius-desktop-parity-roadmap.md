@@ -42,11 +42,14 @@ Implemented foundation:
 - Viewpoint management UI
 - Representation Description editor
 - pin creation, drag, validation, and edge anchoring support
+- `.odesign` viewpoint import/export subset
+- `.aird` view import subset (resolves against an imported model/viewpoint, preserves GMF layout)
 
 In progress / planned:
 
 - richer example coverage and walkthrough documentation
 - broader workflow tests and docs
+- `.aird` export (Phase 5)
 
 ## Parity Areas
 
@@ -211,7 +214,7 @@ After those are done, revisit this roadmap and choose the next parity area:
 
 ## Current Interoperability Position
 
-SpatialDSL supports partial semantic interchange with EMF tooling through Ecore metamodel import/export and XMI model import/export. It does not currently import/export Sirius `.odesign` viewpoint specifications or `.aird` representation/session files.
+SpatialDSL supports partial semantic interchange with EMF tooling through Ecore metamodel import/export and XMI model import/export. It imports and exports a Sirius `.odesign` viewpoint-specification subset, and imports a Sirius `.aird` view subset (diagram representations resolved against an already-imported model and viewpoint, with GMF notation layout preserved). It does not yet export `.aird` representation/session files.
 
 ## References
 

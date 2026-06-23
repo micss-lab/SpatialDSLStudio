@@ -51,6 +51,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { metamodelService } from '../../services/metamodel';
 import { diagramService } from '../../services/diagram';
+import { modelService } from '../../services/model';
 import viewpointService from '../../services/viewpoint.service';
 import { siriusInteropService } from '../../services/interoperability';
 import ColorSwatchField from '../common/ColorSwatchField';
@@ -211,6 +212,7 @@ const ViewpointManager: React.FC = () => {
   const [isSiriusReportOpen, setIsSiriusReportOpen] = useState(false);
   const isCreatingViewpointRef = useRef(false);
   const siriusFileInputRef = useRef<HTMLInputElement | null>(null);
+  const airdFileInputRef = useRef<HTMLInputElement | null>(null);
   const jsonFileInputRef = useRef<HTMLInputElement | null>(null);
   const siriusFileActionRef = useRef<SiriusFileAction>('import');
 
@@ -410,6 +412,50 @@ const ViewpointManager: React.FC = () => {
       setIsSiriusReportOpen(true);
     } catch (error: any) {
       setError(error.message || 'Failed to export Sirius project ZIP');
+    } finally {
+      setIsSiriusBusy(false);
+    }
+  };
+
+  const handleOpenAirdFilePicker = () => {
+    if (!canEditMetamodel) return;
+    airdFileInputRef.current?.click();
+  };
+
+  const handleAirdFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !metamodelId || !canEditMetamodel) return;
+
+    setIsSiriusBusy(true);
+    setSiriusStatus('');
+    setJsonImportStatus('');
+    setSiriusReport(null);
+    setError('');
+
+    try {
+      if (!selectedViewpointId) {
+        throw new Error('Select a viewpoint before importing a Sirius .aird view.');
+      }
+      const models = modelService.getModelsByMetamodelId(metamodelId);
+      if (models.length === 0) {
+        throw new Error('Import a model for this metamodel before importing a Sirius .aird view.');
+      }
+      // .aird import resolves semantic targets against an already-imported model.
+      const model = models[0];
+
+      const result = await siriusInteropService.importAirdFile(file, model.id, selectedViewpointId);
+      setSiriusReport(result.report);
+      setIsSiriusReportOpen(true);
+      const intoModel = models.length > 1 ? ` into model "${model.name}"` : '';
+      setSiriusStatus(
+        `Imported ${result.diagrams.length} Sirius view(s)${intoModel} from ${file.name}. Reopen the Views list to see them.`
+      );
+      result.diagrams.forEach(diagram => window.dispatchEvent(
+        new CustomEvent('view:changed', { detail: { diagramId: diagram.id } })
+      ));
+    } catch (error: any) {
+      setError(error.message || 'Failed to import Sirius .aird view');
     } finally {
       setIsSiriusBusy(false);
     }
@@ -661,6 +707,13 @@ const ViewpointManager: React.FC = () => {
         )}
         <Divider sx={{ my: 2 }} />
         <Typography variant="caption" color="text.secondary">Sirius Compatibility</Typography>
+        <input
+          ref={airdFileInputRef}
+          type="file"
+          hidden
+          accept=".aird"
+          onChange={handleAirdFileChange}
+        />
         <Stack direction="row" spacing={1} sx={{ mt: 1, mb: 1.5, flexWrap: 'wrap', rowGap: 1 }}>
           <Button
             size="small"
@@ -671,6 +724,17 @@ const ViewpointManager: React.FC = () => {
           >
             Validate
           </Button>
+          {canEditMetamodel && (
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<FileUploadIcon />}
+              disabled={isSiriusBusy || !selectedViewpointId}
+              onClick={handleOpenAirdFilePicker}
+            >
+              Import .aird View
+            </Button>
+          )}
           {canEditMetamodel && (
             <Button
               size="small"

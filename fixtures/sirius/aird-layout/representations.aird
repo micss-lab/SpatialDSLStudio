@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI
+    xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:viewpoint="http://www.eclipse.org/sirius/1.1.0"
+    xmlns:diagram="http://www.eclipse.org/sirius/diagram/1.1.0"
+    xmlns:notation="http://www.eclipse.org/gmf/runtime/1.0.2/notation">
+  <viewpoint:DAnalysis xmi:id="analysis-aird-layout">
+    <semanticResources>model/sample.xmi</semanticResources>
+    <ownedViews
+        xmi:id="view-minimal"
+        viewpoint="description/minimal.odesign#viewpoint-minimal">
+      <ownedRepresentations
+          xsi:type="diagram:DSemanticDiagram"
+          xmi:id="representation-minimal"
+          name="Demo System"
+          uid="representation-minimal"
+          target="model/sample.xmi#system-demo"
+          description="description/minimal.odesign#diagram-minimal">
+        <ownedDiagramElements
+            xmi:id="node-api"
+            name="API"
+            target="model/sample.xmi#component-api"
+            mapping="description/minimal.odesign#mapping-component"/>
+        <ownedDiagramElements
+            xmi:id="node-db"
+            name="Database"
+            target="model/sample.xmi#component-db"
+            mapping="description/minimal.odesign#mapping-component"/>
+        <ownedDiagramElements
+            xmi:id="edge-api-db"
+            name="API to Database"
+            target="model/sample.xmi#component-api"
+            mapping="description/minimal.odesign#mapping-dependency"
+            sourceNode="#node-api"
+            targetNode="#node-db"/>
+      </ownedRepresentations>
+    </ownedViews>
+  </viewpoint:DAnalysis>
+  <notation:Diagram xmi:id="gmf-diagram-minimal" type="Sirius" element="#representation-minimal">
+    <children xsi:type="notation:Node" xmi:id="gmf-node-api" element="#node-api">
+      <layoutConstraint xsi:type="notation:Bounds" x="80" y="60" width="160" height="90"/>
+    </children>
+    <children xsi:type="notation:Node" xmi:id="gmf-node-db" element="#node-db">
+      <layoutConstraint xsi:type="notation:Bounds" x="420" y="280" width="160" height="90"/>
+    </children>
+    <edges xsi:type="notation:Edge" xmi:id="gmf-edge-api-db" element="#edge-api-db" source="gmf-node-api" target="gmf-node-db">
+      <points x="160" y="150"/>
+      <points x="500" y="280"/>
+    </edges>
+  </notation:Diagram>
+</xmi:XMI>

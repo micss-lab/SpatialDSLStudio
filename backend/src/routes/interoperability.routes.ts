@@ -15,11 +15,29 @@ router.post(
     body('content').isString().notEmpty().withMessage('content is required'),
     body('sourceFormat').optional().isIn(['ecore', 'xmi', 'odesign', 'aird', 'project-zip']),
     body('metamodelId').optional().isString().withMessage('metamodelId must be a string'),
+    body('modelId').optional().isString().withMessage('modelId must be a string'),
+    body('viewpointId').optional().isString().withMessage('viewpointId must be a string'),
     body('options').optional().isObject().withMessage('options must be an object'),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const preview = await siriusInteropService.validate(req.body, req.user!.userId);
+    const preview = req.body.sourceFormat === 'aird'
+      ? await siriusInteropService.validateAirdView(req.body, req.user!.userId)
+      : await siriusInteropService.validate(req.body, req.user!.userId);
     res.json({ success: true, data: preview });
+  })
+);
+
+router.post(
+  '/sirius/aird/import',
+  validate([
+    body('content').isString().notEmpty().withMessage('content is required'),
+    body('modelId').isString().notEmpty().withMessage('modelId is required'),
+    body('viewpointId').optional().isString().withMessage('viewpointId must be a string'),
+    body('options').optional().isObject().withMessage('options must be an object'),
+  ]),
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const result = await siriusInteropService.importAird(req.body, req.user!.userId, req.user!.role);
+    res.status(201).json({ success: true, data: result });
   })
 );
 
