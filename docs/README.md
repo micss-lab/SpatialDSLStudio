@@ -18,6 +18,8 @@ Use this page to find the right documentation based on your goal.
 - [Viewpoints and Representation Descriptions](user-guide/viewpoints.md)
 - [Transformations](user-guide/transformations.md)
 - [Code Generation](user-guide/code-generation.md)
+- [Visual Components Code Generation](user-guide/visual-components-code-generation.md)
+- [Omniverse Code Generation](user-guide/omniverse-code-generation.md)
 - [Roles and Sharing](user-guide/roles-and-sharing.md)
 
 ### I want technical internals
@@ -46,6 +48,8 @@ Recommended reading path for first-time onboarding:
 5. user-guide/diagrams.md
 6. user-guide/transformations.md
 7. user-guide/code-generation.md
-8. reference/sirius-compatibility.md
-9. reference/sirius-file-compatibility.md
-10. reference/architecture.md
+8. user-guide/visual-components-code-generation.md
+9. user-guide/omniverse-code-generation.md
+10. reference/sirius-compatibility.md
+11. reference/sirius-file-compatibility.md
+12. reference/architecture.md
