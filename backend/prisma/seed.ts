@@ -8,7 +8,12 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 const DEMO_EMAIL = process.env.DEMO_EMAIL;
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD;
-const DEMO_ROLE = (process.env.DEMO_ROLE as UserRole) || 'DSL_DESIGNER';
+const DEMO_ROLE_RAW = process.env.DEMO_ROLE;
+
+const DEMO_ROLE: UserRole =
+  DEMO_ROLE_RAW && Object.values(UserRole).includes(DEMO_ROLE_RAW as UserRole)
+    ? (DEMO_ROLE_RAW as UserRole)
+    : UserRole.DSL_DESIGNER;
 
 // Seeded accounts are pre-verified so reviewers and operators can log in
 // without access to the account's mailbox.
