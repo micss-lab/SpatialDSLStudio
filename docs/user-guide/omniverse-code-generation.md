@@ -12,6 +12,8 @@ changing the app bundle.
 
 - Importable codegen project:
   `examples/codegen-projects/smart-warehouse-omniverse-project.json`
+- Vendored CC0 demonstration assets:
+  `examples/omniverse-assets/cc0-mini-vehicle-kit/`
 - Example source model:
   `frontend/src/examples/data/smart-warehouse-model.json`
 - Example target metamodel:
@@ -35,14 +37,16 @@ The generated Python script creates a `.usda` USD stage with:
   - `OutputLocation`
   - `ChargingStation`
   - `MobileRobot`
-- one placeholder cube per model element
+- a referenced CC0 vehicle asset for each `MobileRobot` when the asset root is available
+- a placeholder cube for unmapped classes or unavailable asset files
 - source metadata attributes such as `spatialDsl:sourceName`,
   `spatialDsl:className`, and source coordinates in millimeters
 
-This is a first-stage scene-generation template. It does not implement robot
-movement, path planning, OPC UA integration, physics tuning, or asset conversion.
+This remains a first-stage scene-generation template. It demonstrates real USD
+references, but does not implement robot movement, path planning, OPC UA
+integration, physics tuning, or production AMR behavior.
 
-## Why Placeholder Geometry
+## Asset References And Fallback Geometry
 
 The Smart Warehouse model already stores useful 3D scene data:
 
@@ -52,9 +56,16 @@ The Smart Warehouse model already stores useful 3D scene data:
 - Z rotation, through `presentation.rotationZ`
 - size in millimeters, through `presentation.size3D`
 
-The template maps those values into OpenUSD transforms and cube sizes. This gives
-you a deterministic, inspectable USD scene before introducing asset conversion or
-runtime simulation behavior.
+The template maps those values into OpenUSD transforms. `MobileRobot` elements
+reference `cc0-mini-vehicle-kit/demo_forklift.usda`; all remaining classes use
+deterministic cube geometry. If the asset root is missing, robots also fall back
+to cubes and the script prints the unresolved path.
+
+The included vehicle subset is CC0 and demonstrates USD composition, materials,
+textures, instancing, Y-up to Z-up orientation, and scaling. It is not a
+production autonomous mobile robot. See the asset directory's `SOURCE.md` for
+provenance and the root-level `smart-warehouse-codegen-future-work.md` for the
+production asset roadmap.
 
 ## Import The Project
 
@@ -154,13 +165,15 @@ Python environment before running the packaged interpreter. On Windows, use
 From your Isaac Sim installation directory:
 
 ```bash
-./python.sh /absolute/path/to/generate_warehouse_usd.py /absolute/path/to/warehouse_scene.usda
+./python.sh /absolute/path/to/generate_warehouse_usd.py \
+  /absolute/path/to/warehouse_scene.usda \
+  /absolute/path/to/SpatialDSLStudio/examples/omniverse-assets
 ```
 
 On Windows:
 
 ```powershell
-python.bat C:\path\to\generate_warehouse_usd.py C:\path\to\warehouse_scene.usda
+python.bat C:\path\to\generate_warehouse_usd.py C:\path\to\warehouse_scene.usda C:\path\to\SpatialDSLStudio\examples\omniverse-assets
 ```
 
 Expected terminal output:
@@ -168,10 +181,15 @@ Expected terminal output:
 ```text
 Generated USD scene: /absolute/path/to/warehouse_scene.usda
 Elements: 25
+Referenced assets: 2
 ```
 
 The element count excludes the root `WarehouseSystem` object because the template
 generates geometry for physical warehouse assets only.
+
+The asset-root argument is optional. Without it, the script looks for an
+`omniverse-assets` directory beside the generated script and uses cube fallbacks
+when the mapped file is unavailable.
 
 ## Verify The Generated USD File
 
@@ -223,12 +241,22 @@ Cause: the script was run with system Python.
 
 Fix: run the generated script with Isaac Sim's `python.sh` or `python.bat`.
 
-### The USD file opens but looks like simple boxes
+### Some elements still look like simple boxes
 
-Cause: this first template intentionally generates placeholder geometry.
+Cause: only `MobileRobot` currently has a real asset mapping. Other classes use
+fallback geometry by design.
 
-Fix: this is expected. The next template iteration should reference converted
-USD assets for robots, conveyors, charging stations, and pathway surfaces.
+Fix: this is expected. Add reviewed assets to the class map for conveyors,
+charging stations, output locations, and pathway surfaces.
+
+### `Asset not found; using placeholder`
+
+Cause: the asset-root argument does not point to
+`examples/omniverse-assets`, or the asset directory was not copied beside the
+generated script.
+
+Fix: pass the repository asset directory as the second script argument. Keep the
+vendored directory structure intact because its layers use relative references.
 
 ### The scene opens far from the camera
 
@@ -250,7 +278,7 @@ Fix: this is expected for the current scene template.
 The current project JSON is meant to be edited or copied for other targets.
 Common next changes:
 
-- Replace placeholder cubes with references to converted USD assets.
+- Replace remaining placeholder cubes with references to reviewed USD assets.
 - Add a class-to-asset map such as `MobileRobot -> assets/mobile_robot.usd`.
 - Emit physics APIs and collision approximations.
 - Emit a second script for robot motion or event logic.

@@ -138,10 +138,50 @@ describe('Smart Warehouse code generation project fixtures', () => {
     expect(project.targetMetamodelId).toBe(smartWarehouseMetamodel.id);
     expect(Object.keys(outputs)).toEqual(['generate_warehouse_usd.py']);
     expect(outputs['generate_warehouse_usd.py']).toContain('Usd.Stage.CreateNew');
+    expect(outputs['generate_warehouse_usd.py']).toContain('ASSET_MAP = {');
+    expect(outputs['generate_warehouse_usd.py']).toContain(
+      'cc0-mini-vehicle-kit/demo_forklift.usda'
+    );
+    expect(outputs['generate_warehouse_usd.py']).toContain('GetReferences().AddReference');
+    expect(outputs['generate_warehouse_usd.py']).toContain('Asset not found; using placeholder');
+    expect(outputs['generate_warehouse_usd.py']).toContain('Referenced assets: ');
     expect(outputs['generate_warehouse_usd.py'].match(/"class_name":/g)).toHaveLength(25);
     expect(outputs['generate_warehouse_usd.py']).toContain(
       'print("Elements: " + str(len(ELEMENTS)))'
     );
+  });
+
+  it('includes the CC0 referenced asset and its required local dependencies', () => {
+    const assetRoot = path.resolve(
+      process.cwd(),
+      '..',
+      'examples',
+      'omniverse-assets',
+      'cc0-mini-vehicle-kit'
+    );
+    const requiredFiles = [
+      'demo_forklift.usda',
+      'SOURCE.md',
+      'UPSTREAM_README.md',
+      'assets/vehicles/tractor/asset/tractorBodyAsset.usda',
+      'assets/vehicles/tractor/geo/tractorGeo.usd',
+      'assets/wheels/wheelWide/asset/wheelWideAsset.usda',
+      'assets/wheels/wheelWide/geo/wheelWideGeo.usd',
+      'assets/wheels/wheelBlack/asset/wheelBlackAsset.usda',
+      'assets/wheels/wheelBlack/geo/wheelBlackGeo.usd',
+      'materials/lightGrey.usda',
+      'materials/mediumGrey.usda',
+      'textures/global-colors/greylight.jpg',
+      'textures/global-colors/greymedium.jpg',
+    ];
+
+    requiredFiles.forEach(relativePath => {
+      expect(fs.existsSync(path.join(assetRoot, relativePath))).toBe(true);
+    });
+
+    const sourceNotes = fs.readFileSync(path.join(assetRoot, 'SOURCE.md'), 'utf8');
+    expect(sourceNotes).toContain('Creative Commons Zero (CC0 1.0)');
+    expect(sourceNotes).toContain('1b91f3c464891af259d51d9ee9ee9e6c357f7079');
   });
 
   it('uses template metadata accepted by the current project importer', () => {

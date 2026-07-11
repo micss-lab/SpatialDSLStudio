@@ -27,6 +27,7 @@ Use this page to find the right documentation based on your goal.
 - [API Reference](reference/api.md)
 - [Data Model](reference/data-model.md)
 - [Architecture](reference/architecture.md)
+- [Smart Warehouse Codegen Future Work](../smart-warehouse-codegen-future-work.md)
 - [Sirius Desktop Compatibility](reference/sirius-compatibility.md)
 - [Sirius File Compatibility](reference/sirius-file-compatibility.md)
 
