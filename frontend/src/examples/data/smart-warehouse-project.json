@@ -1,7 +1,7 @@
 {
   "id": "40000000-0000-4000-8000-000000000100",
-  "name": "Smart Warehouse Visual Components",
-  "description": "Generates a Visual Components simulation setup script, OPC UA configuration, JADE MAS config, and position JSON files from the Smart Warehouse model.",
+  "name": "Smart Warehouse Visual Components (Example)",
+  "description": "Example (seeded) project: generates a Visual Components simulation setup script, OPC UA configuration, JADE MAS config, and position JSON files from the Smart Warehouse model."
   "targetMetamodelId": "10000000-0000-4000-8000-000000000100",
   "templates": [
     {
