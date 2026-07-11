@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<description:Group
+    xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:description="http://www.eclipse.org/sirius/description/1.1.0"
+    xmlns:diagramDescription="http://www.eclipse.org/sirius/diagram/description/1.1.0"
+    xmlns:diagramStyle="http://www.eclipse.org/sirius/diagram/description/style/1.1.0"
+    name="minimal">
+  <ownedViewpoints xmi:id="viewpoint-minimal" name="MinimalViewpoint" label="Minimal Viewpoint" modelFileExtension="xmi">
+    <ownedRepresentations
+        xsi:type="diagramDescription:DiagramDescription"
+        xmi:id="diagram-minimal"
+        name="MinimalDiagram"
+        label="Minimal Diagram"
+        domainClass="minimal::System">
+      <defaultLayer xmi:id="layer-default" name="Default">
+        <nodeMappings
+            xmi:id="mapping-component"
+            name="ComponentNode"
+            label="Component"
+            domainClass="minimal::Component"
+            semanticCandidatesExpression="feature:components">
+          <style
+              xsi:type="diagramStyle:SquareDescription"
+              xmi:id="style-component"
+              labelExpression="feature:name"
+              color="SystemColor:light_blue"
+              borderColor="SystemColor:black"
+              labelSize="12"/>
+        </nodeMappings>
+        <edgeMappings
+            xmi:id="mapping-dependency"
+            name="DependencyEdge"
+            label="Dependency"
+            sourceMapping="//@ownedViewpoints.0/@ownedRepresentations.0/@defaultLayer/@nodeMappings.0"
+            targetMapping="//@ownedViewpoints.0/@ownedRepresentations.0/@defaultLayer/@nodeMappings.0"
+            targetFinderExpression="feature:dependencies">
+          <style
+              xsi:type="diagramStyle:EdgeStyleDescription"
+              xmi:id="style-dependency"
+              strokeColor="SystemColor:black"
+              lineStyle="solid"
+              targetArrow="InputArrow"/>
+        </edgeMappings>
+      </defaultLayer>
+    </ownedRepresentations>
+  </ownedViewpoints>
+</description:Group>

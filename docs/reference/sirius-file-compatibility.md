@@ -7,8 +7,9 @@ claim that all listed Sirius formats are implemented today.
 SpatialDSL Studio currently supports partial semantic interchange through
 Ecore metamodel files and EMF-style XMI model files. The backend Sirius
 interoperability API also supports an initial `.odesign` validate/import/export
-subset for diagram Viewpoint Specification Models. Sirius `.aird`
-session/representation files are not implemented yet.
+subset for diagram Viewpoint Specification Models, plus an initial `.aird`
+view-import subset that turns Sirius diagram representations into SpatialDSL
+views. `.aird` export remains deferred.
 
 ## Source Concepts
 
@@ -69,7 +70,7 @@ segments. Exporters must generate stable relative paths.
 | `.ecore` | Supported subset | Import and export single-package Ecore metamodels with named classes, attributes, references, containment, inheritance, enums, `nsURI`, and `nsPrefix`. Report unsupported annotations, custom datatype details, unresolved references, and cross-package references. |
 | `.xmi` | Supported subset | Import and export semantic model resources against a matching metamodel. Preserve stable `xmi:id` values when present. Report unresolved non-containment references and any presentation data found in semantic resources. |
 | `.odesign` | Supported subset | Import and export one or more Viewpoints with diagram Representation Descriptions using the subset below. Report unsupported Sirius specifier features. |
-| `.aird` | Deferred | Do not import or export session/representation data until semantic and `.odesign` compatibility are stable. Validation may detect the file and report that `.aird` handling is deferred. |
+| `.aird` | Supported import subset | Import diagram representations as SpatialDSL views, resolving semantic targets and viewpoint/representation references against an already-imported model and viewpoint, and preserving GMF notation layout. Export remains deferred. See the `.aird` subset below. |
 | `.representation/*.srm` | Deferred | Detect references to lazy representation resources and report them as deferred or unresolved if the referenced file is missing. |
 | project `.zip` | Supported wrapper | Treat as a relative-path bundle containing the files above. Validate paths and sizes before parsing XML. |
 
@@ -96,6 +97,31 @@ Simple expressions are limited to direct feature access such as
 `feature:name`, `feature:children`, or `aql:self.children`. Any expression that
 requires Java services, complex AQL/OCL evaluation, multi-step operation chains,
 or runtime interpreter state is unsupported in the first implementation.
+
+## `.aird` Supported Import Subset
+
+`.aird` import requires the semantic model and viewpoint to be imported into
+SpatialDSL first; it resolves the session's references against them rather than
+auto-creating new resources. Each Sirius `DSemanticDiagram` becomes one
+SpatialDSL view.
+
+| Sirius Element | SpatialDSL Mapping | Compatibility |
+|---|---|---|
+| `DAnalysis` | session container | Recognized for traceability; `semanticResources` are informational. |
+| `DView` (`ownedViews`) | viewpoint context | The target viewpoint is supplied by the caller; the `viewpoint` reference is not re-resolved. |
+| `DSemanticDiagram` | View (`Diagram`) | Supported. `name` becomes the view name; `description` resolves to a representation description in the supplied viewpoint. |
+| Diagram element `target` | model element (`modelElementId`) | Resolved by `xmi:id` fragment first, then by a unique element name. Unresolved or ambiguous targets are dropped with a report entry. |
+| Node element | view node | Supported. |
+| Edge element (`sourceNode`/`targetNode`, or edge mapping) | view edge | Supported when both endpoints resolve to imported nodes; otherwise dropped with a report entry. |
+| GMF `notation:Node` `Bounds` | node `x`/`y`/`width`/`height` | Supported (layout fidelity). |
+| GMF `notation:Edge` waypoints | edge `points` | Supported when present. |
+| Container nesting, lazy `.srm`, conditional styles, filters, layers | none | Deferred or unsupported; reported, never silently imported. |
+
+Warning codes specific to `.aird` import: `SIRIUS_AIRD_MODEL_REQUIRED`,
+`SIRIUS_AIRD_NO_DIAGRAMS`, `SIRIUS_AIRD_TARGET_UNRESOLVED`,
+`SIRIUS_AIRD_TARGET_AMBIGUOUS`, `SIRIUS_AIRD_TARGET_MISSING`,
+`SIRIUS_AIRD_EDGE_ENDPOINT_UNRESOLVED`, and
+`SIRIUS_AIRD_REPRESENTATION_UNRESOLVED`.
 
 ## Unsupported Sirius Features
 
@@ -178,6 +204,7 @@ Phase 0 fixtures live in `fixtures/sirius/`.
 |---|---|
 | `minimal-diagram` | Small supported project with one `.ecore`, one semantic `.xmi`, one `.odesign`, and one `.aird` placeholder. |
 | `unsupported-features` | Small project that intentionally includes unsupported Sirius features and an expected compatibility report. |
+| `aird-layout` | `.aird` import path: a `DSemanticDiagram` with two nodes and one edge plus GMF `notation:Diagram` layout (node `Bounds` and edge waypoints). |
 
 Fixtures are synthetic and intentionally small. They are meant to drive parser
 and compatibility-report behavior before any application code is changed.

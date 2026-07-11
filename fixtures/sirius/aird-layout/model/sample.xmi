@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<minimal:System
+    xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:minimal="http://example.com/spatialdsl/fixtures/sirius/minimal"
+    xmi:id="system-demo"
+    name="Demo System">
+  <components xmi:id="component-api" name="API" dependencies="component-db"/>
+  <components xmi:id="component-db" name="Database"/>
+</minimal:System>

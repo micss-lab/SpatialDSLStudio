@@ -4,7 +4,9 @@ import { errorHandler } from '../../middleware';
 
 const siriusInteropServiceMock = {
   validate: jest.fn(),
+  validateAirdView: jest.fn(),
   importOdesign: jest.fn(),
+  importAird: jest.fn(),
   exportOdesign: jest.fn(),
 };
 
@@ -64,6 +66,51 @@ describe('interoperability Sirius routes', () => {
       expect.objectContaining({ sourceFormat: 'project-zip', metamodelId: 'metamodel-1' }),
       'user-1'
     );
+  });
+
+  it('routes .aird validation requests to validateAirdView', async () => {
+    siriusInteropServiceMock.validateAirdView.mockResolvedValue({
+      diagrams: [],
+      report: { supported: true, warnings: [], droppedFeatures: [], unresolvedReferences: [] },
+    });
+
+    const res = await request(buildApp())
+      .post('/api/interoperability/sirius/validate')
+      .send({ content: '<viewpoint:DAnalysis/>', sourceFormat: 'aird', modelId: 'model-1', viewpointId: 'viewpoint-1' });
+
+    expect(res.status).toBe(200);
+    expect(siriusInteropServiceMock.validateAirdView).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceFormat: 'aird', modelId: 'model-1', viewpointId: 'viewpoint-1' }),
+      'user-1'
+    );
+    expect(siriusInteropServiceMock.validate).not.toHaveBeenCalled();
+  });
+
+  it('imports Sirius .aird views', async () => {
+    siriusInteropServiceMock.importAird.mockResolvedValue({
+      diagrams: [{ id: 'diagram-1' }],
+      report: { supported: true, warnings: [], droppedFeatures: [], unresolvedReferences: [] },
+    });
+
+    const res = await request(buildApp())
+      .post('/api/interoperability/sirius/aird/import')
+      .send({ content: '<viewpoint:DAnalysis/>', modelId: 'model-1', viewpointId: 'viewpoint-1' });
+
+    expect(res.status).toBe(201);
+    expect(siriusInteropServiceMock.importAird).toHaveBeenCalledWith(
+      expect.objectContaining({ modelId: 'model-1', viewpointId: 'viewpoint-1' }),
+      'user-1',
+      'DSL_DESIGNER'
+    );
+  });
+
+  it('rejects .aird import requests without a modelId', async () => {
+    const res = await request(buildApp())
+      .post('/api/interoperability/sirius/aird/import')
+      .send({ content: '<viewpoint:DAnalysis/>' });
+
+    expect(res.status).toBe(400);
+    expect(siriusInteropServiceMock.importAird).not.toHaveBeenCalled();
   });
 
   it('imports Sirius .odesign content', async () => {

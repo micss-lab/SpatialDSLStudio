@@ -736,6 +736,29 @@ export interface SiriusImportResult {
   report: SiriusCompatibilityReport;
 }
 
+/**
+ * One Sirius diagram representation (`DSemanticDiagram`) resolved against an
+ * already-imported SpatialDSL model and viewpoint, ready to be created as a View.
+ */
+export interface SiriusAirdDiagramPreview {
+  name: string;
+  modelId: string;
+  viewpointId?: string;
+  representationDescriptionId?: string;
+  elements: DiagramElement[];
+  sourceRepresentationId?: string;
+}
+
+export interface SiriusAirdPreview {
+  diagrams: SiriusAirdDiagramPreview[];
+  report: SiriusCompatibilityReport;
+}
+
+export interface SiriusAirdImportResult {
+  diagrams: Diagram[];
+  report: SiriusCompatibilityReport;
+}
+
 export interface SiriusExportResult {
   filename: string;
   content: string;

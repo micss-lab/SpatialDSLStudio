@@ -1,5 +1,7 @@
 import JSZip from 'jszip';
 import {
+  SiriusAirdImportResult,
+  SiriusAirdPreview,
   SiriusCompatibilityReport,
   SiriusExportOptions,
   SiriusExportResult,
@@ -97,6 +99,43 @@ class SiriusInteropService {
     }
 
     return this.importOdesign(await file.text(), metamodelId);
+  }
+
+  async validateAird(
+    content: string,
+    modelId: string,
+    viewpointId?: string,
+    options?: Partial<SiriusImportOptions>
+  ): Promise<SiriusAirdPreview> {
+    return apiClient.post<SiriusAirdPreview>(API_ENDPOINTS.SIRIUS_VALIDATE, {
+      content,
+      sourceFormat: 'aird',
+      modelId,
+      viewpointId,
+      options,
+    });
+  }
+
+  async validateAirdFile(file: File, modelId: string, viewpointId?: string): Promise<SiriusAirdPreview> {
+    return this.validateAird(await file.text(), modelId, viewpointId);
+  }
+
+  async importAird(
+    content: string,
+    modelId: string,
+    viewpointId?: string,
+    options?: Partial<SiriusImportOptions>
+  ): Promise<SiriusAirdImportResult> {
+    return apiClient.post<SiriusAirdImportResult>(API_ENDPOINTS.SIRIUS_AIRD_IMPORT, {
+      content,
+      modelId,
+      viewpointId,
+      options,
+    });
+  }
+
+  async importAirdFile(file: File, modelId: string, viewpointId?: string): Promise<SiriusAirdImportResult> {
+    return this.importAird(await file.text(), modelId, viewpointId);
   }
 
   async exportOdesign(
