@@ -16,6 +16,8 @@ export interface TestCase {
   originalInput?: any;
   expectedOutput?: any;
   actualOutput?: any;
+  isOwner?: boolean; // owner/permission metadata from the API listing
+  ownerEmail?: string; // creator/owner email; absent when the current user owns it
 }
 
 export interface TestValue {

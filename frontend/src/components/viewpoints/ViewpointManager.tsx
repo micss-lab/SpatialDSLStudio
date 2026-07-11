@@ -54,6 +54,7 @@ import { diagramService } from '../../services/diagram';
 import viewpointService from '../../services/viewpoint.service';
 import { siriusInteropService } from '../../services/interoperability';
 import ColorSwatchField from '../common/ColorSwatchField';
+import { CreatedBy } from '../common';
 import { fileStorageService } from '../../services/core';
 
 type ViewpointDraft = Pick<Viewpoint, 'name' | 'description' | 'isDefault'>;
@@ -730,7 +731,13 @@ const ViewpointManager: React.FC = () => {
                     {viewpoint.isDefault && <Chip size="small" label="Default" />}
                   </Stack>
                 }
-                secondary={`${previewText(viewpoint.description) ? `${previewText(viewpoint.description)} · ` : ''}${viewpoint.representationDescriptions.length} representation(s)${usedViewpointCounts.get(viewpoint.id) ? ` · ${usedViewpointCounts.get(viewpoint.id)} view(s)` : ''}`}
+                secondary={
+                  <>
+                    {`${previewText(viewpoint.description) ? `${previewText(viewpoint.description)} · ` : ''}${viewpoint.representationDescriptions.length} representation(s)${usedViewpointCounts.get(viewpoint.id) ? ` · ${usedViewpointCounts.get(viewpoint.id)} view(s)` : ''}`}
+                    <CreatedBy isOwner={metamodel?.isOwner} ownerEmail={metamodel?.ownerEmail} />
+                  </>
+                }
+                secondaryTypographyProps={{ component: 'div' }}
               />
               {canEditMetamodel && (
                 <Tooltip title="Delete viewpoint">

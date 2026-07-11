@@ -10,12 +10,14 @@ import { Metamodel } from '../../models/types';
 import { metamodelService } from '../../services/metamodel';
 import VisualMetamodelEditor from './VisualMetamodelEditor';
 import { exportService, ecoreService } from '../../services/metamodel';
-import { ShareDialog } from '../common';
+import { ShareDialog, CreatedBy } from '../common';
 import { useAuth } from '../../contexts/AuthContext';
+import { useOwnerFilterMatcher } from '../../contexts/OwnerFilterContext';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const MetamodelManager: React.FC = () => {
   const { canShare, canCreate, canDelete, canEditMetamodel } = useAuth();
+  const matchesOwner = useOwnerFilterMatcher();
   const navigate = useNavigate();
   const { id: routeMetamodelId } = useParams<{ id?: string }>();
   const [metamodels, setMetamodels] = useState<Metamodel[]>([]);
@@ -196,7 +198,7 @@ const MetamodelManager: React.FC = () => {
         </Box>
         
         <List sx={{ flexGrow: 1 }}>
-          {metamodels.map((metamodel) => (
+          {metamodels.filter(matchesOwner).map((metamodel) => (
             <ListItem
               key={metamodel.id}
               disablePadding
@@ -237,6 +239,7 @@ const MetamodelManager: React.FC = () => {
                           {metamodel.description}
                         </Typography>
                       )}
+                      <CreatedBy isOwner={metamodel.isOwner} ownerEmail={metamodel.ownerEmail} />
                     </Box>
                   </Tooltip>
                 </ListItemButton>

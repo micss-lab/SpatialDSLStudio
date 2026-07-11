@@ -51,9 +51,10 @@ import ForgotPasswordPage from './components/auth/ForgotPasswordPage';
 import ResetPasswordPage from './components/auth/ResetPasswordPage';
 import RoleRequestDialog from './components/auth/RoleRequestDialog';
 import { AdminPanel } from './components/admin';
-import { ShareDialog } from './components/common';
+import { ShareDialog, CreatedBy } from './components/common';
 import { Sidebar } from './components/layout';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { OwnerFilterProvider, useOwnerFilterMatcher } from './contexts/OwnerFilterContext';
 import { metamodelService } from './services/metamodel';
 import { diagramService } from './services/diagram';
 import { modelService } from './services/model';
@@ -183,7 +184,9 @@ const App: React.FC = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <AuthenticatedApp />
+        <OwnerFilterProvider>
+          <AuthenticatedApp />
+        </OwnerFilterProvider>
       </AuthProvider>
     </ThemeProvider>
   );
@@ -1391,6 +1394,7 @@ const HelpPage: React.FC = () => {
 const DiagramsPage: React.FC = () => {
   const navigate = useNavigate();
   const { canCreate, canDelete, canShare } = useAuth();
+  const matchesOwner = useOwnerFilterMatcher();
   const [diagrams, setDiagrams] = useState<Diagram[]>(diagramService.getAllDiagrams());
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [models, setModels] = useState<Model[]>(modelService.getAllModels());
@@ -1436,14 +1440,14 @@ const DiagramsPage: React.FC = () => {
 
   const groupedDiagrams = useMemo(() => (
     groupByParent(
-      diagrams,
+      diagrams.filter(matchesOwner),
       (diagram: Diagram) => {
         const model = models.find((candidate: Model) => candidate.id === diagram.modelId);
         return model?.conformsTo || model?.metamodelId;
       },
       (parentId: string) => getMetamodelName(parentId)
     )
-  ), [diagrams, models, getMetamodelName]);
+  ), [diagrams, models, getMetamodelName, matchesOwner]);
 
   const selectedViewpoint = useMemo(
     () => availableViewpoints.find(viewpoint => viewpoint.id === selectedViewpointId),
@@ -1794,8 +1798,9 @@ const DiagramsPage: React.FC = () => {
                       <Typography color="textSecondary" gutterBottom>
                         {diagram.description || 'No description'}
                       </Typography>
+                      <CreatedBy isOwner={diagram.isOwner} ownerEmail={diagram.ownerEmail} variant="body2" />
                       <Typography color="textSecondary" gutterBottom>
-                        Model: {model?.name || 'Unknown'} 
+                        Model: {model?.name || 'Unknown'}
                       </Typography>
                       <Typography color="textSecondary" gutterBottom>
                         Metamodel: {metamodel?.name || 'Unknown'}

@@ -155,6 +155,8 @@ export interface Metamodel extends MetamodelElement {
   enums?: MetaEnum[];
   conformsTo: string; // ID of the meta-metamodel package it conforms to
   constraints?: Constraint[]; // Global OCL and JavaScript constraints for the metamodel
+  isOwner?: boolean; // owner/permission metadata from the API listing
+  ownerEmail?: string; // creator/owner email; absent when the current user owns it
 }
 
 export interface ConcreteSyntax2D {
@@ -250,6 +252,8 @@ export interface Viewpoint {
   representationDescriptions: RepresentationDescription[];
   sharedConcreteSyntaxByMetaClassId?: Record<string, ConcreteSyntax>;
   isDefault?: boolean;
+  isOwner?: boolean; // owner/permission metadata from the API listing
+  ownerEmail?: string; // creator/owner email; absent when the current user owns it
 }
 
 // Sirius Desktop interoperability types
@@ -343,6 +347,8 @@ export interface Model {
   elements: ModelElement[];
   connections?: ModelConnection[];
   conformsTo: string; // ID of the metamodel it conforms to
+  isOwner?: boolean; // owner/permission metadata from the API listing
+  ownerEmail?: string; // creator/owner email; absent when the current user owns it
 }
 
 export interface ModelConnection {
@@ -388,6 +394,8 @@ export interface TransformationRule {
   conditions?: string[]; // Additional application conditions
   priority: number; // Execution priority
   enabled: boolean; // Whether the rule is enabled
+  isOwner?: boolean; // owner/permission metadata from the API listing
+  ownerEmail?: string; // creator/owner email; absent when the current user owns it
 }
 
 export interface TransformationExecution {
@@ -453,6 +461,8 @@ export interface Diagram {
   };
   schemaVersion?: number;
   migrationWarnings?: string[];
+  isOwner?: boolean; // owner/permission metadata from the API listing
+  ownerEmail?: string; // creator/owner email; absent when the current user owns it
 }
 
 // Types for Code Generation
@@ -475,6 +485,8 @@ export interface CodeGenerationProject {
   createdAt: number;
   updatedAt: number;
   isExample?: boolean; // Flag to identify example projects
+  isOwner?: boolean; // owner/permission metadata from the API listing
+  ownerEmail?: string; // creator/owner email; absent when the current user owns it
 }
 
 export interface CodeGenerationResult {

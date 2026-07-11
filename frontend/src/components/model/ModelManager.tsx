@@ -34,13 +34,15 @@ import { modelService, modelXmiExportService, modelXmiImportService } from '../.
 import { metamodelService } from '../../services/metamodel';
 import { getParentGroupSurfaceColor, groupByParent } from '../../services/common/grouping.service';
 import VisualModelEditor from './VisualModelEditor';
-import { ShareDialog } from '../common';
+import { ShareDialog, CreatedBy } from '../common';
 import { useAuth } from '../../contexts/AuthContext';
+import { useOwnerFilterMatcher } from '../../contexts/OwnerFilterContext';
 
 const ModelManager: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { canShare, canCreate, canDelete } = useAuth();
+  const matchesOwner = useOwnerFilterMatcher();
   const [models, setModels] = useState<Model[]>([]);
   const [metamodels, setMetamodels] = useState<Metamodel[]>([]);
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
@@ -371,7 +373,7 @@ const ModelManager: React.FC = () => {
       
       <List sx={{ flexGrow: 1 }}>
         {groupByParent(
-          models,
+          models.filter(matchesOwner),
           model => model.conformsTo || model.metamodelId,
           parentId => getMetamodelName(parentId)
         ).map(group => (
@@ -460,7 +462,13 @@ const ModelManager: React.FC = () => {
                           model.name.length > 20 ? theme.typography.body2.fontSize : theme.typography.body1.fontSize
                       }
                     }}
-                    secondary={model.description ? `${group.parentName} - ${model.description}` : group.parentName}
+                    secondary={
+                      <>
+                        {model.description ? `${group.parentName} - ${model.description}` : group.parentName}
+                        <CreatedBy isOwner={model.isOwner} ownerEmail={model.ownerEmail} />
+                      </>
+                    }
+                    secondaryTypographyProps={{ component: 'div' }}
                   />
                 </ListItemButton>
               </ListItem>

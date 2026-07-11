@@ -32,6 +32,7 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import { AuthUser } from '../../services/core';
+import OwnerFilterControl from '../common/OwnerFilterControl';
 
 const EXPANDED_WIDTH = 264;
 const COLLAPSED_WIDTH = 72;
@@ -188,6 +189,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isAdmin, onLogout, onRoleReques
       </Box>
 
       <Divider />
+
+      {!collapsed && isAdmin && <OwnerFilterControl />}
 
       <List sx={{ py: 1, flex: 1 }}>
         {visibleNavItems.map(renderItem)}
