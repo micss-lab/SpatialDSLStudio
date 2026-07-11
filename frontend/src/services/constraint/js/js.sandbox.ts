@@ -12,9 +12,13 @@ export function prepareContextForJS(
   model: Model,
   metamodel: Metamodel
 ): Record<string, any> {
-  // Create a clean context
+  // Create a clean context.
+  // Placement data (position2D/position3D/size3D/rotationZ/attachment fields) lives in
+  // element.presentation; expose it to constraints with style taking precedence, mirroring
+  // the codegen context builder.
   const context: Record<string, any> = {
     self: {
+      ...element.presentation,
       ...element.style,
       id: element.id,
       type: element.modelElementId
@@ -23,9 +27,10 @@ export function prepareContextForJS(
       id: model.id,
       name: model.name,
       elements: model.elements.map(e => ({
+        ...e.presentation,
+        ...e.style,
         id: e.id,
-        type: e.modelElementId,
-        ...e.style
+        type: e.modelElementId
       }))
     },
     metamodel: {
@@ -44,6 +49,7 @@ export function prepareContextForJS(
             const refElement = model.elements.find(e => e.id === refId);
             if (refElement) {
               return {
+                ...refElement.presentation,
                 ...refElement.style,
                 id: refElement.id,
                 type: refElement.modelElementId
@@ -56,6 +62,7 @@ export function prepareContextForJS(
           const refElement = model.elements.find(e => e.id === refValue);
           if (refElement) {
             context.self[refName] = {
+              ...refElement.presentation,
               ...refElement.style,
               id: refElement.id,
               type: refElement.modelElementId

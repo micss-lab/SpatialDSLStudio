@@ -35,6 +35,9 @@ services:
       JWT_EXPIRES_IN: 7d
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      DEMO_EMAIL: ${DEMO_EMAIL:-}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+      DEMO_ROLE: ${DEMO_ROLE:-DSL_DESIGNER}
       SEED_DATABASE: ${SEED_DATABASE:-true}
     command: ["sh", "-c", "npm run prisma:migrate:prod && if [ \"$$SEED_DATABASE\" = \"true\" ]; then npm run prisma:seed; fi && npm start"]
     ports:

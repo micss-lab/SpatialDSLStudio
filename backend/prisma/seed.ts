@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -6,40 +6,60 @@ const prisma = new PrismaClient();
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
-async function main() {
-  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
-    console.log('ADMIN_EMAIL or ADMIN_PASSWORD not set, skipping admin seed.');
-    return;
-  }
+const DEMO_EMAIL = process.env.DEMO_EMAIL;
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD;
+const DEMO_ROLE = (process.env.DEMO_ROLE as UserRole) || 'DSL_DESIGNER';
 
+// Seeded accounts are pre-verified so reviewers and operators can log in
+// without access to the account's mailbox.
+async function seedUser(email: string, password: string, role: UserRole, label: string) {
   const existing = await prisma.user.findUnique({
-    where: { email: ADMIN_EMAIL.toLowerCase() },
+    where: { email: email.toLowerCase() },
   });
 
   if (existing) {
-    if (existing.role !== 'ADMIN') {
+    const updates: { role?: UserRole; emailVerified?: boolean } = {};
+    if (existing.role !== role) updates.role = role;
+    if (!existing.emailVerified) updates.emailVerified = true;
+
+    if (Object.keys(updates).length > 0) {
       await prisma.user.update({
         where: { id: existing.id },
-        data: { role: 'ADMIN' },
+        data: updates,
       });
-      console.log(`Promoted ${ADMIN_EMAIL} to ADMIN.`);
+      console.log(`Updated ${label} user ${email}: ${Object.keys(updates).join(', ')}.`);
     } else {
-      console.log(`${ADMIN_EMAIL} is already ADMIN.`);
+      console.log(`${email} is already a verified ${role}.`);
     }
     return;
   }
 
-  const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, 12);
+  const hashedPassword = await bcrypt.hash(password, 12);
 
   await prisma.user.create({
     data: {
-      email: ADMIN_EMAIL.toLowerCase(),
+      email: email.toLowerCase(),
       password: hashedPassword,
-      role: 'ADMIN',
+      role,
+      emailVerified: true,
     },
   });
 
-  console.log(`Created admin user: ${ADMIN_EMAIL}`);
+  console.log(`Created ${label} user: ${email}`);
+}
+
+async function main() {
+  if (ADMIN_EMAIL && ADMIN_PASSWORD) {
+    await seedUser(ADMIN_EMAIL, ADMIN_PASSWORD, 'ADMIN', 'admin');
+  } else {
+    console.log('ADMIN_EMAIL or ADMIN_PASSWORD not set, skipping admin seed.');
+  }
+
+  if (DEMO_EMAIL && DEMO_PASSWORD) {
+    await seedUser(DEMO_EMAIL, DEMO_PASSWORD, DEMO_ROLE, 'demo');
+  } else {
+    console.log('DEMO_EMAIL or DEMO_PASSWORD not set, skipping demo seed.');
+  }
 }
 
 main()
