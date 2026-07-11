@@ -1,0 +1,47 @@
+#usda 1.0
+(
+    defaultPrim = "DemoForklift"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "DemoForklift"
+{
+    def "Body" (
+        prepend references = @./assets/vehicles/tractor/asset/tractorBodyAsset.usda@</tractor>
+    )
+    {
+    }
+
+    def "WheelFrontRight" (
+        prepend references = @./assets/wheels/wheelWide/asset/wheelWideAsset.usda@</wheelWide>
+    )
+    {
+        matrix4d xformOp:transform = ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (64, -13, 80, 1))
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def "WheelRearRight" (
+        prepend references = @./assets/wheels/wheelBlack/asset/wheelBlackAsset.usda@</wheelBlack>
+    )
+    {
+        matrix4d xformOp:transform = ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (64, -13, -118, 1))
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def "WheelFrontLeft" (
+        prepend references = @./assets/wheels/wheelWide/asset/wheelWideAsset.usda@</wheelWide>
+    )
+    {
+        matrix4d xformOp:transform = ((-1, 0, 1.2246468525851679e-16, 0), (0, 1, 0, 0), (-1.2246468525851679e-16, 0, -1, 0), (-64, -13, 80, 1))
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def "WheelRearLeft" (
+        prepend references = @./assets/wheels/wheelBlack/asset/wheelBlackAsset.usda@</wheelBlack>
+    )
+    {
+        matrix4d xformOp:transform = ((-1, 0, 1.2246468525851679e-16, 0), (0, 1, 0, 0), (-1.2246468525851679e-16, 0, -1, 0), (-64, -13, -118, 1))
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
