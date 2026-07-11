@@ -17,7 +17,11 @@ export class CodegenModelGenerationService {
   generateCodeFromModel(modelId: string, templateId: string): CodeGenerationResult[] {
     console.log('Generating code with template:', templateId, 'for model:', modelId);
     
-    const template = codegenTemplateCrudService.getTemplateById(templateId);
+    const template = codegenTemplateCrudService.getTemplateById(templateId)
+      ?? codegenProjectCrudService
+        .getAllProjects()
+        .flatMap(project => project.templates)
+        .find(projectTemplate => projectTemplate.id === templateId);
     if (!template) {
       throw new Error('Template not found');
     }

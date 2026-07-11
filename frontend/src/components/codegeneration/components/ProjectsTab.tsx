@@ -16,6 +16,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ShareIcon from '@mui/icons-material/Share';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { CodeGenerationProject } from '../../../models/types';
 import { metamodelService } from '../../../services/metamodel';
 import { getParentGroupSurfaceColor, groupByParent } from '../../../services/common/grouping.service';
@@ -26,6 +27,7 @@ interface ProjectsTabProps {
   onDelete: (projectId: string) => void;
   onShare: (project: CodeGenerationProject) => void;
   onNewProject: () => void;
+  onImportProject: (file: File) => void;
   canCreate: boolean;
   canDelete: boolean;
   canShare: boolean;
@@ -40,10 +42,13 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   onDelete,
   onShare,
   onNewProject,
+  onImportProject,
   canCreate,
   canDelete,
   canShare
 }) => {
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
   const getMetamodelName = (metamodelId: string): string => (
     metamodelService.getMetamodelById(metamodelId)?.name || 'Unknown'
   );
@@ -115,7 +120,27 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
       </List>
       
       {canCreate && (
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = '';
+              if (file) {
+                onImportProject(file);
+              }
+            }}
+          />
+          <Button
+            variant="outlined"
+            startIcon={<UploadFileIcon />}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Import Project
+          </Button>
           <Button
             variant="outlined"
             startIcon={<AddIcon />}

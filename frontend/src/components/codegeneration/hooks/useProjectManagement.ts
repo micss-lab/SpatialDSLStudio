@@ -30,6 +30,7 @@ export interface UseProjectManagementReturn {
   handleProjectChange: (event: SelectChangeEvent<string>) => void;
   handleCreateProject: (templates: ProjectTemplate[]) => void;
   handleUpdateProject: (templates: ProjectTemplate[]) => void;
+  handleImportProject: (file: File) => Promise<void>;
   handleEditProject: (project: CodeGenerationProject) => ProjectTemplate[];
   handleDeleteProject: (projectId: string) => void;
   resetProjectForm: () => ProjectTemplate[];
@@ -151,6 +152,34 @@ export const useProjectManagement = (): UseProjectManagementReturn => {
   }, [selectedProjectForEditing, projectName, projectDescription, projectTarget]);
 
   /**
+   * Import a project from a JSON file.
+   */
+  const handleImportProject = useCallback(async (file: File) => {
+    try {
+      const rawContent = await file.text();
+      const parsedContent = JSON.parse(rawContent);
+      const projectPayloads: unknown[] = Array.isArray(parsedContent)
+        ? parsedContent
+        : Array.isArray(parsedContent.projects)
+          ? parsedContent.projects
+          : [parsedContent];
+
+      const importedProjects = projectPayloads.map((project: unknown) => codeGenerationService.importProject(project));
+
+      const allProjects = codeGenerationService.getAllProjects();
+      setProjects(allProjects.filter(p => !p.isExample));
+      setExampleProjects(allProjects.filter(p => p.isExample));
+
+      if (importedProjects.length > 0) {
+        setSelectedProject(importedProjects[0].id);
+      }
+    } catch (error) {
+      console.error('Error importing code generation project:', error);
+      alert(`Error importing project: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }, []);
+
+  /**
    * Edit a project (opens dialog with project data)
    * Returns templates to be set in template management hook
    */
@@ -246,6 +275,7 @@ export const useProjectManagement = (): UseProjectManagementReturn => {
     handleProjectChange,
     handleCreateProject,
     handleUpdateProject,
+    handleImportProject,
     handleEditProject,
     handleDeleteProject,
     resetProjectForm

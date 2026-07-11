@@ -76,6 +76,13 @@ export class CodegenProjectCrudService {
     return result;
   }
 
+  importProject(projectData: unknown): CodeGenerationProject {
+    const parsedProject = this.normalizeImportedProject(projectData);
+    this.projects.push(parsedProject);
+    codegenApiSyncService.syncProjectToAPI(parsedProject);
+    return parsedProject;
+  }
+
   // Template management within projects
   
   addTemplateToProject(
@@ -145,6 +152,78 @@ export class CodegenProjectCrudService {
 
   clearProjects(): void {
     this.projects = [];
+  }
+
+  private normalizeImportedProject(projectData: unknown): CodeGenerationProject {
+    if (!projectData || typeof projectData !== 'object') {
+      throw new Error('Imported file must contain a code generation project object');
+    }
+
+    const project = projectData as Partial<CodeGenerationProject>;
+    if (!project.name || typeof project.name !== 'string') {
+      throw new Error('Imported project is missing a valid name');
+    }
+    if (!project.targetMetamodelId || typeof project.targetMetamodelId !== 'string') {
+      throw new Error('Imported project is missing a valid targetMetamodelId');
+    }
+    if (!Array.isArray(project.templates)) {
+      throw new Error('Imported project is missing a templates array');
+    }
+
+    const projectId = project.id && !this.projects.some(existing => existing.id === project.id)
+      ? project.id
+      : uuidv4();
+
+    const existingTemplateIds = new Set(
+      this.projects.flatMap(existingProject => existingProject.templates.map(template => template.id))
+    );
+    const importedTemplateIds = new Set<string>();
+
+    const templates: CodeGenerationTemplate[] = project.templates.map((template, index) => {
+      if (!template || typeof template !== 'object') {
+        throw new Error(`Template ${index + 1} is not a valid object`);
+      }
+      if (!template.name || typeof template.name !== 'string') {
+        throw new Error(`Template ${index + 1} is missing a valid name`);
+      }
+      if (template.language !== 'java' && template.language !== 'python') {
+        throw new Error(`Template "${template.name}" must use language "java" or "python"`);
+      }
+      if (typeof template.templateContent !== 'string') {
+        throw new Error(`Template "${template.name}" is missing templateContent`);
+      }
+      if (!template.outputPattern || typeof template.outputPattern !== 'string') {
+        throw new Error(`Template "${template.name}" is missing a valid outputPattern`);
+      }
+
+      const shouldKeepTemplateId = (
+        !!template.id &&
+        !existingTemplateIds.has(template.id) &&
+        !importedTemplateIds.has(template.id)
+      );
+      const templateId = shouldKeepTemplateId ? template.id : uuidv4();
+      importedTemplateIds.add(templateId);
+
+      return {
+        id: templateId,
+        name: template.name,
+        language: template.language,
+        templateContent: template.templateContent,
+        targetMetamodelId: template.targetMetamodelId || project.targetMetamodelId!,
+        outputPattern: template.outputPattern
+      };
+    });
+
+    return {
+      id: projectId,
+      name: project.name,
+      description: typeof project.description === 'string' ? project.description : '',
+      targetMetamodelId: project.targetMetamodelId,
+      templates,
+      createdAt: typeof project.createdAt === 'number' ? project.createdAt : Date.now(),
+      updatedAt: Date.now(),
+      isExample: false
+    };
   }
 }
 
