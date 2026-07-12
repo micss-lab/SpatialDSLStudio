@@ -40,7 +40,7 @@
       "id": "fc608b1f-ffaa-4dd3-8193-588e9b86a54e",
       "name": "ConveyorLocation",
       "language": "java",
-      "templateContent": "[\n{{#each elementsByClassName.Conveyor}}\n  {\n    \"Name\": \"{{name}}\",\n    \"X\": {{X}},\n    \"Y\": {{Y}},\n    \"Rz\": {{#unless RZ}}0{{else}}{{RZ}}{{/unless}}\n  }{{#unless @last}},{{/unless}}\n{{/each}}\n]\n",
+      "templateContent": "[\n{{#each elementsByClassName.Conveyor}}\n  {\n    \"Name\": \"{{name}}\",\n    \"X\": {{X}},\n    \"Y\": {{Y}},\n    \"Rz\": {{#unless RZ}}0{{else}}{{RZ}}{{/unless}},\n    \"Length\": {{Length}},\n    \"Width\": {{Width}},\n    \"Height\": {{Height}}\n  }{{#unless @last}},{{/unless}}\n{{/each}}\n]\n",
       "targetMetamodelId": "225d08e9-881b-46d3-9dfc-293c0c7800df",
       "outputPattern": "ConveyorLocation.json"
     },

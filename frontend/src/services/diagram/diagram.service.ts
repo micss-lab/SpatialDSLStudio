@@ -228,6 +228,35 @@ class DiagramService {
     );
   }
 
+  /**
+   * Spatial languages persist one position per projection (2D canvas vs 3D world) that
+   * share the same millimeter ground-plane values. Keep the two fields in sync: a 3D move
+   * always mirrors to position2D, while a 2D move mirrors to position3D only when the
+   * element already carries a world-space position, so pure 2D notations never gain one.
+   */
+  private applyPositionWriteThrough(
+    modelElement: ModelElement | undefined,
+    presentation: ModelElementPresentation
+  ): ModelElementPresentation {
+    if (presentation.position3D && !presentation.position2D) {
+      return {
+        ...presentation,
+        position2D: { x: presentation.position3D.x, y: presentation.position3D.y },
+      };
+    }
+    if (
+      presentation.position2D &&
+      !presentation.position3D &&
+      modelElement?.presentation?.position3D
+    ) {
+      return {
+        ...presentation,
+        position3D: { x: presentation.position2D.x, y: presentation.position2D.y },
+      };
+    }
+    return presentation;
+  }
+
   updateElement(diagramId: string, elementId: string, updates: Partial<DiagramElement>): boolean {
     const diagram = diagramCrudService.getDiagramById(diagramId);
     if (!diagram) return false;
@@ -292,11 +321,12 @@ class DiagramService {
         ...modelStyleUpdates
       } = styleUpdates;
 
-      const hasPresentationChanges = Object.keys(presentation).length > 0;
+      const syncedPresentation = this.applyPositionWriteThrough(modelElement, presentation);
+      const hasPresentationChanges = Object.keys(syncedPresentation).length > 0;
       const hasStyleChanges = Object.keys(modelStyleUpdates).length > 0;
 
       if (hasPresentationChanges) {
-        modelService.updateModelElementPresentation(diagram.modelId, elementId, presentation);
+        modelService.updateModelElementPresentation(diagram.modelId, elementId, syncedPresentation);
       }
       if (hasStyleChanges) {
         modelService.updateModelElementProperties(diagram.modelId, elementId, modelStyleUpdates);
@@ -372,10 +402,15 @@ class DiagramService {
     const diagram = diagramCrudService.getDiagramById(diagramId);
     if (!diagram) return false;
 
+    const modelElement = modelService
+      .getModelById(diagram.modelId)
+      ?.elements.find(element => element.id === modelElementId);
+    const syncedPresentation = this.applyPositionWriteThrough(modelElement, presentation);
+
     const updatedLocally = modelService.updateModelElementPresentation(
       diagram.modelId,
       modelElementId,
-      presentation
+      syncedPresentation
     );
     if (!updatedLocally) return false;
 
@@ -383,7 +418,7 @@ class DiagramService {
       const updatedDiagram = await diagramApiSyncService.updateModelElementPresentation(
         diagramId,
         modelElementId,
-        presentation
+        syncedPresentation
       );
       const diagrams = diagramCrudService.getDiagramsRef();
       const diagramIndex = diagrams.findIndex(candidate => candidate.id === updatedDiagram.id);

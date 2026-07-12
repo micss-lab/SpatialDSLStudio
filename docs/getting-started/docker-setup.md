@@ -34,7 +34,8 @@ Set at least:
 Optional seed variables:
 
 - `SEED_DATABASE=true` runs the backend seed script during backend startup. Development Docker defaults this to `true`; production Docker defaults it to `false`.
-- `ADMIN_EMAIL` and `ADMIN_PASSWORD` let the current seed script create or promote an admin user. If either value is missing, the seed step exits without changing data.
+- `ADMIN_EMAIL` and `ADMIN_PASSWORD` let the current seed script create or promote an admin user. If either value is missing, that seed step is skipped without changing data.
+- `DEMO_EMAIL` and `DEMO_PASSWORD` let the seed script create a pre-verified demo account for reviewers and offline demos. `DEMO_ROLE` picks its role (`ADMIN`, `DSL_DESIGNER`, `MODELER`, or `VIEWER`; defaults to `DSL_DESIGNER`). Seeded accounts are marked email-verified, so they can log in without receiving a verification code.
 
 ## 2) Build and start all services
 
@@ -78,7 +79,7 @@ For production compose:
 docker compose -f docker-compose.prod.yml up --build
 ```
 
-Production does not run the seed script by default. To intentionally run it, set `SEED_DATABASE=true` in the production environment together with `ADMIN_EMAIL` and `ADMIN_PASSWORD`, start the backend once, then set `SEED_DATABASE=false` again for normal restarts.
+Production does not run the seed script by default. To intentionally run it, set `SEED_DATABASE=true` in the production environment together with `ADMIN_EMAIL`/`ADMIN_PASSWORD` (and optionally `DEMO_EMAIL`/`DEMO_PASSWORD`), start the backend once, then set `SEED_DATABASE=false` again for normal restarts.
 
 ## 5) Verify stack health
 

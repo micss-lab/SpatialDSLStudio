@@ -35,6 +35,9 @@ services:
       JWT_EXPIRES_IN: 7d
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      DEMO_EMAIL: ${DEMO_EMAIL:-}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+      DEMO_ROLE: ${DEMO_ROLE:-DSL_DESIGNER}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@example.com}
       APP_URL: ${APP_URL:-https://dsl-studio.micss-lab.be}

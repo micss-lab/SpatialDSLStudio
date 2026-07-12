@@ -19,8 +19,10 @@ export function prepareContextForOCL(
     throw new Error(`MetaClass not found for element ${element.id}`);
   }
 
-  // Create the base context with type information and attribute values
+  // Create the base context with type information and attribute values.
+  // Placement data from element.presentation is exposed too, with style taking precedence.
   const context: any = {
+    ...element.presentation,
     ...element.style,
     id: element.id,
     _type: metaClass.name, // Used by the typeDeterminer function

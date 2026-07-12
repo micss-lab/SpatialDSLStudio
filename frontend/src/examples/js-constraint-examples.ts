@@ -227,6 +227,45 @@ return true;
 };
 
 /**
+ * Example 6: Spatial Placement Validation
+ *
+ * This constraint reads the element's persisted placement record
+ * (exposed on self alongside its attribute values) and checks that
+ * every placed element has a world-space position inside the
+ * warehouse bounds. Spatial data such as position2D, position3D,
+ * size3D and rotationZ are available to constraints directly.
+ */
+export const createSpatialPlacementConstraint = (
+  metamodelId: string,
+  contextClassId: string
+): JSConstraint | null => {
+  const name = 'Placement Inside Warehouse Bounds';
+  const expression = `
+// Elements that have not been placed in world space yet are skipped
+if (!self.position3D) {
+  return true;
+}
+
+// The world-space position must lie inside the warehouse bounds
+if (self.position3D.x < 0 || self.position3D.y < 0) {
+  return { valid: false, message: "Element '" + (self.name || self.id) + "' is placed outside the warehouse bounds at (" + self.position3D.x + ", " + self.position3D.y + ")" };
+}
+
+return true;
+`;
+  const description = 'Validates that every placed element has a world-space position inside the warehouse bounds, using the spatial placement data exposed to constraints';
+
+  return jsService.createConstraint(
+    metamodelId,
+    contextClassId,
+    name,
+    expression,
+    description,
+    'error'
+  );
+};
+
+/**
  * Helper function to run all examples
  */
 export const createAllExampleConstraints = (
@@ -238,8 +277,9 @@ export const createAllExampleConstraints = (
     createCollectionConstraint(metamodelId, contextClassId),
     createDateConstraint(metamodelId, contextClassId),
     createConditionalConstraint(metamodelId, contextClassId),
-    createUtilityConstraint(metamodelId, contextClassId)
+    createUtilityConstraint(metamodelId, contextClassId),
+    createSpatialPlacementConstraint(metamodelId, contextClassId)
   ];
-  
+
   return constraints.filter(c => c !== null) as JSConstraint[];
-}; 
+};

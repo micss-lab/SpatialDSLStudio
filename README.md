@@ -39,7 +39,7 @@ You can:
 - Build code generation projects with templates
 - Manage access with roles and resource sharing
 
-SpatialDSL Studio is Sirius-inspired, not currently file-compatible with Sirius Desktop projects. Ecore/XMI semantic interchange is supported with limits; Sirius `.odesign` and `.aird` import/export are not implemented yet. See [Sirius Desktop Compatibility](docs/reference/sirius-compatibility.md).
+SpatialDSL Studio is Sirius-inspired, not a drop-in replacement for Sirius Desktop projects. Ecore/XMI semantic interchange is supported with limits; an initial `.odesign` validate/import/export subset covers basic diagram descriptions and returns compatibility reports, and an initial `.aird` import subset turns Sirius diagram representations into SpatialDSL views (`.aird` export is not implemented). See [Sirius Desktop Compatibility](docs/reference/sirius-compatibility.md).
 
 ## Multi-Layer Architecture
 
@@ -75,7 +75,7 @@ The tool follows a four-layer architecture:
 docker compose up --build
 ```
 
-The Docker backend applies Prisma migrations before it starts. Development Docker also runs the seed script by default; set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the root `.env` if you want that seed to create or promote an admin account.
+The Docker backend applies Prisma migrations before it starts. Development Docker also runs the seed script by default; set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the root `.env` if you want that seed to create or promote an admin account. The seed can also create a pre-verified demo account (no email verification step) via `DEMO_EMAIL` and `DEMO_PASSWORD`, with an optional `DEMO_ROLE` (defaults to `DSL_DESIGNER`). Seeded accounts are marked email-verified, so they work without a reachable mailbox; this is the intended path for reviewers and offline demos.
 
 Then open:
 
@@ -128,3 +128,7 @@ For complete setup requirements (database, env vars, migrations), see the gettin
 - [Data Model](docs/reference/data-model.md)
 - [Architecture](docs/reference/architecture.md)
 - [Sirius Desktop Compatibility](docs/reference/sirius-compatibility.md)
+
+## License
+
+This project is licensed under the MIT License, see [LICENSE](LICENSE).
