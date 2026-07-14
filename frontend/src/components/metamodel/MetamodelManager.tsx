@@ -11,13 +11,13 @@ import { Metamodel } from '../../models/types';
 import { metamodelService } from '../../services/metamodel';
 import VisualMetamodelEditor from './VisualMetamodelEditor';
 import { exportService, ecoreService } from '../../services/metamodel';
-import { ShareDialog, CreatedBy } from '../common';
+import { ShareDialog, resolveOwnerEmail } from '../common';
 import { useAuth } from '../../contexts/AuthContext';
 import { useOwnerFilterMatcher } from '../../contexts/OwnerFilterContext';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const MetamodelManager: React.FC = () => {
-  const { canShare, canCreate, canDelete, canEditMetamodel } = useAuth();
+  const { user, canShare, canCreate, canDelete, canEditMetamodel } = useAuth();
   const matchesOwner = useOwnerFilterMatcher();
   const navigate = useNavigate();
   const { id: routeMetamodelId } = useParams<{ id?: string }>();
@@ -206,56 +206,24 @@ const MetamodelManager: React.FC = () => {
         </Box>
         
         <List sx={{ flexGrow: 1 }}>
-          {metamodels.filter(matchesOwner).map((metamodel) => (
-            <ListItem
-              key={metamodel.id}
-              disablePadding
-              sx={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'stretch',
-                mb: 0.5
-              }}
-            >
-              <Box sx={{ display: 'flex', width: '100%' }}>
-                <ListItemButton
-                  selected={selectedMetamodel?.id === metamodel.id}
-                  onClick={() => handleSelectMetamodel(metamodel)}
-                  sx={{ 
-                    flexGrow: 1,
-                    height: 'auto',
-                    py: 0.75,
-                    pr: 0
-                  }}
-                >
-                  <Tooltip title={metamodel.description ? `${metamodel.name} - ${metamodel.description}` : metamodel.name} enterDelay={700}>
-                    <Box sx={{ minWidth: 0, width: '100%' }}>
-                      <Typography
-                        sx={{
-                          fontSize: metamodel.name.length > 20 ? '0.875rem' : '1rem',
-                          lineHeight: 1.2,
-                          width: '100%',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        {metamodel.name}
-                      </Typography>
-                      {metamodel.description && (
-                        <Typography variant="caption" color="text.secondary" noWrap>
-                          {metamodel.description}
-                        </Typography>
-                      )}
-                      <CreatedBy isOwner={metamodel.isOwner} ownerEmail={metamodel.ownerEmail} />
-                    </Box>
-                  </Tooltip>
-                </ListItemButton>
-                
-                <Box sx={{ display: 'flex', alignItems: 'center', pr: 0.5 }}>
+          {metamodels.filter(matchesOwner).map((metamodel) => {
+            const ownerEmail = resolveOwnerEmail(
+              { isOwner: metamodel.isOwner, ownerEmail: metamodel.ownerEmail },
+              user?.email
+            );
+            const ownerLabel = ownerEmail
+              ? (ownerEmail === user?.email ? `${ownerEmail} (you)` : ownerEmail)
+              : null;
+            return (
+              <ListItem
+                key={metamodel.id}
+                disablePadding
+                sx={{ mb: 0.5 }}
+                secondaryAction={
                   <Tooltip title="Metamodel actions">
                     <IconButton
                       size="small"
+                      edge="end"
                       aria-label={`Actions for ${metamodel.name}`}
                       aria-haspopup="menu"
                       aria-expanded={Boolean(actionsAnchorEl) && actionsTarget?.id === metamodel.id ? 'true' : undefined}
@@ -268,10 +236,44 @@ const MetamodelManager: React.FC = () => {
                       <MoreVertIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
-                </Box>
-              </Box>
-            </ListItem>
-          ))}
+                }
+              >
+                <ListItemButton
+                  selected={selectedMetamodel?.id === metamodel.id}
+                  onClick={() => handleSelectMetamodel(metamodel)}
+                  sx={{ py: 0.75, pr: 6 }}
+                >
+                  <Tooltip
+                    enterDelay={500}
+                    title={
+                      <>
+                        <div>{metamodel.name}</div>
+                        {metamodel.description && <div>{metamodel.description}</div>}
+                        {ownerLabel && <div>Created by {ownerLabel}</div>}
+                      </>
+                    }
+                  >
+                    <Box sx={{ minWidth: 0, width: '100%' }}>
+                      <Typography
+                        noWrap
+                        sx={{
+                          fontSize: metamodel.name.length > 20 ? '0.875rem' : '1rem',
+                          lineHeight: 1.2
+                        }}
+                      >
+                        {metamodel.name}
+                      </Typography>
+                      {metamodel.description && (
+                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                          {metamodel.description}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Tooltip>
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
         </List>
 
         <Menu
