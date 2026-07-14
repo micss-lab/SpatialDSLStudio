@@ -42,48 +42,39 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
   canCreate
 }) => {
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <FormControl sx={{ minWidth: 300 }}>
-        <InputLabel id="project-select-label">Project</InputLabel>
-        <Select
-          labelId="project-select-label"
-          value={selectedProject}
-          label="Project"
-          onChange={onProjectChange}
-        >
-          {/* User Projects */}
-          {projects.length > 0 && (
-            <ListSubheader>Your Projects</ListSubheader>
-          )}
-          {projects.map((project) => (
-            <MenuItem key={project.id} value={project.id}>
-              {project.name} ({metamodels.find(m => m.id === project.targetMetamodelId)?.name || 'Unknown Metamodel'})
-            </MenuItem>
-          ))}
-          
-          {/* Example Projects */}
-          {exampleProjects.length > 0 && (
-            <ListSubheader>Example Projects</ListSubheader>
-          )}
-          {exampleProjects.map((project) => (
-            <MenuItem key={project.id} value={project.id}>
-              {project.name} ({metamodels.find(m => m.id === project.targetMetamodelId)?.name || 'Unknown Metamodel'})
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      
-      <Box sx={{ display: 'flex', gap: 2 }}>
-        {canCreate && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={onNewProject}
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+      {/* Generate Code operates on the selected project, so they form one group */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <FormControl sx={{ minWidth: 300 }}>
+          <InputLabel id="project-select-label">Project</InputLabel>
+          <Select
+            labelId="project-select-label"
+            value={selectedProject}
+            label="Project"
+            onChange={onProjectChange}
           >
-            New Project
-          </Button>
-        )}
-        
+            {/* User Projects */}
+            {projects.length > 0 && (
+              <ListSubheader>Your Projects</ListSubheader>
+            )}
+            {projects.map((project) => (
+              <MenuItem key={project.id} value={project.id}>
+                {project.name} ({metamodels.find(m => m.id === project.targetMetamodelId)?.name || 'Unknown Metamodel'})
+              </MenuItem>
+            ))}
+
+            {/* Example Projects */}
+            {exampleProjects.length > 0 && (
+              <ListSubheader>Example Projects</ListSubheader>
+            )}
+            {exampleProjects.map((project) => (
+              <MenuItem key={project.id} value={project.id}>
+                {project.name} ({metamodels.find(m => m.id === project.targetMetamodelId)?.name || 'Unknown Metamodel'})
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
         <Button
           variant="contained"
           color="primary"
@@ -94,6 +85,16 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
           Generate Code
         </Button>
       </Box>
+
+      {canCreate && (
+        <Button
+          variant="outlined"
+          startIcon={<AddIcon />}
+          onClick={onNewProject}
+        >
+          New Project
+        </Button>
+      )}
     </Box>
   );
 };
