@@ -395,6 +395,12 @@ describe('AuthService', () => {
         where: { tokenHash: expect.any(String) },
         include: { user: true },
       });
+      // Completing a reset proves mailbox ownership, so the account must be
+      // marked verified or an unverified user stays locked out after a reset
+      expect(prismaMock.user.update).toHaveBeenCalledWith({
+        where: { id: mockUser.id },
+        data: { password: expect.any(String), emailVerified: true },
+      });
     });
 
     it('throws error for invalid token', async () => {

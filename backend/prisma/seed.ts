@@ -23,9 +23,14 @@ async function seedUser(email: string, password: string, role: UserRole, label: 
   });
 
   if (existing) {
-    const updates: { role?: UserRole; emailVerified?: boolean } = {};
+    const updates: { role?: UserRole; emailVerified?: boolean; password?: string } = {};
     if (existing.role !== role) updates.role = role;
     if (!existing.emailVerified) updates.emailVerified = true;
+    // Keep the stored password in sync with the configured one, so the
+    // documented demo/admin credentials always work even if the account
+    // predates the seed or its password was changed in the app.
+    const passwordMatches = await bcrypt.compare(password, existing.password);
+    if (!passwordMatches) updates.password = await bcrypt.hash(password, 12);
 
     if (Object.keys(updates).length > 0) {
       await prisma.user.update({
