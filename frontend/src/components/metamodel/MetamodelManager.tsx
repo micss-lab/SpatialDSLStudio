@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Button, Typography, TextField, List, ListItem, Paper, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, ListItemButton, Tooltip } from '@mui/material';
+import { Box, Button, Typography, TextField, List, ListItem, ListItemIcon, ListItemText, Paper, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, ListItemButton, Menu, MenuItem, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import ShareIcon from '@mui/icons-material/Share';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { Metamodel } from '../../models/types';
 import { metamodelService } from '../../services/metamodel';
 import VisualMetamodelEditor from './VisualMetamodelEditor';
@@ -30,7 +31,14 @@ const MetamodelManager: React.FC = () => {
   const [importFileFormat, setImportFileFormat] = useState('');
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareTarget, setShareTarget] = useState<Metamodel | null>(null);
+  const [actionsAnchorEl, setActionsAnchorEl] = useState<HTMLElement | null>(null);
+  const [actionsTarget, setActionsTarget] = useState<Metamodel | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const closeActionsMenu = () => {
+    setActionsAnchorEl(null);
+    setActionsTarget(null);
+  };
 
   useEffect(() => {
     // Load metamodels when component mounts
@@ -244,39 +252,65 @@ const MetamodelManager: React.FC = () => {
                   </Tooltip>
                 </ListItemButton>
                 
-                <Box sx={{ display: 'flex', alignItems: 'center', pr: 1 }}>
-                  {canShare && (
-                    <Tooltip title="Share Metamodel">
-                      <IconButton size="small" onClick={() => {
-                        setShareTarget(metamodel);
-                        setShareDialogOpen(true);
-                      }}>
-                        <ShareIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  <Tooltip title="Export Metamodel (JSON or Ecore)">
-                    <IconButton size="small" onClick={() => handleExportMetamodel(metamodel)}>
-                      <FileDownloadIcon fontSize="small" />
+                <Box sx={{ display: 'flex', alignItems: 'center', pr: 0.5 }}>
+                  <Tooltip title="Metamodel actions">
+                    <IconButton
+                      size="small"
+                      aria-label={`Actions for ${metamodel.name}`}
+                      onClick={(e) => {
+                        setActionsAnchorEl(e.currentTarget);
+                        setActionsTarget(metamodel);
+                      }}
+                    >
+                      <MoreVertIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Manage Viewpoints">
-                    <IconButton size="small" onClick={() => navigate(`/metamodels/${metamodel.id}/viewpoints`)}>
-                      <AccountTreeIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  {canDelete && (
-                    <Tooltip title="Delete Metamodel">
-                      <IconButton size="small" onClick={() => handleDeleteMetamodel(metamodel.id)}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
                 </Box>
               </Box>
             </ListItem>
           ))}
         </List>
+
+        <Menu
+          anchorEl={actionsAnchorEl}
+          open={Boolean(actionsAnchorEl) && Boolean(actionsTarget)}
+          onClose={closeActionsMenu}
+        >
+          {canShare && (
+            <MenuItem onClick={() => {
+              setShareTarget(actionsTarget);
+              setShareDialogOpen(true);
+              closeActionsMenu();
+            }}>
+              <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Share</ListItemText>
+            </MenuItem>
+          )}
+          <MenuItem onClick={() => {
+            if (actionsTarget) handleExportMetamodel(actionsTarget);
+            closeActionsMenu();
+          }}>
+            <ListItemIcon><FileDownloadIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Export (JSON or Ecore)</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={() => {
+            if (actionsTarget) navigate(`/metamodels/${actionsTarget.id}/viewpoints`);
+            closeActionsMenu();
+          }}>
+            <ListItemIcon><AccountTreeIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Manage Viewpoints</ListItemText>
+          </MenuItem>
+          {canDelete && (
+            <MenuItem onClick={() => {
+              const targetId = actionsTarget?.id;
+              closeActionsMenu();
+              if (targetId) handleDeleteMetamodel(targetId);
+            }}>
+              <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
+              <ListItemText sx={{ color: 'error.main' }}>Delete</ListItemText>
+            </MenuItem>
+          )}
+        </Menu>
       </Paper>
 
       {/* Right Panel Content */}
