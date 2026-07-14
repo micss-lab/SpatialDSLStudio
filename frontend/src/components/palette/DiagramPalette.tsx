@@ -10,6 +10,8 @@ import {
 import ShapeLineIcon from '@mui/icons-material/ShapeLine';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import TuneIcon from '@mui/icons-material/Tune';
+import { useNavigate } from 'react-router-dom';
 import { Diagram, MetaClass, Metamodel, Model, ModelElement, RepresentationDescription } from '../../models/types';
 import { viewpointService } from '../../services/viewpoint.service';
 
@@ -32,6 +34,7 @@ const DiagramPalette: React.FC<DiagramPaletteProps> = ({
   onDragStart,
   onAddAll
 }) => {
+  const navigate = useNavigate();
   const includedElementIds = new Set(
     diagram.elements
       .filter(element => element.type === 'node')
@@ -78,6 +81,11 @@ const DiagramPalette: React.FC<DiagramPaletteProps> = ({
   const creatableMetaClasses = metamodel.classes.filter(metaClass => (
     isCreatable(metaClass) && !isMappedPinMetaClass(metaClass.id, representationDescription)
   ));
+  const hiddenElementCount = model.elements.filter(
+    element => !includedElementIds.has(element.id) && !isVisible(element.modelElementId)
+  ).length;
+  const isTypeFiltered = visibleMetaClassIds.size > 0 || creatableMetaClassIds.size > 0;
+  const descriptionName = representationDescription?.name;
   const getMetaClassName = (modelElement: ModelElement) => {
     return metamodel.classes.find(cls => cls.id === modelElement.modelElementId)?.name || modelElement.modelElementId;
   };
@@ -193,7 +201,9 @@ const DiagramPalette: React.FC<DiagramPaletteProps> = ({
         
         {remainingModelElements.length === 0 && (
           <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 2 }}>
-            All model elements are already included in this view.
+            {hiddenElementCount > 0
+              ? `All elements this view can show are already included. ${hiddenElementCount} other model element${hiddenElementCount === 1 ? ' is' : 's are'} hidden because ${descriptionName ? `the "${descriptionName}" view description` : "this view's description"} does not list their types as visible.`
+              : 'All model elements are already included in this view.'}
           </Typography>
         )}
 
@@ -241,6 +251,27 @@ const DiagramPalette: React.FC<DiagramPaletteProps> = ({
           <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 2 }}>
             No concrete metaclasses are available.
           </Typography>
+        )}
+
+        {isTypeFiltered && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="caption" color="textSecondary" component="p" sx={{ mb: 1 }}>
+              {descriptionName
+                ? `This view only shows and creates the types allowed by its "${descriptionName}" description.`
+                : 'This view only shows and creates the types allowed by its view description.'}
+              {' '}To allow more types, edit the description and tick them as Visible or Creatable.
+            </Typography>
+            <Button
+              variant="text"
+              size="small"
+              startIcon={<TuneIcon />}
+              onClick={() => navigate(`/metamodels/${metamodel.id}/viewpoints`)}
+              fullWidth
+            >
+              Manage view types
+            </Button>
+          </>
         )}
       </Box>
       
