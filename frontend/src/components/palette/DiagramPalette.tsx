@@ -202,7 +202,7 @@ const DiagramPalette: React.FC<DiagramPaletteProps> = ({
         {remainingModelElements.length === 0 && (
           <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 2 }}>
             {hiddenElementCount > 0
-              ? `All elements this view can show are already included. ${hiddenElementCount} other model element${hiddenElementCount === 1 ? ' is' : 's are'} hidden because ${descriptionName ? `the "${descriptionName}" view description` : "this view's description"} does not list their types as visible.`
+              ? `All elements this view can show are already included. ${hiddenElementCount} other model element${hiddenElementCount === 1 ? ' is' : 's are'} hidden because ${descriptionName ? `the "${descriptionName}" view description` : "this view's description"} does not list ${hiddenElementCount === 1 ? 'its type' : 'their types'} as visible.`
               : 'All model elements are already included in this view.'}
           </Typography>
         )}
