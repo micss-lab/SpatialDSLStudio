@@ -400,7 +400,9 @@ class AuthService {
     await prisma.$transaction([
       prisma.user.update({
         where: { id: resetToken.userId },
-        data: { password: hashedPassword },
+        // Completing a reset link proves mailbox ownership, so it also
+        // satisfies email verification.
+        data: { password: hashedPassword, emailVerified: true },
       }),
       prisma.passwordResetToken.update({
         where: { id: resetToken.id },

@@ -34,7 +34,6 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
-  const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -43,7 +42,6 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     if (registrationSuccess) {
       setSuccessMessage('Account created. Enter the verification code sent to your email.');
-      setPendingVerificationEmail(email.trim());
       setMode('verify');
       setPassword('');
       setConfirmPassword('');
@@ -95,12 +93,11 @@ const LoginPage: React.FC = () => {
       } else if (mode === 'register') {
         await register(email.trim(), password);
       } else {
-        await verifyEmail((pendingVerificationEmail || email).trim(), verificationCode.trim());
+        await verifyEmail(email.trim(), verificationCode.trim());
       }
     } catch (err: any) {
       if (mode === 'login' && err?.message === 'Email verification required') {
         clearError();
-        setPendingVerificationEmail(email.trim());
         setVerificationCode('');
         setSuccessMessage('Enter the verification code sent to your email.');
         setMode('verify');
@@ -121,7 +118,7 @@ const LoginPage: React.FC = () => {
     clearError();
     setLocalError(null);
     setSuccessMessage(null);
-    const targetEmail = (pendingVerificationEmail || email).trim();
+    const targetEmail = email.trim();
     if (!targetEmail) {
       setLocalError('Email is required');
       return;
@@ -200,7 +197,7 @@ const LoginPage: React.FC = () => {
                 ? 'Sign in to start working on your models.'
                 : mode === 'register'
                   ? 'Use your email and password to get started.'
-                  : `Enter the 6-digit code sent to ${pendingVerificationEmail || email}.`}
+                  : `Enter the 6-digit code sent to ${email.trim() || 'your email'}.`}
             </Typography>
           </Box>
 
@@ -230,6 +227,16 @@ const LoginPage: React.FC = () => {
           <form onSubmit={handleSubmit}>
             {mode === 'verify' ? (
               <>
+                <TextField
+                  fullWidth
+                  label="Email Address"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  margin="normal"
+                  autoComplete="email"
+                  disabled={isLoading}
+                />
                 <TextField
                   fullWidth
                   label="Verification Code"
