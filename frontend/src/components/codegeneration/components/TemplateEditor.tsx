@@ -26,6 +26,11 @@ import { autocompletion } from '@codemirror/autocomplete';
 import { createHandlebarsCompletions } from '../../../services/codegeneration';
 import { TemplateEditorProps } from '../types';
 
+// Element context keys are raw element names, so names that are not plain
+// identifiers need Handlebars segment-literal syntax: {{[Rack A].name}}
+const toHandlebarsPathSegment = (name: string): string =>
+  /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : `[${name}]`;
+
 const THREE_D_PROPERTIES: Array<{ label: string; info: string }> = [
   { label: 'X', info: 'X position in 3D space' },
   { label: 'Y', info: 'Y position in 3D space' },
@@ -175,7 +180,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
                     size="small"
                     clickable
                     label={`Loop ${referenceClass.name}`}
-                    onClick={() => insertSnippet(`{{#each elementsByClassName.${referenceClass.name}}}\n  \n{{/each}}`)}
+                    onClick={() => insertSnippet(`{{#each elementsByClassName.${toHandlebarsPathSegment(referenceClass.name)}}}\n  \n{{/each}}`)}
                   />
                 </Box>
 
@@ -187,14 +192,14 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
                   {(referenceClass.attributes || []).map(attribute => (
                     <Tooltip
                       key={attribute.id || attribute.name}
-                      title={`Inserts {{${attribute.name}}}. Use inside a loop, or as {{InstanceName.${attribute.name}}}`}
+                      title={`Inserts {{${toHandlebarsPathSegment(attribute.name)}}}. Use inside a loop, or as {{InstanceName.${toHandlebarsPathSegment(attribute.name)}}}`}
                     >
                       <Chip
                         size="small"
                         clickable
                         variant="outlined"
                         label={`${attribute.name}: ${attribute.type || 'string'}`}
-                        onClick={() => insertSnippet(`{{${attribute.name}}}`)}
+                        onClick={() => insertSnippet(`{{${toHandlebarsPathSegment(attribute.name)}}}`)}
                         sx={{ color: '#d4d4d4', borderColor: '#494949' }}
                       />
                     </Tooltip>
@@ -224,18 +229,21 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
                       No instances in conforming models
                     </Typography>
                   )}
-                  {referenceInstances.map(name => (
-                    <Tooltip key={name} title={`Inserts {{${name}.name}}. Swap .name for any attribute`}>
-                      <Chip
-                        size="small"
-                        clickable
-                        variant="outlined"
-                        label={name}
-                        onClick={() => insertSnippet(`{{${name}.name}}`)}
-                        sx={{ color: '#d4d4d4', borderColor: '#494949' }}
-                      />
-                    </Tooltip>
-                  ))}
+                  {referenceInstances.map(name => {
+                    const pathSegment = toHandlebarsPathSegment(name);
+                    return (
+                      <Tooltip key={name} title={`Inserts {{${pathSegment}.name}}. Swap .name for any attribute`}>
+                        <Chip
+                          size="small"
+                          clickable
+                          variant="outlined"
+                          label={name}
+                          onClick={() => insertSnippet(`{{${pathSegment}.name}}`)}
+                          sx={{ color: '#d4d4d4', borderColor: '#494949' }}
+                        />
+                      </Tooltip>
+                    );
+                  })}
                 </Box>
               </>
             ) : (

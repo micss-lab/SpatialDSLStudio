@@ -257,6 +257,9 @@ const MetamodelManager: React.FC = () => {
                     <IconButton
                       size="small"
                       aria-label={`Actions for ${metamodel.name}`}
+                      aria-haspopup="menu"
+                      aria-expanded={Boolean(actionsAnchorEl) && actionsTarget?.id === metamodel.id ? 'true' : undefined}
+                      aria-controls={Boolean(actionsAnchorEl) && actionsTarget?.id === metamodel.id ? 'metamodel-actions-menu' : undefined}
                       onClick={(e) => {
                         setActionsAnchorEl(e.currentTarget);
                         setActionsTarget(metamodel);
@@ -272,6 +275,7 @@ const MetamodelManager: React.FC = () => {
         </List>
 
         <Menu
+          id="metamodel-actions-menu"
           anchorEl={actionsAnchorEl}
           open={Boolean(actionsAnchorEl) && Boolean(actionsTarget)}
           onClose={closeActionsMenu}

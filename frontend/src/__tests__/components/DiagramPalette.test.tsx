@@ -87,7 +87,7 @@ describe('DiagramPalette with a viewpoint type filter', () => {
     expect(screen.queryByText('Conveyor 1')).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        /1 other model element is hidden because the "Fleet and Charging" view description does not list their types as visible/i
+        /1 other model element is hidden because the "Fleet and Charging" view description does not list its type as visible/i
       )
     ).toBeInTheDocument();
   });

@@ -45,6 +45,7 @@ const models = [
     conformsTo: 'mm-1',
     elements: [
       { id: 'el-1', name: 'Robot1', modelElementId: 'mc-robot', style: { name: 'Robot1' } },
+      { id: 'el-2', name: 'Mobile Robot Resource', modelElementId: 'mc-robot', style: { name: 'Mobile Robot Resource' } },
     ],
   },
 ] as any;
@@ -99,5 +100,17 @@ describe('TemplateEditor', () => {
     fireEvent.click(screen.getByText('Count MobileRobot'));
 
     expect(onChange).toHaveBeenCalledWith(expect.stringContaining('{{countElements "MobileRobot"}}'));
+  });
+
+  it('uses segment-literal paths for instance names that are not identifiers', () => {
+    const { onChange } = renderEditor();
+
+    fireEvent.click(screen.getByRole('button', { name: /show model reference/i }));
+    fireEvent.mouseDown(screen.getByLabelText(/metaclass/i));
+    fireEvent.click(screen.getByRole('option', { name: /MobileRobot/i }));
+    fireEvent.click(screen.getByText('Mobile Robot Resource'));
+
+    // {{Mobile Robot Resource.name}} would be invalid Handlebars
+    expect(onChange).toHaveBeenCalledWith(expect.stringContaining('{{[Mobile Robot Resource].name}}'));
   });
 });
