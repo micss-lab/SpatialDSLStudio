@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Button, Typography, TextField, List, ListItem, ListItemIcon, ListItemText, Paper, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, ListItemButton, Menu, MenuItem, Tooltip } from '@mui/material';
+import { Alert, Box, Button, Typography, TextField, List, ListItem, ListItemIcon, ListItemText, Paper, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, ListItemButton, Menu, MenuItem, Snackbar, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
@@ -33,6 +33,7 @@ const MetamodelManager: React.FC = () => {
   const [shareTarget, setShareTarget] = useState<Metamodel | null>(null);
   const [actionsAnchorEl, setActionsAnchorEl] = useState<HTMLElement | null>(null);
   const [actionsTarget, setActionsTarget] = useState<Metamodel | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const closeActionsMenu = () => {
@@ -74,15 +75,23 @@ const MetamodelManager: React.FC = () => {
     }
   };
 
-  const handleDeleteMetamodel = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this metamodel?')) {
-      metamodelService.deleteMetamodel(id);
-      if (selectedMetamodel?.id === id || routeMetamodelId === id) {
-        setSelectedMetamodel(null);
-        navigate('/metamodels');
-      }
-      refreshMetamodels();
+  const handleDeleteMetamodel = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this metamodel?')) {
+      return;
     }
+
+    try {
+      await metamodelService.deleteMetamodel(id);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'Failed to delete metamodel');
+      return;
+    }
+
+    if (selectedMetamodel?.id === id || routeMetamodelId === id) {
+      setSelectedMetamodel(null);
+      navigate('/metamodels');
+    }
+    refreshMetamodels();
   };
 
   const handleSelectMetamodel = (metamodel: Metamodel) => {
@@ -400,6 +409,18 @@ const MetamodelManager: React.FC = () => {
           <Button onClick={handleImportMetamodel} color="primary">Import</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Delete failure notice */}
+      <Snackbar
+        open={Boolean(deleteError)}
+        autoHideDuration={8000}
+        onClose={() => setDeleteError(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="error" onClose={() => setDeleteError(null)} sx={{ width: '100%' }}>
+          {deleteError}
+        </Alert>
+      </Snackbar>
 
       {/* Share Dialog */}
       {shareTarget && (

@@ -109,10 +109,10 @@ export function saveMetamodelToAPI(
 
 /**
  * Deletes a metamodel from the API.
- * 
+ *
  * @param id The ID of the metamodel to delete
+ * @returns A promise that rejects with the server's reason when deletion is refused
  */
-export function deleteMetamodelFromAPI(id: string): void {
-  apiClient.delete(`${API_ENDPOINTS.METAMODELS}/${id}`)
-    .catch(err => console.error('Error deleting metamodel from API:', err));
+export function deleteMetamodelFromAPI(id: string): Promise<void> {
+  return apiClient.delete(`${API_ENDPOINTS.METAMODELS}/${id}`);
 }
