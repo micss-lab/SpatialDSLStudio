@@ -41,9 +41,9 @@
         "appearance": {
           "type": "rectangle",
           "shape": "rectangle",
-          "fillColor": "#37474F",
-          "strokeColor": "#263238",
-          "fontColor": "#ffffff"
+          "fillColor": "#EDE7F6",
+          "strokeColor": "#6A1B9A",
+          "fontColor": "#4A148C"
         }
       }
     },
@@ -439,9 +439,9 @@
         "appearance": {
           "type": "rectangle",
           "shape": "rectangle",
-          "fillColor": "#37474F",
-          "strokeColor": "#263238",
-          "fontColor": "#ffffff"
+          "fillColor": "#EDE7F6",
+          "strokeColor": "#6A1B9A",
+          "fontColor": "#4A148C"
         }
       }
     },
