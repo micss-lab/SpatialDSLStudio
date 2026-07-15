@@ -40,14 +40,20 @@
           "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
           "target": "a1100000-0000-4000-8000-000000000102",
           "containment": true,
-          "cardinality": { "lowerBound": 0, "upperBound": "*" },
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": "*"
+          },
           "allowSelfReference": false,
           "isMultiValued": true,
           "attributes": []
         }
       ],
       "constraints": [],
-      "position": { "x": 60, "y": 60 }
+      "position": {
+        "x": 60,
+        "y": 60
+      }
     },
     {
       "id": "a1100000-0000-4000-8000-000000000102",
@@ -73,7 +79,10 @@
           "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
           "target": "a1100000-0000-4000-8000-000000000102",
           "containment": false,
-          "cardinality": { "lowerBound": 0, "upperBound": "*" },
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": "*"
+          },
           "allowSelfReference": false,
           "isMultiValued": true,
           "attributes": [
@@ -94,43 +103,61 @@
           "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
           "target": "a1100000-0000-4000-8000-000000000102",
           "containment": false,
-          "cardinality": { "lowerBound": 0, "upperBound": "*" },
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": "*"
+          },
           "allowSelfReference": false,
           "isMultiValued": true,
           "attributes": []
         }
       ],
       "constraints": [],
-      "position": { "x": 320, "y": 60 }
+      "position": {
+        "x": 320,
+        "y": 60
+      }
     },
     {
       "id": "a1100000-0000-4000-8000-000000000103",
       "name": "InitialNode",
       "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
       "abstract": false,
-      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "superTypes": [
+        "a1100000-0000-4000-8000-000000000102"
+      ],
       "attributes": [],
       "references": [],
       "constraints": [],
-      "position": { "x": 60, "y": 240 }
+      "position": {
+        "x": 60,
+        "y": 240
+      }
     },
     {
       "id": "a1100000-0000-4000-8000-000000000104",
       "name": "ActivityFinalNode",
       "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
       "abstract": false,
-      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "superTypes": [
+        "a1100000-0000-4000-8000-000000000102"
+      ],
       "attributes": [],
       "references": [],
       "constraints": [],
-      "position": { "x": 220, "y": 240 }
+      "position": {
+        "x": 220,
+        "y": 240
+      }
     },
     {
       "id": "a1100000-0000-4000-8000-000000000105",
       "name": "Action",
       "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
       "abstract": false,
-      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "superTypes": [
+        "a1100000-0000-4000-8000-000000000102"
+      ],
       "attributes": [
         {
           "id": "a1100000-0000-4000-8000-000000001501",
@@ -151,60 +178,100 @@
           "many": false
         }
       ],
-      "references": [],
+      "references": [
+        {
+          "id": "a1100000-0000-4000-8000-000000002401",
+          "name": "invokes",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "a1100000-0000-4000-8000-000000000101",
+          "containment": false,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": false,
+          "isMultiValued": false,
+          "attributes": []
+        }
+      ],
       "constraints": [],
-      "position": { "x": 380, "y": 240 }
+      "position": {
+        "x": 380,
+        "y": 240
+      }
     },
     {
       "id": "a1100000-0000-4000-8000-000000000106",
       "name": "DecisionNode",
       "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
       "abstract": false,
-      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "superTypes": [
+        "a1100000-0000-4000-8000-000000000102"
+      ],
       "attributes": [],
       "references": [],
       "constraints": [],
-      "position": { "x": 60, "y": 400 }
+      "position": {
+        "x": 60,
+        "y": 400
+      }
     },
     {
       "id": "a1100000-0000-4000-8000-000000000107",
       "name": "MergeNode",
       "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
       "abstract": false,
-      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "superTypes": [
+        "a1100000-0000-4000-8000-000000000102"
+      ],
       "attributes": [],
       "references": [],
       "constraints": [],
-      "position": { "x": 220, "y": 400 }
+      "position": {
+        "x": 220,
+        "y": 400
+      }
     },
     {
       "id": "a1100000-0000-4000-8000-000000000108",
       "name": "ForkNode",
       "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
       "abstract": false,
-      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "superTypes": [
+        "a1100000-0000-4000-8000-000000000102"
+      ],
       "attributes": [],
       "references": [],
       "constraints": [],
-      "position": { "x": 380, "y": 400 }
+      "position": {
+        "x": 380,
+        "y": 400
+      }
     },
     {
       "id": "a1100000-0000-4000-8000-000000000109",
       "name": "JoinNode",
       "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
       "abstract": false,
-      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "superTypes": [
+        "a1100000-0000-4000-8000-000000000102"
+      ],
       "attributes": [],
       "references": [],
       "constraints": [],
-      "position": { "x": 540, "y": 400 }
+      "position": {
+        "x": 540,
+        "y": 400
+      }
     },
     {
       "id": "a1100000-0000-4000-8000-000000000110",
       "name": "Pin",
       "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
       "abstract": true,
-      "superTypes": ["a1100000-0000-4000-8000-000000000102"],
+      "superTypes": [
+        "a1100000-0000-4000-8000-000000000102"
+      ],
       "attributes": [],
       "references": [
         {
@@ -213,36 +280,52 @@
           "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
           "target": "a1100000-0000-4000-8000-000000000105",
           "containment": false,
-          "cardinality": { "lowerBound": 1, "upperBound": 1 },
+          "cardinality": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
           "allowSelfReference": false,
           "isMultiValued": false,
           "attributes": []
         }
       ],
       "constraints": [],
-      "position": { "x": 720, "y": 240 }
+      "position": {
+        "x": 720,
+        "y": 240
+      }
     },
     {
       "id": "a1100000-0000-4000-8000-000000000111",
       "name": "InputPin",
       "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
       "abstract": false,
-      "superTypes": ["a1100000-0000-4000-8000-000000000110"],
+      "superTypes": [
+        "a1100000-0000-4000-8000-000000000110"
+      ],
       "attributes": [],
       "references": [],
       "constraints": [],
-      "position": { "x": 900, "y": 300 }
+      "position": {
+        "x": 900,
+        "y": 300
+      }
     },
     {
       "id": "a1100000-0000-4000-8000-000000000112",
       "name": "OutputPin",
       "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
       "abstract": false,
-      "superTypes": ["a1100000-0000-4000-8000-000000000110"],
+      "superTypes": [
+        "a1100000-0000-4000-8000-000000000110"
+      ],
       "attributes": [],
       "references": [],
       "constraints": [],
-      "position": { "x": 1080, "y": 300 }
+      "position": {
+        "x": 1080,
+        "y": 300
+      }
     }
   ],
   "constraints": []
