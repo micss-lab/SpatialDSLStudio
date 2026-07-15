@@ -747,10 +747,14 @@ const MetamodelsPage: React.FC = () => {
     }
   };
 
-  const handleDeleteMetamodel = (id: string) => {
+  const handleDeleteMetamodel = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this metamodel?')) {
-      metamodelService.deleteMetamodel(id);
-      setMetamodels(metamodels.filter(m => m.id !== id));
+      try {
+        await metamodelService.deleteMetamodel(id);
+        setMetamodels(metamodels.filter(m => m.id !== id));
+      } catch (error) {
+        window.alert(error instanceof Error ? error.message : 'Failed to delete metamodel');
+      }
     }
   };
 

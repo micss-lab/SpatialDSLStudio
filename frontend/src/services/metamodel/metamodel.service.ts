@@ -162,16 +162,36 @@ class MetamodelService {
     return importedMetamodel;
   }
 
-  deleteMetamodel(id: string): boolean {
-    const initialLength = this.metamodels.length;
-    this.metamodels = this.metamodels.filter(mm => mm.id !== id);
-    const result = initialLength !== this.metamodels.length;
-    if (result) {
-      this.saveToStorage();
-      deleteMetamodelFromAPI(id); // Delete from PostgreSQL
-      this.syncedToDb.delete(id); // Remove from synced tracking
+  async deleteMetamodel(id: string): Promise<boolean> {
+    if (!this.metamodels.some(mm => mm.id === id)) {
+      return false;
     }
-    return result;
+
+    // Let an in-flight save settle first, otherwise its 404 fallback can
+    // re-create the metamodel right after we delete it
+    const pendingSave = this.pendingSaves.get(id);
+    if (pendingSave) {
+      await pendingSave.catch(() => {});
+    }
+
+    try {
+      await deleteMetamodelFromAPI(id);
+    } catch (error) {
+      // A metamodel that never reached the database has nothing to delete
+      // there; any other refusal (dependent models, not the owner) must keep
+      // the local copy so the UI stays consistent with the server
+      const missingRemotely =
+        !this.syncedToDb.has(id) &&
+        error instanceof Error &&
+        /not found/i.test(error.message);
+      if (!missingRemotely) {
+        throw error;
+      }
+    }
+
+    this.metamodels = this.metamodels.filter(mm => mm.id !== id);
+    this.syncedToDb.delete(id);
+    return true;
   }
 
   addMetaClass(metamodelId: string, name: string, abstract: boolean = false): MetaClass | null {
