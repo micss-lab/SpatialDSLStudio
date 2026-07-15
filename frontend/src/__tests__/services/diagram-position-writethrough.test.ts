@@ -104,6 +104,34 @@ describe('2D/3D position write-through', () => {
       );
     });
 
+    it('does not mirror across a legacy record whose 2D and 3D positions intentionally differ', () => {
+      (modelService.getModelById as jest.Mock).mockReturnValue(
+        makeModel({ position2D: { x: 354, y: 104.5 }, position3D: { x: -22140, y: -9669 } })
+      );
+
+      diagramService.updateElement('diagram-1', 'el-1', {
+        style: { position3D: { x: -20140, y: -9669 } }
+      });
+
+      const persisted = (modelService.updateModelElementPresentation as jest.Mock).mock
+        .calls[0][2];
+      expect(persisted.position3D).toEqual({ x: -20140, y: -9669 });
+      expect(persisted.position2D).toBeUndefined();
+    });
+
+    it('does not overwrite a world-space position from a schematic 2D drag', () => {
+      (modelService.getModelById as jest.Mock).mockReturnValue(
+        makeModel({ position2D: { x: 354, y: 104.5 }, position3D: { x: -22140, y: -9669 } })
+      );
+
+      diagramService.updateElement('diagram-1', 'el-1', { x: 489, y: 106.5 });
+
+      const persisted = (modelService.updateModelElementPresentation as jest.Mock).mock
+        .calls[0][2];
+      expect(persisted.position2D).toEqual({ x: 489, y: 106.5 });
+      expect(persisted.position3D).toBeUndefined();
+    });
+
     it('does not create position3D for elements without a world-space position', () => {
       (modelService.getModelById as jest.Mock).mockReturnValue(
         makeModel({ position2D: { x: 1, y: 2 } })
