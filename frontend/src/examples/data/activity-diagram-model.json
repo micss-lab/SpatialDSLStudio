@@ -30,8 +30,14 @@
         ]
       },
       "presentation": {
-        "position2D": { "x": 20, "y": 20 },
-        "size2D": { "width": 220, "height": 60 },
+        "position2D": {
+          "x": 20,
+          "y": 20
+        },
+        "size2D": {
+          "width": 220,
+          "height": 60
+        },
         "appearance": {
           "type": "rectangle",
           "shape": "rectangle",
@@ -44,11 +50,21 @@
     {
       "id": "a2200000-0000-4000-8000-000000000010",
       "modelElementId": "a1100000-0000-4000-8000-000000000103",
-      "style": { "name": "Start" },
-      "references": { "flowsTo": [] },
+      "style": {
+        "name": "Start"
+      },
+      "references": {
+        "flowsTo": []
+      },
       "presentation": {
-        "position2D": { "x": 50, "y": 205 },
-        "size2D": { "width": 30, "height": 30 },
+        "position2D": {
+          "x": 50,
+          "y": 205
+        },
+        "size2D": {
+          "width": 30,
+          "height": 30
+        },
         "appearance": {
           "type": "circle",
           "shape": "circle",
@@ -66,10 +82,18 @@
         "description": "Capture order details from the customer.",
         "isLocallyReentrant": false
       },
-      "references": { "flowsTo": [] },
+      "references": {
+        "flowsTo": []
+      },
       "presentation": {
-        "position2D": { "x": 130, "y": 190 },
-        "size2D": { "width": 140, "height": 60 },
+        "position2D": {
+          "x": 130,
+          "y": 190
+        },
+        "size2D": {
+          "width": 140,
+          "height": 60
+        },
         "appearance": {
           "type": "rectangle",
           "shape": "rectangle",
@@ -82,11 +106,21 @@
     {
       "id": "a2200000-0000-4000-8000-000000000030",
       "modelElementId": "a1100000-0000-4000-8000-000000000106",
-      "style": { "name": "In Stock?" },
-      "references": { "flowsTo": [] },
+      "style": {
+        "name": "In Stock?"
+      },
+      "references": {
+        "flowsTo": []
+      },
       "presentation": {
-        "position2D": { "x": 330, "y": 190 },
-        "size2D": { "width": 140, "height": 60 },
+        "position2D": {
+          "x": 330,
+          "y": 190
+        },
+        "size2D": {
+          "width": 140,
+          "height": 60
+        },
         "appearance": {
           "type": "rectangle",
           "shape": "rectangle",
@@ -104,10 +138,18 @@
         "description": "Charge the customer's payment method.",
         "isLocallyReentrant": false
       },
-      "references": { "flowsTo": [] },
+      "references": {
+        "flowsTo": []
+      },
       "presentation": {
-        "position2D": { "x": 530, "y": 90 },
-        "size2D": { "width": 140, "height": 60 },
+        "position2D": {
+          "x": 530,
+          "y": 90
+        },
+        "size2D": {
+          "width": 140,
+          "height": 60
+        },
         "appearance": {
           "type": "rectangle",
           "shape": "rectangle",
@@ -125,10 +167,18 @@
         "description": "Inform the customer the item is out of stock.",
         "isLocallyReentrant": false
       },
-      "references": { "flowsTo": [] },
+      "references": {
+        "flowsTo": []
+      },
       "presentation": {
-        "position2D": { "x": 530, "y": 290 },
-        "size2D": { "width": 140, "height": 60 },
+        "position2D": {
+          "x": 530,
+          "y": 290
+        },
+        "size2D": {
+          "width": 140,
+          "height": 60
+        },
         "appearance": {
           "type": "rectangle",
           "shape": "rectangle",
@@ -141,11 +191,21 @@
     {
       "id": "a2200000-0000-4000-8000-000000000060",
       "modelElementId": "a1100000-0000-4000-8000-000000000108",
-      "style": { "name": "Fork" },
-      "references": { "flowsTo": [] },
+      "style": {
+        "name": "Fork"
+      },
+      "references": {
+        "flowsTo": []
+      },
       "presentation": {
-        "position2D": { "x": 730, "y": 110 },
-        "size2D": { "width": 130, "height": 16 },
+        "position2D": {
+          "x": 730,
+          "y": 110
+        },
+        "size2D": {
+          "width": 130,
+          "height": 16
+        },
         "appearance": {
           "type": "rectangle",
           "shape": "rectangle",
@@ -163,10 +223,18 @@
         "description": "Pick the items and prepare the shipment box.",
         "isLocallyReentrant": false
       },
-      "references": { "flowsTo": [] },
+      "references": {
+        "flowsTo": []
+      },
       "presentation": {
-        "position2D": { "x": 900, "y": 35 },
-        "size2D": { "width": 140, "height": 60 },
+        "position2D": {
+          "x": 900,
+          "y": 35
+        },
+        "size2D": {
+          "width": 140,
+          "height": 60
+        },
         "appearance": {
           "type": "rectangle",
           "shape": "rectangle",
@@ -184,10 +252,18 @@
         "description": "Email the invoice PDF to the customer.",
         "isLocallyReentrant": false
       },
-      "references": { "flowsTo": [] },
+      "references": {
+        "flowsTo": []
+      },
       "presentation": {
-        "position2D": { "x": 900, "y": 165 },
-        "size2D": { "width": 140, "height": 60 },
+        "position2D": {
+          "x": 900,
+          "y": 165
+        },
+        "size2D": {
+          "width": 140,
+          "height": 60
+        },
         "appearance": {
           "type": "rectangle",
           "shape": "rectangle",
@@ -200,11 +276,21 @@
     {
       "id": "a2200000-0000-4000-8000-000000000090",
       "modelElementId": "a1100000-0000-4000-8000-000000000109",
-      "style": { "name": "Join" },
-      "references": { "flowsTo": [] },
+      "style": {
+        "name": "Join"
+      },
+      "references": {
+        "flowsTo": []
+      },
       "presentation": {
-        "position2D": { "x": 1090, "y": 110 },
-        "size2D": { "width": 130, "height": 16 },
+        "position2D": {
+          "x": 1090,
+          "y": 110
+        },
+        "size2D": {
+          "width": 130,
+          "height": 16
+        },
         "appearance": {
           "type": "rectangle",
           "shape": "rectangle",
@@ -222,10 +308,18 @@
         "description": "Hand the parcel to the courier.",
         "isLocallyReentrant": false
       },
-      "references": { "flowsTo": [] },
+      "references": {
+        "flowsTo": []
+      },
       "presentation": {
-        "position2D": { "x": 1260, "y": 90 },
-        "size2D": { "width": 140, "height": 60 },
+        "position2D": {
+          "x": 1260,
+          "y": 90
+        },
+        "size2D": {
+          "width": 140,
+          "height": 60
+        },
         "appearance": {
           "type": "rectangle",
           "shape": "rectangle",
@@ -238,11 +332,21 @@
     {
       "id": "a2200000-0000-4000-8000-0000000000b0",
       "modelElementId": "a1100000-0000-4000-8000-000000000104",
-      "style": { "name": "End" },
-      "references": { "flowsTo": [] },
+      "style": {
+        "name": "End"
+      },
+      "references": {
+        "flowsTo": []
+      },
       "presentation": {
-        "position2D": { "x": 1460, "y": 205 },
-        "size2D": { "width": 30, "height": 30 },
+        "position2D": {
+          "x": 1460,
+          "y": 205
+        },
+        "size2D": {
+          "width": 30,
+          "height": 30
+        },
         "appearance": {
           "type": "circle",
           "shape": "circle",
@@ -255,7 +359,9 @@
     {
       "id": "a2200000-0000-4000-8000-0000000000c0",
       "modelElementId": "a1100000-0000-4000-8000-000000000111",
-      "style": { "name": "paymentInput" },
+      "style": {
+        "name": "paymentInput"
+      },
       "references": {
         "flowsTo": [],
         "objectFlow": [],
@@ -265,7 +371,10 @@
         "attachedToElementId": "a2200000-0000-4000-8000-000000000040",
         "attachmentSide": "left",
         "attachmentOffsetRatio": 0.5,
-        "size2D": { "width": 16, "height": 16 },
+        "size2D": {
+          "width": 16,
+          "height": 16
+        },
         "appearance": {
           "type": "square",
           "shape": "square",
@@ -278,7 +387,9 @@
     {
       "id": "a2200000-0000-4000-8000-0000000000d0",
       "modelElementId": "a1100000-0000-4000-8000-000000000112",
-      "style": { "name": "paymentOutput" },
+      "style": {
+        "name": "paymentOutput"
+      },
       "references": {
         "flowsTo": [],
         "objectFlow": [],
@@ -288,13 +399,161 @@
         "attachedToElementId": "a2200000-0000-4000-8000-000000000040",
         "attachmentSide": "right",
         "attachmentOffsetRatio": 0.5,
-        "size2D": { "width": 16, "height": 16 },
+        "size2D": {
+          "width": 16,
+          "height": 16
+        },
         "appearance": {
           "type": "square",
           "shape": "square",
           "fillColor": "#E8F5E9",
           "strokeColor": "#2E7D32",
           "strokeWidth": 2
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-0000000000e0",
+      "modelElementId": "a1100000-0000-4000-8000-000000000101",
+      "style": {
+        "name": "Shipping",
+        "description": "Prepare the parcel and hand it over to the carrier."
+      },
+      "references": {
+        "containsNodes": [
+          "a2200000-0000-4000-8000-0000000000f0",
+          "a2200000-0000-4000-8000-000000000100",
+          "a2200000-0000-4000-8000-000000000110",
+          "a2200000-0000-4000-8000-000000000120"
+        ]
+      },
+      "presentation": {
+        "position2D": {
+          "x": 20,
+          "y": 400
+        },
+        "size2D": {
+          "width": 220,
+          "height": 60
+        },
+        "appearance": {
+          "type": "rectangle",
+          "shape": "rectangle",
+          "fillColor": "#37474F",
+          "strokeColor": "#263238",
+          "fontColor": "#ffffff"
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-0000000000f0",
+      "modelElementId": "a1100000-0000-4000-8000-000000000103",
+      "style": {
+        "name": "Shipping Start"
+      },
+      "references": {
+        "flowsTo": []
+      },
+      "presentation": {
+        "position2D": {
+          "x": 130,
+          "y": 480
+        },
+        "size2D": {
+          "width": 30,
+          "height": 30
+        },
+        "appearance": {
+          "type": "circle",
+          "shape": "circle",
+          "fillColor": "#000000",
+          "strokeColor": "#000000",
+          "strokeWidth": 1
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000100",
+      "modelElementId": "a1100000-0000-4000-8000-000000000105",
+      "style": {
+        "name": "Prepare Shipment",
+        "description": "Label and pack the parcel for dispatch.",
+        "isLocallyReentrant": false
+      },
+      "references": {
+        "flowsTo": []
+      },
+      "presentation": {
+        "position2D": {
+          "x": 230,
+          "y": 465
+        },
+        "size2D": {
+          "width": 150,
+          "height": 60
+        },
+        "appearance": {
+          "type": "rectangle",
+          "shape": "rectangle",
+          "fillColor": "#BBDEFB",
+          "strokeColor": "#1976D2",
+          "fontColor": "#0D47A1"
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000110",
+      "modelElementId": "a1100000-0000-4000-8000-000000000105",
+      "style": {
+        "name": "Hand Over to Carrier",
+        "description": "Transfer the parcel to the logistics carrier.",
+        "isLocallyReentrant": false
+      },
+      "references": {
+        "flowsTo": []
+      },
+      "presentation": {
+        "position2D": {
+          "x": 450,
+          "y": 465
+        },
+        "size2D": {
+          "width": 170,
+          "height": 60
+        },
+        "appearance": {
+          "type": "rectangle",
+          "shape": "rectangle",
+          "fillColor": "#BBDEFB",
+          "strokeColor": "#1976D2",
+          "fontColor": "#0D47A1"
+        }
+      }
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000120",
+      "modelElementId": "a1100000-0000-4000-8000-000000000104",
+      "style": {
+        "name": "Shipped"
+      },
+      "references": {
+        "flowsTo": []
+      },
+      "presentation": {
+        "position2D": {
+          "x": 690,
+          "y": 480
+        },
+        "size2D": {
+          "width": 30,
+          "height": 30
+        },
+        "appearance": {
+          "type": "circle",
+          "shape": "circle",
+          "fillColor": "#ffffff",
+          "strokeColor": "#000000",
+          "strokeWidth": 4
         }
       }
     }
@@ -325,7 +584,9 @@
       "referenceId": "a1100000-0000-4000-8000-000000002201",
       "referenceName": "[in stock]",
       "type": "flowsTo",
-      "attributes": { "guard": "in stock" }
+      "attributes": {
+        "guard": "in stock"
+      }
     },
     {
       "id": "a2200000-0000-4000-8000-000000000204",
@@ -334,7 +595,9 @@
       "referenceId": "a1100000-0000-4000-8000-000000002201",
       "referenceName": "[out of stock]",
       "type": "flowsTo",
-      "attributes": { "guard": "out of stock" }
+      "attributes": {
+        "guard": "out of stock"
+      }
     },
     {
       "id": "a2200000-0000-4000-8000-000000000205",
@@ -424,6 +687,42 @@
       "referenceId": "a1100000-0000-4000-8000-000000002202",
       "referenceName": "objectFlow",
       "type": "objectFlow",
+      "attributes": {}
+    },
+    {
+      "id": "a2200000-0000-4000-8000-00000000020f",
+      "sourceId": "a2200000-0000-4000-8000-0000000000a0",
+      "targetId": "a2200000-0000-4000-8000-0000000000e0",
+      "referenceId": "a1100000-0000-4000-8000-000000002401",
+      "referenceName": "invokes",
+      "type": "invokes",
+      "attributes": {}
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000210",
+      "sourceId": "a2200000-0000-4000-8000-0000000000f0",
+      "targetId": "a2200000-0000-4000-8000-000000000100",
+      "referenceId": "a1100000-0000-4000-8000-000000002201",
+      "referenceName": "flowsTo",
+      "type": "flowsTo",
+      "attributes": {}
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000211",
+      "sourceId": "a2200000-0000-4000-8000-000000000100",
+      "targetId": "a2200000-0000-4000-8000-000000000110",
+      "referenceId": "a1100000-0000-4000-8000-000000002201",
+      "referenceName": "flowsTo",
+      "type": "flowsTo",
+      "attributes": {}
+    },
+    {
+      "id": "a2200000-0000-4000-8000-000000000212",
+      "sourceId": "a2200000-0000-4000-8000-000000000110",
+      "targetId": "a2200000-0000-4000-8000-000000000120",
+      "referenceId": "a1100000-0000-4000-8000-000000002201",
+      "referenceName": "flowsTo",
+      "type": "flowsTo",
       "attributes": {}
     }
   ]

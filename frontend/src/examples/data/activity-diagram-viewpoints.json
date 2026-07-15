@@ -45,7 +45,10 @@
               "fillColor": "#FFF8E1",
               "strokeColor": "#F57F17",
               "strokeWidth": 2,
-              "defaultSize": { "width": 16, "height": 16 }
+              "defaultSize": {
+                "width": 16,
+                "height": 16
+              }
             }
           },
           "a1100000-0000-4000-8000-000000000112": {
@@ -54,7 +57,10 @@
               "fillColor": "#E8F5E9",
               "strokeColor": "#2E7D32",
               "strokeWidth": 2,
-              "defaultSize": { "width": 16, "height": 16 }
+              "defaultSize": {
+                "width": 16,
+                "height": 16
+              }
             }
           }
         },
@@ -76,7 +82,10 @@
             "concreteSyntax": {
               "lineColor": "#2E7D32",
               "lineWidth": 2,
-              "lineDash": [6, 4],
+              "lineDash": [
+                6,
+                4
+              ],
               "arrowHead": "filled"
             }
           }
@@ -84,25 +93,55 @@
         "pinMappings": [
           {
             "id": "a4400000-0000-4000-8000-000000000301",
-            "pinMetaClassIds": ["a1100000-0000-4000-8000-000000000111"],
-            "ownerMetaClassIds": ["a1100000-0000-4000-8000-000000000105"],
+            "pinMetaClassIds": [
+              "a1100000-0000-4000-8000-000000000111"
+            ],
+            "ownerMetaClassIds": [
+              "a1100000-0000-4000-8000-000000000105"
+            ],
             "attachmentReferenceName": "owner",
             "direction": "input",
-            "allowedSides": ["top", "right", "bottom", "left"],
+            "allowedSides": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
             "defaultSide": "left",
             "defaultOffsetRatio": 0.5
           },
           {
             "id": "a4400000-0000-4000-8000-000000000302",
-            "pinMetaClassIds": ["a1100000-0000-4000-8000-000000000112"],
-            "ownerMetaClassIds": ["a1100000-0000-4000-8000-000000000105"],
+            "pinMetaClassIds": [
+              "a1100000-0000-4000-8000-000000000112"
+            ],
+            "ownerMetaClassIds": [
+              "a1100000-0000-4000-8000-000000000105"
+            ],
             "attachmentReferenceName": "owner",
             "direction": "output",
-            "allowedSides": ["top", "right", "bottom", "left"],
+            "allowedSides": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
             "defaultSide": "right",
             "defaultOffsetRatio": 0.5
           }
-        ]
+        ],
+        "concreteSyntaxByReferenceId": {
+          "a1100000-0000-4000-8000-000000002401": {
+            "lineColor": "#6A1B9A",
+            "lineWidth": 2,
+            "lineDash": [
+              6,
+              4
+            ],
+            "arrowHead": "open",
+            "labelFormat": "invokes"
+          }
+        }
       },
       {
         "id": "a4400000-0000-4000-8000-000000000102",
