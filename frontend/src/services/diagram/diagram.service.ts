@@ -233,11 +233,23 @@ class DiagramService {
    * share the same millimeter ground-plane values. Keep the two fields in sync: a 3D move
    * always mirrors to position2D, while a 2D move mirrors to position3D only when the
    * element already carries a world-space position, so pure 2D notations never gain one.
+   *
+   * Exception: legacy spatial examples keep a schematic diagram layout whose 2D
+   * coordinates intentionally differ from the world-space millimeters. Mirroring across
+   * such a record would clobber one projection with the other's units, so write-through
+   * applies only when the stored fields are absent or already aligned.
    */
   private applyPositionWriteThrough(
     modelElement: ModelElement | undefined,
     presentation: ModelElementPresentation
   ): ModelElementPresentation {
+    const existing2D = modelElement?.presentation?.position2D;
+    const existing3D = modelElement?.presentation?.position3D;
+    const aligned =
+      !existing2D ||
+      !existing3D ||
+      (existing2D.x === existing3D.x && existing2D.y === existing3D.y);
+    if (!aligned) return presentation;
     if (presentation.position3D && !presentation.position2D) {
       return {
         ...presentation,
