@@ -88,6 +88,21 @@
               ],
               "arrowHead": "filled"
             }
+          },
+          {
+            "id": "a4400000-0000-4000-8000-000000000203",
+            "referenceId": "a1100000-0000-4000-8000-000000002401",
+            "referenceName": "invokes",
+            "concreteSyntax": {
+              "lineColor": "#6A1B9A",
+              "lineWidth": 2,
+              "lineDash": [
+                6,
+                4
+              ],
+              "arrowHead": "open",
+              "labelFormat": "invokes"
+            }
           }
         ],
         "pinMappings": [
