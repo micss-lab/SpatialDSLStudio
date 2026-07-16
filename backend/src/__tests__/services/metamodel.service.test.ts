@@ -278,20 +278,36 @@ describe('MetamodelService', () => {
       sharingServiceMock.deleteResourceShares.mockResolvedValue(undefined);
       prismaMock.metamodel.delete.mockResolvedValue(mockMetamodelRow);
 
-      await expect(metamodelService.delete('mm-uuid-1', 'user-uuid-1')).resolves.toBeUndefined();
+      await expect(metamodelService.delete('mm-uuid-1', 'user-uuid-1', 'DSL_DESIGNER')).resolves.toBeUndefined();
+      expect(prismaMock.metamodel.findFirst).toHaveBeenCalledWith({
+        where: { id: 'mm-uuid-1', userId: 'user-uuid-1' },
+      });
+    });
+
+    it('lets an admin delete a metamodel they do not own', async () => {
+      prismaMock.metamodel.findFirst.mockResolvedValue(mockMetamodelRow);
+      prismaMock.model.count.mockResolvedValue(0);
+      prismaMock.codeGenerationProject.count.mockResolvedValue(0);
+      sharingServiceMock.deleteResourceShares.mockResolvedValue(undefined);
+      prismaMock.metamodel.delete.mockResolvedValue(mockMetamodelRow);
+
+      await expect(metamodelService.delete('mm-uuid-1', 'admin-user', 'ADMIN')).resolves.toBeUndefined();
+      expect(prismaMock.metamodel.findFirst).toHaveBeenCalledWith({
+        where: { id: 'mm-uuid-1' },
+      });
     });
 
     it('throws 404 when metamodel not found or not owner', async () => {
       prismaMock.metamodel.findFirst.mockResolvedValue(null);
 
-      await expect(metamodelService.delete('mm-uuid-1', 'other-user')).rejects.toThrow(ApiError);
+      await expect(metamodelService.delete('mm-uuid-1', 'other-user', 'DSL_DESIGNER')).rejects.toThrow(ApiError);
     });
 
     it('throws 400 when models depend on the metamodel', async () => {
       prismaMock.metamodel.findFirst.mockResolvedValue(mockMetamodelRow);
       prismaMock.model.count.mockResolvedValue(2);
 
-      await expect(metamodelService.delete('mm-uuid-1', 'user-uuid-1')).rejects.toThrow(ApiError);
+      await expect(metamodelService.delete('mm-uuid-1', 'user-uuid-1', 'DSL_DESIGNER')).rejects.toThrow(ApiError);
     });
 
     it('throws 400 when codegen projects depend on the metamodel', async () => {
@@ -299,7 +315,7 @@ describe('MetamodelService', () => {
       prismaMock.model.count.mockResolvedValue(0);
       prismaMock.codeGenerationProject.count.mockResolvedValue(1);
 
-      await expect(metamodelService.delete('mm-uuid-1', 'user-uuid-1')).rejects.toThrow(ApiError);
+      await expect(metamodelService.delete('mm-uuid-1', 'user-uuid-1', 'DSL_DESIGNER')).rejects.toThrow(ApiError);
     });
   });
 

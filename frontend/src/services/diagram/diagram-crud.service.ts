@@ -74,23 +74,12 @@ export class DiagramCrudService {
   }
 
   /**
-   * Delete a diagram
+   * Delete a diagram from local state
    */
-  deleteDiagram(
-    id: string,
-    saveCallback: () => void,
-    deleteCallback: (id: string) => void,
-    syncedToDbCallback: (id: string) => void
-  ): boolean {
+  deleteDiagram(id: string): boolean {
     const initialLength = this.diagrams.length;
     this.diagrams = this.diagrams.filter(d => d.id !== id);
-    const result = initialLength !== this.diagrams.length;
-    if (result) {
-      saveCallback();
-      deleteCallback(id);
-      syncedToDbCallback(id);
-    }
-    return result;
+    return initialLength !== this.diagrams.length;
   }
 
   /**

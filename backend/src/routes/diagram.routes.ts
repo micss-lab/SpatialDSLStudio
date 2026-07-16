@@ -80,13 +80,13 @@ router.put(
 
 /**
  * @route   DELETE /api/diagrams/:id
- * @desc    Delete a diagram (owner only)
+ * @desc    Delete a diagram (owner or admin)
  */
 router.delete(
   '/:id',
   validate([param('id').isUUID().withMessage('Invalid ID format')]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    await diagramService.delete(req.params.id, req.user!.userId);
+    await diagramService.delete(req.params.id, req.user!.userId, req.user!.role);
     res.json({ success: true, message: 'Diagram deleted successfully' });
   })
 );

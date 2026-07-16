@@ -265,13 +265,27 @@ describe('DiagramService', () => {
       sharingServiceMock.deleteResourceShares.mockResolvedValue(undefined);
       prismaMock.diagram.delete.mockResolvedValue(mockDiagramRow);
 
-      await expect(diagramService.delete('diag-uuid-1', 'user-uuid-1')).resolves.toBeUndefined();
+      await expect(diagramService.delete('diag-uuid-1', 'user-uuid-1', 'DSL_DESIGNER')).resolves.toBeUndefined();
+      expect(prismaMock.diagram.findFirst).toHaveBeenCalledWith({
+        where: { id: 'diag-uuid-1', userId: 'user-uuid-1' },
+      });
+    });
+
+    it('lets an admin delete a diagram they do not own', async () => {
+      prismaMock.diagram.findFirst.mockResolvedValue(mockDiagramRow);
+      sharingServiceMock.deleteResourceShares.mockResolvedValue(undefined);
+      prismaMock.diagram.delete.mockResolvedValue(mockDiagramRow);
+
+      await expect(diagramService.delete('diag-uuid-1', 'admin-user', 'ADMIN')).resolves.toBeUndefined();
+      expect(prismaMock.diagram.findFirst).toHaveBeenCalledWith({
+        where: { id: 'diag-uuid-1' },
+      });
     });
 
     it('throws 404 when not owner', async () => {
       prismaMock.diagram.findFirst.mockResolvedValue(null);
 
-      await expect(diagramService.delete('diag-uuid-1', 'other-user')).rejects.toThrow(ApiError);
+      await expect(diagramService.delete('diag-uuid-1', 'other-user', 'DSL_DESIGNER')).rejects.toThrow(ApiError);
     });
   });
 

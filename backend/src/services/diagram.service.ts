@@ -631,11 +631,11 @@ class DiagramService {
   }
 
   /**
-   * Delete a diagram (owner only)
+   * Delete a diagram (owner or platform admin)
    */
-  async delete(id: string, userId: string): Promise<void> {
+  async delete(id: string, userId: string, userRole: UserRole): Promise<void> {
     const existing = await prisma.diagram.findFirst({
-      where: { id, userId },
+      where: userRole === 'ADMIN' ? { id } : { id, userId },
     });
 
     if (!existing) {

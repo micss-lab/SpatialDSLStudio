@@ -20,6 +20,7 @@ import {
   Select,
   MenuItem,
   ListItemButton,
+  Snackbar,
   Tooltip,
   SelectChangeEvent
 } from '@mui/material';
@@ -54,6 +55,7 @@ const ModelManager: React.FC = () => {
   const [importStatus, setImportStatus] = useState('');
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareTarget, setShareTarget] = useState<Model | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
   // Form states
@@ -98,13 +100,21 @@ const ModelManager: React.FC = () => {
   };
   
   // Handle deleting a model
-  const handleDeleteModel = (modelId: string) => {
-    if (window.confirm('Are you sure you want to delete this model?')) {
-      modelService.deleteModel(modelId);
-      setModels(models.filter(m => m.id !== modelId));
-      if (selectedModel?.id === modelId) {
-        setSelectedModel(null);
-      }
+  const handleDeleteModel = async (modelId: string) => {
+    if (!window.confirm('Are you sure you want to delete this model?')) {
+      return;
+    }
+
+    try {
+      await modelService.deleteModel(modelId);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'Failed to delete model');
+      return;
+    }
+
+    setModels(models.filter(m => m.id !== modelId));
+    if (selectedModel?.id === modelId) {
+      setSelectedModel(null);
     }
   };
   
@@ -520,7 +530,19 @@ const ModelManager: React.FC = () => {
       {/* Dialogs */}
       {renderCreateModelDialog()}
       {renderImportModelDialog()}
-      
+
+      {/* Delete failure notice */}
+      <Snackbar
+        open={Boolean(deleteError)}
+        autoHideDuration={8000}
+        onClose={() => setDeleteError(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="error" onClose={() => setDeleteError(null)} sx={{ width: '100%' }}>
+          {deleteError}
+        </Alert>
+      </Snackbar>
+
       {/* Share Dialog */}
       {shareTarget && (
         <ShareDialog
