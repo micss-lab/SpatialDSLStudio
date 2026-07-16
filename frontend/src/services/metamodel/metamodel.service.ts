@@ -1,4 +1,4 @@
-import { MetaClass, Metamodel, MetaAttribute, MetaAttributeType, MetaReference } from '../../models/types';
+import { MetaClass, Metamodel, MetaAttribute, MetaAttributeType, MetaReference, Viewpoint } from '../../models/types';
 import { v4 as uuidv4 } from 'uuid';
 import { metaMetamodelService } from '../metametamodel';
 import { exampleDataService } from './exampleData.service';
@@ -56,23 +56,43 @@ class MetamodelService {
   }
 
   private async loadExampleMetamodels(): Promise<void> {
+    // The example bundle carries fresh per-session ids (see ExampleDataService),
+    // so this account owns every row it seeds
     const exampleMetamodels = exampleDataService.getExampleMetamodels();
-    
+    const exampleViewpoints = exampleDataService.getExampleViewpoints();
+
     // Get the actual core ePackage to use its real ID
     const corePackage = await metaMetamodelService.getCoreEPackageAsync();
-    
-    // Add example metamodels if they don't already exist
+
     for (const exampleMM of exampleMetamodels) {
       const exists = this.metamodels.some(mm => mm.id === exampleMM.id);
-      if (!exists) {
-        // Update the conformsTo field to use the actual ePackage ID from the database
-        const metamodelWithCorrectRef = {
-          ...exampleMM,
-          conformsTo: corePackage.id, // Use the actual ePackage ID
-        };
-        this.metamodels.push(metamodelWithCorrectRef);
-        // Save to API
-        saveMetamodelToAPI(metamodelWithCorrectRef, this.syncedToDb, this.pendingSaves);
+      if (exists) continue;
+
+      // Update the conformsTo field to use the actual ePackage ID from the database
+      const metamodelWithCorrectRef = {
+        ...exampleMM,
+        conformsTo: corePackage.id, // Use the actual ePackage ID
+      };
+      this.metamodels.push(metamodelWithCorrectRef);
+      // Save to API, waiting so dependent example viewpoints can be persisted
+      // against the created row
+      saveMetamodelToAPI(metamodelWithCorrectRef, this.syncedToDb, this.pendingSaves);
+      await this.pendingSaves.get(metamodelWithCorrectRef.id)?.catch(() => {});
+
+      if (this.syncedToDb.has(metamodelWithCorrectRef.id)) {
+        await this.seedExampleViewpoints(metamodelWithCorrectRef.id, exampleViewpoints);
+      }
+    }
+  }
+
+  private async seedExampleViewpoints(metamodelId: string, exampleViewpoints: Viewpoint[]): Promise<void> {
+    const viewpointsForMetamodel = exampleViewpoints.filter(vp => vp.metamodelId === metamodelId);
+    for (const viewpoint of viewpointsForMetamodel) {
+      try {
+        await apiClient.post(API_ENDPOINTS.VIEWPOINTS, viewpoint);
+      } catch (error) {
+        // Best effort: the session cache still serves the bundle viewpoints
+        console.error('Error seeding example viewpoint:', error);
       }
     }
   }

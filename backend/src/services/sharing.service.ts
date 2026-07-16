@@ -52,9 +52,13 @@ class SharingService {
       throw new ApiError(403, 'Only ADMIN and DSL_DESIGNER roles can share resources');
     }
 
-    // Verify the owner actually owns this resource
-    const isOwner = await this.checkResourceOwnership(resourceType, resourceId, ownerUserId);
-    if (!isOwner) {
+    // Verify the requester owns this resource; platform admins manage shares
+    // for any resource
+    const actualOwnerId = await this.getResourceOwnerId(resourceType, resourceId);
+    if (actualOwnerId === null) {
+      throw new ApiError(404, 'Resource not found');
+    }
+    if (actualOwnerId !== ownerUserId && owner.role !== 'ADMIN') {
       throw new ApiError(403, 'You can only share resources you own');
     }
 
@@ -68,8 +72,13 @@ class SharingService {
       throw new ApiError(404, 'User with this email not found');
     }
 
-    if (targetUser.id === ownerUserId) {
-      throw new ApiError(400, 'You cannot share a resource with yourself');
+    if (targetUser.id === actualOwnerId) {
+      throw new ApiError(
+        400,
+        targetUser.id === ownerUserId
+          ? 'You cannot share a resource with yourself'
+          : 'This user already owns the resource'
+      );
     }
 
     // Check if already shared with this user
@@ -97,13 +106,14 @@ class SharingService {
       return this.mapToSharedResource(updated);
     }
 
-    // Create new sharing record
+    // Create new sharing record, attributed to the actual resource owner so
+    // the owner sees and manages the share even when an admin created it
     const share = await prisma.sharedResource.create({
       data: {
         resourceType: toPrismaResourceType(resourceType),
         resourceId,
         permission: toPrismaPermission(permission),
-        ownerId: ownerUserId,
+        ownerId: actualOwnerId,
         sharedWithId: targetUser.id,
       },
       include: {
@@ -397,9 +407,9 @@ class SharingService {
     ownerUserId: string,
     sharedWithUserId: string
   ): Promise<void> {
-    // Verify ownership
-    const isOwner = await this.checkResourceOwnership(resourceType, resourceId, ownerUserId);
-    if (!isOwner) {
+    // Verify ownership (platform admins manage shares for any resource)
+    const canManage = await this.canManageResourceShares(resourceType, resourceId, ownerUserId);
+    if (!canManage) {
       throw new ApiError(403, 'You can only unshare resources you own');
     }
 
@@ -430,9 +440,9 @@ class SharingService {
     resourceId: string,
     requestingUserId: string
   ): Promise<SharedResourceType[]> {
-    // Verify the requesting user is the owner
-    const isOwner = await this.checkResourceOwnership(resourceType, resourceId, requestingUserId);
-    if (!isOwner) {
+    // Verify the requesting user is the owner (or a platform admin)
+    const canManage = await this.canManageResourceShares(resourceType, resourceId, requestingUserId);
+    if (!canManage) {
       throw new ApiError(403, 'Only resource owners can view sharing details');
     }
 
@@ -541,15 +551,18 @@ class SharingService {
   }
 
   /**
-   * Check if a user owns a resource
+   * Check if a user may manage a resource's shares: the owner, or a platform
+   * admin acting on any existing resource.
    */
-  private async checkResourceOwnership(
+  private async canManageResourceShares(
     resourceType: ResourceType,
     resourceId: string,
     userId: string
   ): Promise<boolean> {
     const ownerId = await this.getResourceOwnerId(resourceType, resourceId);
-    return ownerId !== null && ownerId === userId;
+    if (ownerId === null) return false;
+    if (ownerId === userId) return true;
+    return this.isAdmin(userId);
   }
 
   /**

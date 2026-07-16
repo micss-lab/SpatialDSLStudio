@@ -184,7 +184,37 @@ describe('SharingService', () => {
 
       await expect(
         sharingService.shareResource('METAMODEL', 'mm-uuid-1', 'owner-uuid', 'target@example.com', 'VIEWER')
-      ).rejects.toThrow(ApiError);
+      ).rejects.toThrow('You can only share resources you own');
+    });
+
+    it('throws 404 when the resource does not exist', async () => {
+      prismaMock.user.findUnique.mockResolvedValueOnce(mockOwner as any);
+      prismaMock.metamodel.findFirst.mockResolvedValue(null);
+
+      await expect(
+        sharingService.shareResource('METAMODEL', 'mm-uuid-1', 'owner-uuid', 'target@example.com', 'VIEWER')
+      ).rejects.toThrow('Resource not found');
+    });
+
+    it('lets an admin share a resource they do not own, attributed to the owner', async () => {
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce({ ...mockOwner, id: 'admin-uuid', email: 'admin@example.com', role: 'ADMIN' } as any)
+        .mockResolvedValueOnce(mockTarget as any);
+      prismaMock.metamodel.findFirst.mockResolvedValue({
+        id: 'mm-uuid-1',
+        userId: 'real-owner',
+      } as any);
+      prismaMock.sharedResource.findUnique.mockResolvedValue(null);
+      prismaMock.sharedResource.create.mockResolvedValue(mockShare as any);
+
+      await sharingService.shareResource('METAMODEL', 'mm-uuid-1', 'admin-uuid', 'target@example.com', 'VIEWER');
+
+      // The share row belongs to the actual resource owner, not the admin
+      expect(prismaMock.sharedResource.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ ownerId: 'real-owner' }),
+        })
+      );
     });
 
     it('throws 404 when target user not found', async () => {
@@ -264,6 +294,20 @@ describe('SharingService', () => {
       await expect(
         sharingService.unshareResource('METAMODEL', 'mm-uuid-1', 'not-owner', 'target-uuid')
       ).rejects.toThrow(ApiError);
+    });
+
+    it('lets an admin remove a share for a resource they do not own', async () => {
+      prismaMock.metamodel.findFirst.mockResolvedValue({
+        id: 'mm-uuid-1',
+        userId: 'real-owner',
+      } as any);
+      prismaMock.user.findUnique.mockResolvedValue({ role: 'ADMIN' } as any);
+      prismaMock.sharedResource.findUnique.mockResolvedValue(mockShare as any);
+      prismaMock.sharedResource.delete.mockResolvedValue(mockShare as any);
+
+      await expect(
+        sharingService.unshareResource('METAMODEL', 'mm-uuid-1', 'admin-uuid', 'target-uuid')
+      ).resolves.toBeUndefined();
     });
 
     it('throws 404 when share record not found', async () => {
@@ -473,6 +517,16 @@ describe('SharingService', () => {
       await expect(
         sharingService.getResourceShares('METAMODEL', 'mm-uuid-1', 'not-owner')
       ).rejects.toThrow(ApiError);
+    });
+
+    it('lets an admin view shares for a resource they do not own', async () => {
+      prismaMock.metamodel.findFirst.mockResolvedValue({ id: 'mm-uuid-1', userId: 'real-owner' } as any);
+      prismaMock.user.findUnique.mockResolvedValue({ role: 'ADMIN' } as any);
+      prismaMock.sharedResource.findMany.mockResolvedValue([mockShare as any]);
+
+      const result = await sharingService.getResourceShares('METAMODEL', 'mm-uuid-1', 'admin-uuid');
+
+      expect(result).toHaveLength(1);
     });
   });
 

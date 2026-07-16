@@ -4,6 +4,7 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { mockDeep, mockReset } from 'jest-mock-extended';
 import { PrismaClient } from '@prisma/client';
+import { ApiError } from '../../middleware/errorHandler';
 
 
 const sharingServiceMock = {
@@ -125,6 +126,34 @@ describe('POST /api/share/:resourceType/:resourceId/share', () => {
     const res = await request(buildApp()).post('/api/share/METAMODEL/mm-uuid-1/share');
     expect(res.status).toBe(401);
   });
+
+  it('surfaces the service refusal reason instead of a generic message', async () => {
+    sharingServiceMock.shareResourceWithCascade.mockRejectedValue(
+      new ApiError(403, 'You can only share resources you own')
+    );
+
+    const res = await request(buildApp())
+      .post('/api/share/METAMODEL/mm-uuid-1/share')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({ email: 'other@example.com', permission: 'EDITOR' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('You can only share resources you own');
+  });
+
+  it('surfaces the unknown-email reason', async () => {
+    sharingServiceMock.shareResourceWithCascade.mockRejectedValue(
+      new ApiError(404, 'User with this email not found')
+    );
+
+    const res = await request(buildApp())
+      .post('/api/share/METAMODEL/mm-uuid-1/share')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({ email: 'nobody@example.com', permission: 'EDITOR' });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('User with this email not found');
+  });
 });
 
 describe('DELETE /api/share/:resourceType/:resourceId/share/:userId', () => {
@@ -167,6 +196,19 @@ describe('GET /api/share/:resourceType/:resourceId/shares', () => {
       .set('Authorization', `Bearer ${makeToken()}`);
 
     expect(res.status).toBe(400);
+  });
+
+  it('surfaces the ownership reason with its status code', async () => {
+    sharingServiceMock.getResourceShares.mockRejectedValue(
+      new ApiError(403, 'Only resource owners can view sharing details')
+    );
+
+    const res = await request(buildApp())
+      .get('/api/share/METAMODEL/mm-uuid-1/shares')
+      .set('Authorization', `Bearer ${makeToken()}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('Only resource owners can view sharing details');
   });
 });
 
