@@ -443,8 +443,10 @@ export class ModelValidationService {
       
       // Check all references
       Object.entries(element.references).forEach(([refName, refValue]) => {
-        // Find the reference in the metaclass
-        const reference = metaClass.references.find(r => r.name === refName);
+        // Find the reference in the metaclass, including inherited references
+        const reference = modelInheritanceUtilsService
+          .getAllReferences(metaClass, metamodel)
+          .find(r => r.name === refName);
         if (!reference || !reference.containment) return; // Skip non-containment references
         
         if (Array.isArray(refValue)) {
