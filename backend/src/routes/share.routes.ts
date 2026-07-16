@@ -74,12 +74,14 @@ router.post(
       });
     } catch (error: any) {
       console.error('Share resource error:', error);
-      
-      // Handle ApiError with statusCode, or generic status
-      if (error.statusCode || error.status) {
-        return res.status(error.statusCode || error.status).json({ error: 'Failed to share resource' });
+
+      // Surface the ApiError reason (e.g. ownership, unknown email) instead
+      // of a generic message the user cannot act on
+      const status = error.statusCode || error.status;
+      if (status) {
+        return res.status(status).json({ error: error.message || 'Failed to share resource' });
       }
-      
+
       res.status(500).json({ error: 'Failed to share resource' });
     }
   }
@@ -109,11 +111,12 @@ router.delete(
       res.json({ success: true, message: 'Resource unshared successfully' });
     } catch (error: any) {
       console.error('Unshare resource error:', error);
-      
-      if (error.status) {
-        return res.status(error.status).json({ error: 'Failed to unshare resource' });
+
+      const status = error.statusCode || error.status;
+      if (status) {
+        return res.status(status).json({ error: error.message || 'Failed to unshare resource' });
       }
-      
+
       res.status(500).json({ error: 'Failed to unshare resource' });
     }
   }
@@ -142,11 +145,12 @@ router.get(
       res.json({ success: true, data: shares });
     } catch (error: any) {
       console.error('Get resource shares error:', error);
-      
-      if (error.status) {
-        return res.status(error.status).json({ error: 'Failed to get shares' });
+
+      const status = error.statusCode || error.status;
+      if (status) {
+        return res.status(status).json({ error: error.message || 'Failed to get shares' });
       }
-      
+
       res.status(500).json({ error: 'Failed to get shares' });
     }
   }

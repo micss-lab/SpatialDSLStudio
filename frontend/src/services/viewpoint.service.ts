@@ -126,7 +126,13 @@ const withViewpointId = (
 });
 
 class ViewpointService {
-  private viewpoints: Viewpoint[] = exampleDataService.getExampleViewpoints();
+  // Seed the cache with this session's example bundle plus the fixed-id
+  // fixtures: accounts that seeded before ids were remapped still resolve
+  // their example views against the fixture ids.
+  private viewpoints: Viewpoint[] = [
+    ...exampleDataService.getExampleViewpoints(),
+    ...exampleDataService.getLegacyExampleViewpoints(),
+  ];
 
   getCachedViewpoints(metamodelId?: string): Viewpoint[] {
     return this.viewpoints.filter(viewpoint => !metamodelId || viewpoint.metamodelId === metamodelId);
