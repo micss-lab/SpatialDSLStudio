@@ -177,12 +177,11 @@ class MetamodelService {
   }
 
   /**
-   * Delete a metamodel (owner only)
+   * Delete a metamodel (owner or platform admin)
    */
-  async delete(id: string, userId: string): Promise<void> {
-    // Only owner can delete
+  async delete(id: string, userId: string, userRole: UserRole): Promise<void> {
     const existing = await prisma.metamodel.findFirst({
-      where: { id, userId },
+      where: userRole === 'ADMIN' ? { id } : { id, userId },
     });
 
     if (!existing) {

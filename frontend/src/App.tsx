@@ -1556,10 +1556,18 @@ const DiagramsPage: React.FC = () => {
     }
   };
 
-  const handleDeleteDiagram = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this view?')) {
-      diagramService.deleteDiagram(id);
+  const handleDeleteDiagram = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this view?')) {
+      return;
+    }
+
+    try {
+      await diagramService.deleteDiagram(id);
       setDiagrams(diagrams.filter(d => d.id !== id));
+    } catch (error) {
+      setSnackbarMessage(error instanceof Error ? error.message : 'Failed to delete view');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
     }
   };
 

@@ -218,13 +218,27 @@ describe('ModelService', () => {
       sharingServiceMock.deleteResourceShares.mockResolvedValue(undefined);
       prismaMock.model.delete.mockResolvedValue(mockModelRow);
 
-      await expect(modelService.delete('model-uuid-1', 'user-uuid-1')).resolves.toBeUndefined();
+      await expect(modelService.delete('model-uuid-1', 'user-uuid-1', 'DSL_DESIGNER')).resolves.toBeUndefined();
+      expect(prismaMock.model.findFirst).toHaveBeenCalledWith({
+        where: { id: 'model-uuid-1', userId: 'user-uuid-1' },
+      });
+    });
+
+    it('lets an admin delete a model they do not own', async () => {
+      prismaMock.model.findFirst.mockResolvedValue(mockModelRow);
+      sharingServiceMock.deleteResourceShares.mockResolvedValue(undefined);
+      prismaMock.model.delete.mockResolvedValue(mockModelRow);
+
+      await expect(modelService.delete('model-uuid-1', 'admin-user', 'ADMIN')).resolves.toBeUndefined();
+      expect(prismaMock.model.findFirst).toHaveBeenCalledWith({
+        where: { id: 'model-uuid-1' },
+      });
     });
 
     it('throws 404 when model not found or not owner', async () => {
       prismaMock.model.findFirst.mockResolvedValue(null);
 
-      await expect(modelService.delete('model-uuid-1', 'other-user')).rejects.toThrow(ApiError);
+      await expect(modelService.delete('model-uuid-1', 'other-user', 'DSL_DESIGNER')).rejects.toThrow(ApiError);
     });
   });
 

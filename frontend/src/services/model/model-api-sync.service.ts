@@ -161,11 +161,22 @@ export class ModelApiSyncService {
   }
 
   /**
-   * Delete a model from API (fire and forget)
+   * Delete a model from API.
+   *
+   * @returns A promise that rejects with the server's reason when deletion is refused
    */
-  deleteModelFromAPI(id: string): void {
-    apiClient.delete(`${API_ENDPOINTS.MODELS}/${id}`)
-      .catch(err => console.error('Error deleting model from API:', err));
+  deleteModelFromAPI(id: string): Promise<void> {
+    return apiClient.delete(`${API_ENDPOINTS.MODELS}/${id}`);
+  }
+
+  /**
+   * Wait for any in-flight save of this model to settle
+   */
+  async waitForPendingSave(id: string): Promise<void> {
+    const pendingSave = this.pendingSaves.get(id);
+    if (pendingSave) {
+      await pendingSave.catch(() => {});
+    }
   }
 
   /**

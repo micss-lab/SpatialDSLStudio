@@ -17,7 +17,10 @@ class TestRunnerService {
   // Clear any temporary models created for testing
   private cleanup(): void {
     this.tempModels.forEach(modelId => {
-      modelService.deleteModel(modelId);
+      // Best-effort cleanup; a failed remote delete must not break the run
+      modelService.deleteModel(modelId).catch(err =>
+        console.error('Failed to delete temporary test model:', err)
+      );
     });
     this.tempModels = [];
   }
@@ -202,8 +205,10 @@ class TestRunnerService {
       // Default to checking if the model is valid
       return validationResult.valid;
     } finally {
-      // Clean up the test model
-      modelService.deleteModel(context.testModelId);
+      // Clean up the test model (best effort, see cleanup())
+      modelService.deleteModel(context.testModelId).catch(err =>
+        console.error('Failed to delete temporary test model:', err)
+      );
       const index = this.tempModels.indexOf(context.testModelId);
       if (index !== -1) {
         this.tempModels.splice(index, 1);

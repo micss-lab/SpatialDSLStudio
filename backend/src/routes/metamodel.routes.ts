@@ -67,13 +67,13 @@ router.put(
 
 /**
  * @route   DELETE /api/metamodels/:id
- * @desc    Delete a metamodel (owner only)
+ * @desc    Delete a metamodel (owner or admin)
  */
 router.delete(
   '/:id',
   validate([param('id').isUUID().withMessage('Invalid ID format')]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    await metamodelService.delete(req.params.id, req.user!.userId);
+    await metamodelService.delete(req.params.id, req.user!.userId, req.user!.role);
     res.json({ success: true, message: 'Metamodel deleted successfully' });
   })
 );

@@ -159,11 +159,29 @@ export class DiagramApiSyncService {
   }
 
   /**
-   * Delete a diagram from API (fire and forget)
+   * Delete a diagram from API.
+   *
+   * @returns A promise that rejects with the server's reason when deletion is refused
    */
-  deleteDiagramFromAPI(id: string): void {
-    apiClient.delete(`${API_ENDPOINTS.DIAGRAMS}/${id}`)
-      .catch(err => console.error('Error deleting diagram from API:', err));
+  deleteDiagramFromAPI(id: string): Promise<void> {
+    return apiClient.delete(`${API_ENDPOINTS.DIAGRAMS}/${id}`);
+  }
+
+  /**
+   * Check if diagram is synced to database
+   */
+  isSyncedToDb(id: string): boolean {
+    return this.syncedToDb.has(id);
+  }
+
+  /**
+   * Wait for any in-flight save of this diagram to settle
+   */
+  async waitForPendingSave(id: string): Promise<void> {
+    const pendingSave = this.pendingSaves.get(id);
+    if (pendingSave) {
+      await pendingSave.catch(() => {});
+    }
   }
 
   /**

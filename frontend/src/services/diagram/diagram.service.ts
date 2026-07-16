@@ -113,13 +113,32 @@ class DiagramService {
     }, options);
   }
 
-  deleteDiagram(id: string): boolean {
-    return diagramCrudService.deleteDiagram(
-      id,
-      () => this.saveToStorage(),
-      (id) => diagramApiSyncService.deleteDiagramFromAPI(id),
-      (id) => diagramApiSyncService.removeSyncedDiagram(id)
-    );
+  async deleteDiagram(id: string): Promise<boolean> {
+    if (!diagramCrudService.getDiagramById(id)) {
+      return false;
+    }
+
+    // Let an in-flight save settle first, otherwise its 404 fallback can
+    // re-create the diagram right after we delete it
+    await diagramApiSyncService.waitForPendingSave(id);
+
+    try {
+      await diagramApiSyncService.deleteDiagramFromAPI(id);
+    } catch (error) {
+      // A diagram that never reached the database has nothing to delete
+      // there; any other refusal (not the owner) must keep the local copy so
+      // the UI stays consistent with the server
+      const missingRemotely =
+        !diagramApiSyncService.isSyncedToDb(id) &&
+        error instanceof Error &&
+        /not found/i.test(error.message);
+      if (!missingRemotely) {
+        throw error;
+      }
+    }
+
+    diagramApiSyncService.removeSyncedDiagram(id);
+    return diagramCrudService.deleteDiagram(id);
   }
 
   updateGridSettings(diagramId: string, gridSettings: { sizeX: number; sizeY: number }): boolean {

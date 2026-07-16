@@ -141,13 +141,32 @@ class ModelService {
     return modelCrudService.updateModel(modelId, updatedModel, (id) => this.saveToStorage(id));
   }
 
-  deleteModel(id: string): boolean {
-    return modelCrudService.deleteModel(
-      id,
-      () => this.saveToStorage(),
-      (id) => modelApiSyncService.deleteModelFromAPI(id),
-      (id) => modelApiSyncService.removeSyncedModel(id)
-    );
+  async deleteModel(id: string): Promise<boolean> {
+    if (!this.getModelById(id)) {
+      return false;
+    }
+
+    // Let an in-flight save settle first, otherwise its 404 fallback can
+    // re-create the model right after we delete it
+    await modelApiSyncService.waitForPendingSave(id);
+
+    try {
+      await modelApiSyncService.deleteModelFromAPI(id);
+    } catch (error) {
+      // A model that never reached the database has nothing to delete there;
+      // any other refusal (not the owner) must keep the local copy so the UI
+      // stays consistent with the server
+      const missingRemotely =
+        !modelApiSyncService.isSyncedToDb(id) &&
+        error instanceof Error &&
+        /not found/i.test(error.message);
+      if (!missingRemotely) {
+        throw error;
+      }
+    }
+
+    modelApiSyncService.removeSyncedModel(id);
+    return modelCrudService.deleteModel(id);
   }
 
   // Model element CRUD operations

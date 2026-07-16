@@ -75,23 +75,12 @@ export class ModelCrudService {
   }
 
   /**
-   * Delete a model
+   * Delete a model from local state
    */
-  deleteModel(
-    id: string,
-    saveCallback: () => void,
-    deleteCallback: (id: string) => void,
-    syncedToDbCallback: (id: string) => void
-  ): boolean {
+  deleteModel(id: string): boolean {
     const initialLength = this.models.length;
     this.models = this.models.filter(m => m.id !== id);
-    const result = initialLength !== this.models.length;
-    if (result) {
-      saveCallback();
-      deleteCallback(id);
-      syncedToDbCallback(id);
-    }
-    return result;
+    return initialLength !== this.models.length;
   }
 
   /**

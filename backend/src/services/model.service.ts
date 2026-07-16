@@ -170,11 +170,11 @@ class ModelService {
   }
 
   /**
-   * Delete a model (owner only)
+   * Delete a model (owner or platform admin)
    */
-  async delete(id: string, userId: string): Promise<void> {
+  async delete(id: string, userId: string, userRole: UserRole): Promise<void> {
     const existing = await prisma.model.findFirst({
-      where: { id, userId },
+      where: userRole === 'ADMIN' ? { id } : { id, userId },
     });
 
     if (!existing) {
