@@ -1,5 +1,6 @@
 import { Model, ModelElement } from '../../models/types';
 import { metamodelService } from '../metamodel';
+import { modelInheritanceUtilsService } from './model-inheritance-utils.service';
 
 /**
  * Service for managing references between model elements
@@ -33,8 +34,11 @@ export class ModelReferenceService {
     const sourceMetaClass = metamodel.classes.find(c => c.id === sourceElement.modelElementId);
     if (!sourceMetaClass) return false;
     
-    // Find the reference definition
-    const reference = sourceMetaClass.references.find(r => r.name === referenceName);
+    // Find the reference definition, including references inherited from supertypes
+    // (e.g. flowsTo is defined on the abstract FlowNode, not on each concrete node class)
+    const reference = modelInheritanceUtilsService
+      .getAllReferences(sourceMetaClass, metamodel)
+      .find(r => r.name === referenceName);
     if (!reference) return false;
     
     // For self-references, check if they're allowed
@@ -133,8 +137,10 @@ export class ModelReferenceService {
     const targetMetaClass = metamodel.classes.find(c => c.id === targetElement.modelElementId);
     if (!targetMetaClass) return;
     
-    // Find the opposite reference definition
-    const oppositeReference = targetMetaClass.references.find(r => r.name === oppositeName);
+    // Find the opposite reference definition, including inherited references
+    const oppositeReference = modelInheritanceUtilsService
+      .getAllReferences(targetMetaClass, metamodel)
+      .find(r => r.name === oppositeName);
     if (!oppositeReference) return;
     
     // Check if opposite reference is multi-valued
