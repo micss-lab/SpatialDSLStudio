@@ -121,6 +121,12 @@ For this first workflow, use NVIDIA Isaac Sim as the Omniverse runtime. The
 generated script only needs the OpenUSD Python modules bundled with
 Omniverse/Isaac Sim, so you do not need to write an Omniverse extension.
 
+Isaac Sim's workstation application currently supports Windows 11 and Ubuntu
+22.04/24.04 on a compatible NVIDIA RTX GPU. It does not run natively on macOS.
+When using SpatialDSL Studio on a Mac, export the generator there, then move the
+generator and asset directory to a supported Isaac Sim workstation or cloud
+host before creating the final USD scene.
+
 1. Check the current Isaac Sim requirements:
 
    ```text
@@ -155,6 +161,28 @@ ModuleNotFoundError: No module named 'pxr'
 That error means the script is correct, but the wrong Python interpreter was
 used.
 
+## Move A macOS Export To The Isaac Sim Host
+
+Copy both of these items to the Windows or Linux machine:
+
+```text
+generate_warehouse_usd.py
+examples/omniverse-assets/
+```
+
+For example, place them together as:
+
+```text
+spatialdsl-export/
+  generate_warehouse_usd.py
+  omniverse-assets/
+```
+
+Run the generator on that destination machine. The current template resolves
+asset references while generating the scene, so copying only a `.usda` created
+on another machine can leave references pointing at paths that do not exist on
+the Isaac Sim host.
+
 ## Run With Isaac Sim Python
 
 The simplest route for a beginner is Isaac Sim's standalone Python environment.
@@ -165,15 +193,15 @@ Python environment before running the packaged interpreter. On Windows, use
 From your Isaac Sim installation directory:
 
 ```bash
-./python.sh /absolute/path/to/generate_warehouse_usd.py \
-  /absolute/path/to/warehouse_scene.usda \
-  /absolute/path/to/SpatialDSLStudio/examples/omniverse-assets
+./python.sh /absolute/path/to/spatialdsl-export/generate_warehouse_usd.py \
+  /absolute/path/to/spatialdsl-export/warehouse_scene.usda \
+  /absolute/path/to/spatialdsl-export/omniverse-assets
 ```
 
 On Windows:
 
 ```powershell
-python.bat C:\path\to\generate_warehouse_usd.py C:\path\to\warehouse_scene.usda C:\path\to\SpatialDSLStudio\examples\omniverse-assets
+python.bat C:\path\to\spatialdsl-export\generate_warehouse_usd.py C:\path\to\spatialdsl-export\warehouse_scene.usda C:\path\to\spatialdsl-export\omniverse-assets
 ```
 
 Expected terminal output:
