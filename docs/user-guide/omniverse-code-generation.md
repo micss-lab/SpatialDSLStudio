@@ -183,6 +183,148 @@ asset references while generating the scene, so copying only a `.usda` created
 on another machine can leave references pointing at paths that do not exist on
 the Isaac Sim host.
 
+## Run In A Browser With NVIDIA Brev
+
+NVIDIA does not run Isaac Sim directly inside the browser. NVIDIA Brev rents a
+remote GPU instance, and the Isaac Launchable provides two browser tabs:
+
+- a Visual Studio Code tab for files and terminal commands
+- an Isaac Sim tab streamed from the GPU with WebRTC
+
+Brev bills running instances by the hour. The current price is displayed before
+deployment. Stop the instance when taking a break; stopped instances do not
+incur compute charges, although a small storage charge can remain. Deleting the
+instance stops all charges and permanently removes its files.
+
+### 1. Export The Generator From SpatialDSL Studio
+
+Follow `Import The Project` and `Generate The Python Script` above on the Mac.
+Keep the downloaded file named:
+
+```text
+generate_warehouse_usd.py
+```
+
+### 2. Deploy The Isaac Launchable
+
+1. Open NVIDIA's current Isaac Launchable instructions:
+
+   ```text
+   https://docs.isaacsim.omniverse.nvidia.com/latest/installation/install_advanced_cloud_setup_launchable.html
+   ```
+
+2. Open the `Isaac Launchable` link and create or sign in to an NVIDIA Brev
+   account.
+3. Review the displayed GPU, storage, provider, and hourly price.
+4. Click `Deploy Launchable`.
+5. Wait until the instance is running, built, and its setup script has
+   completed. The first deployment and first shader warmup can take several
+   minutes.
+6. On the instance page, find `Using Secure Links` and open the shareable URL.
+   Sign in again if prompted. This opens browser-based Visual Studio Code.
+
+The preconfigured Launchable is the simplest first run. When creating a manual
+Brev VM instead, NVIDIA currently recommends one L40S GPU. Avoid A100 for a
+streamed session because it does not provide the NVENC encoder required by
+Isaac Sim livestreaming.
+
+### 3. Prepare The Export In Browser VS Code
+
+Open a terminal in the browser-based VS Code and run:
+
+```bash
+cd /workspace
+git clone --depth 1 https://github.com/micss-lab/SpatialDSLStudio.git
+mkdir -p /workspace/spatialdsl-export
+cp -R /workspace/SpatialDSLStudio/examples/omniverse-assets \
+  /workspace/spatialdsl-export/omniverse-assets
+```
+
+In the VS Code Explorer, drag the downloaded `generate_warehouse_usd.py` from
+the Mac into:
+
+```text
+/workspace/spatialdsl-export/
+```
+
+The directory should now contain:
+
+```text
+/workspace/spatialdsl-export/
+  generate_warehouse_usd.py
+  omniverse-assets/
+```
+
+### 4. Generate The USD Scene In The Cloud
+
+In the VS Code terminal, use Isaac Sim's bundled Python:
+
+```bash
+ACCEPT_EULA=y /isaac-sim/python.sh \
+  /workspace/spatialdsl-export/generate_warehouse_usd.py \
+  /workspace/spatialdsl-export/warehouse_scene.usda \
+  /workspace/spatialdsl-export/omniverse-assets
+```
+
+Expected output:
+
+```text
+Generated USD scene: /workspace/spatialdsl-export/warehouse_scene.usda
+Elements: 25
+Referenced assets: 2
+```
+
+Do not use the terminal's ordinary `python3`; it may not contain the `pxr`
+modules required by the generator.
+
+### 5. Start The Browser-Streamed Isaac Sim UI
+
+Run the following command and leave it running:
+
+```bash
+ACCEPT_EULA=y /isaac-sim/runheadless.sh
+```
+
+Wait until the terminal reports that the application is ready. Copy the secure
+VS Code URL into a new Chrome or Chromium tab and change the end of the URL to:
+
+```text
+/viewer/
+```
+
+For example:
+
+```text
+https://isaac.example-brev-host/viewer/
+```
+
+The page can display `Waiting for stream...` while Isaac Sim warms its shader
+cache. Keep only one viewer tab connected to the instance.
+
+In the streamed Isaac Sim UI:
+
+1. Select `File > Open`.
+2. Enter or browse to:
+
+   ```text
+   /workspace/spatialdsl-export/warehouse_scene.usda
+   ```
+
+3. Open `/World/MobileRobot` in the Stage tree and confirm that two vehicle
+   references load.
+4. Inspect the remaining class groups under `/World`; their boxes are expected
+   placeholder geometry in the current template.
+
+### 6. End The Paid Session
+
+1. In Isaac Sim, select `File > Exit`.
+2. Return to the Brev console.
+3. Stop the instance and confirm its state changes to `Stopped`.
+4. Download or push any files that must survive before deleting the instance.
+
+Do not rely on closing the browser tab to stop billing. A Brev instance can
+continue running after its VS Code and viewer tabs are closed.
+
 ## Run With Isaac Sim Python
 
 The simplest route for a beginner is Isaac Sim's standalone Python environment.
