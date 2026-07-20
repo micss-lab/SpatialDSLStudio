@@ -13,28 +13,68 @@ projects unless several targets need the same generic capability.
 
 Implemented:
 
-- code generation project import in PR #14
-- Smart Warehouse Visual Components and Omniverse projects in PR #16
+- code generation project import from merged PR #14
+- Smart Warehouse Visual Components and Omniverse projects consolidated on
+  current-main PR #30
 - eight Visual Components outputs, including OPC UA configuration
 - OpenUSD scene generation for 25 physical warehouse elements
 - model-driven OPC UA port and namespace values
 - automated Handlebars rendering, JSON parsing, and XML parsing tests
 - a vendored CC0 USD vehicle subset for asset-reference testing
 - a `MobileRobot` asset reference with placeholder fallback
+- native Apple Silicon static-scene generation with standalone OpenUSD bindings
 
 The included CC0 vehicle is a composition demonstrator, not a production AMR.
+The generated USD is a static scene, not an executable warehouse simulation.
 
 ## Release Gates
 
-- [ ] Merge PR #14.
-- [ ] Retarget PR #16 to `main` after PR #14 merges.
-- [ ] Run the normal CI workflow on PR #16.
+- [x] Merge PR #14.
+- [x] Consolidate the PR #16 work onto PR #30 against current `main`.
+- [x] Run the normal CI workflow on PR #30.
+- [x] Generate and validate the exact 25-element USD scene on Apple Silicon.
 - [ ] Import and generate all eight files in the deployed application.
 - [ ] Load the generated setup script and connectivity XML in Visual Components.
 - [ ] Confirm the OPC UA application URI advertised by the real server.
 - [ ] Run the generated OpenUSD script in Isaac Sim.
-- [ ] Confirm referenced assets resolve when `--asset-root` is supplied.
+- [ ] Confirm referenced assets resolve when the asset-root argument is supplied.
 - [ ] Confirm missing assets produce visible cube fallbacks rather than an invalid stage.
+
+## Simulation Status And Options
+
+The current output has no simulation clock, route scheduler, robot controller,
+package lifecycle, collision behavior, or event logger. Pressing Play in a USD
+viewer therefore does not make robots deliver packages.
+
+Two simulation tracks can build on the same generated layout:
+
+### Portable Behavior Simulation
+
+This track can run natively on Apple Silicon without an NVIDIA GPU. Use a proven
+discrete-event engine such as SimPy for warehouse scheduling, then generate:
+
+- deterministic robot and package state transitions
+- JSON Lines or CSV event logs for dispatch, pickup, delivery, and charging
+- USD transform time samples for playback in a compatible viewer
+- summary metrics such as throughput, queue time, utilization, and failures
+
+This would provide an executable warehouse behavior model and an animated USD
+result, but it would not provide Isaac Sim physics, RTX sensors, or PhysX robot
+dynamics. It is new implementation work; none of these outputs exist today.
+
+### Isaac Sim Runtime
+
+This track runs on a supported NVIDIA RTX workstation or cloud instance and
+adds the simulation layers that are specific to Isaac Sim:
+
+- collision and rigid-body schemas
+- robot articulation and controllers
+- navigation and obstacle handling
+- sensors and synthetic-data capture
+- runtime telemetry and event export
+
+Keep scenario inputs and event schemas independent of the runtime where
+possible so the portable simulator and Isaac Sim can execute comparable cases.
 
 ## Real USD Asset Support
 
@@ -117,7 +157,17 @@ should not expose arbitrary filesystem access in browser code.
 - [ ] Split output into layout, asset, physics, and simulation layers.
 - [ ] Add instanceable references for repeated static assets.
 
-### P3: Visual Components Hardening
+### P3: Portable Simulation And Playback
+
+- [ ] Define the simulation clock, random seed, and deterministic scenario schema.
+- [ ] Define robot routes, package jobs, charging rules, and failure states.
+- [ ] Implement the model with a maintained discrete-event simulation library.
+- [ ] Emit a versioned JSON Lines event log and CSV metrics summary.
+- [ ] Author robot and package transform time samples into a playback USD layer.
+- [ ] Add deterministic tests for dispatch, pickup, delivery, charging, and contention.
+- [ ] Compare portable event traces with an equivalent Isaac Sim scenario.
+
+### P4: Visual Components Hardening
 
 - [ ] Make OPC UA application URI a model attribute or generation parameter.
 - [ ] Detect supported Visual Components installation and library paths.
@@ -125,14 +175,14 @@ should not expose arbitrary filesystem access in browser code.
 - [ ] Test generated OPC UA node IDs against the live WarehouseMAS server.
 - [ ] Replace `java` language tags on JSON/XML templates when generic content types exist.
 
-### P4: Core Codegen Improvements
+### P5: Core Codegen Improvements
 
 - [ ] Add native `json`, `xml`, and plain-text template content types.
 - [ ] Make generated ordering deterministic without changing semantic model order.
 - [ ] Add project-level static assets or binary attachment support.
 - [ ] Add end-to-end import, generate, and ZIP-download coverage.
 
-### P5: Spatial Semantics
+### P6: Spatial Semantics
 
 - [ ] Define an explicit transform between diagram coordinates and physical coordinates.
 - [ ] Store scale, origin, axis direction, and units as model/view metadata.
@@ -150,7 +200,8 @@ Warehouse fixture uses independent diagram and physical coordinate systems.
 3. One production-grade AMR asset with collision and Isaac Sim QA.
 4. Static assets for conveyors, stations, and output locations.
 5. Layered USD output and physics.
-6. Spatial coordinate contract and constraint context in a separate core PR.
+6. Portable simulation, event logs, and animated USD playback.
+7. Spatial coordinate contract and constraint context in a separate core PR.
 
 ## Definition Of Done
 
