@@ -15,6 +15,7 @@ const modelServiceMock = {
 
 const diagramServiceMock = {
   create: jest.fn(),
+  getByModelId: jest.fn(),
 };
 
 jest.mock('../../services/metamodel.service', () => ({
@@ -590,5 +591,99 @@ describe('SiriusInteropService .aird import', () => {
     expect(preview.report.supported).toBe(false);
     expect(preview.diagrams).toHaveLength(0);
     expect(preview.report.unresolvedReferences.some(warning => warning.code === 'SIRIUS_AIRD_MODEL_REQUIRED')).toBe(true);
+  });
+});
+
+const mockExportDiagram = {
+  id: 'diagram-demo',
+  name: 'Demo System',
+  modelId: 'model-1',
+  viewpointId: 'viewpoint-1',
+  representationDescriptionId: 'sirius-diag-main',
+  elements: [
+    { id: 'el-api', type: 'node' as const, modelElementId: 'component-api', x: 100, y: 50, width: 160, height: 90, style: {} },
+    { id: 'el-db', type: 'node' as const, modelElementId: 'component-db', x: 400, y: 260, width: 160, height: 90, style: {} },
+    {
+      id: 'el-dep', type: 'edge' as const, modelElementId: 'component-api',
+      sourceId: 'el-api', targetId: 'el-db',
+      points: [{ x: 180, y: 140 }, { x: 480, y: 260 }], style: {},
+    },
+  ],
+};
+
+describe('SiriusInteropService .aird export', () => {
+  beforeEach(() => {
+    modelServiceMock.getById.mockResolvedValue(mockModel);
+    viewpointServiceMock.getAll.mockResolvedValue([mockAirdViewpoint]);
+    diagramServiceMock.getByModelId.mockResolvedValue([mockExportDiagram]);
+  });
+
+  it('requires includeAird to be enabled', async () => {
+    await expect(
+      siriusInteropService.exportAird({ modelId: 'model-1' }, 'user-1')
+    ).rejects.toThrow(ApiError);
+  });
+
+  it('errors when the model has no views to export', async () => {
+    diagramServiceMock.getByModelId.mockResolvedValue([]);
+    await expect(
+      siriusInteropService.exportAird({ modelId: 'model-1', options: { includeAird: true } }, 'user-1')
+    ).rejects.toThrow(ApiError);
+  });
+
+  it('rejects explicit view IDs that are not part of the model', async () => {
+    await expect(
+      siriusInteropService.exportAird(
+        { modelId: 'model-1', diagramIds: ['diagram-demo', 'missing'], options: { includeAird: true } },
+        'user-1'
+      )
+    ).rejects.toThrow(ApiError);
+  });
+
+  it('exports SpatialDSL views into a Sirius .aird session with GMF layout', async () => {
+    const result = await siriusInteropService.exportAird(
+      { modelId: 'model-1', options: { includeAird: true } },
+      'user-1'
+    );
+
+    expect(result.filename).toBe('demo-model.aird');
+    expect(result.report.supported).toBe(true);
+    const xml = result.content;
+    expect(xml).toContain('<viewpoint:DAnalysis');
+    expect(xml).toContain('xsi:type="diagram:DSemanticDiagram"');
+    expect(xml).toContain('name="Demo System"');
+    expect(xml).toContain('description="#sirius-diag-main"');
+    expect(xml).toContain('target="demo-model.xmi#component-api"');
+    expect(xml).toContain('sourceNode="#el-api" targetNode="#el-db"');
+    expect(xml).toContain('<notation:Diagram');
+    expect(xml).toContain('<layoutConstraint xsi:type="notation:Bounds" x="100" y="50" width="160" height="90"/>');
+    expect(xml).toContain('<points x="180" y="140"/>');
+  });
+
+  it('round-trips: exported .aird re-imports to the same nodes, edges, and layout', async () => {
+    const exported = await siriusInteropService.exportAird(
+      { modelId: 'model-1', options: { includeAird: true } },
+      'user-1'
+    );
+
+    const preview = await siriusInteropService.validateAirdView(
+      { content: exported.content, sourceFormat: 'aird', modelId: 'model-1', viewpointId: 'viewpoint-1' },
+      'user-1'
+    );
+
+    expect(preview.report.supported).toBe(true);
+    expect(preview.diagrams).toHaveLength(1);
+    const diagram = preview.diagrams[0];
+    expect(diagram.name).toBe('Demo System');
+    expect(diagram.representationDescriptionId).toBe('sirius-diag-main');
+
+    const nodes = diagram.elements.filter(element => element.type === 'node');
+    const edges = diagram.elements.filter(element => element.type === 'edge');
+    expect(nodes.map(node => node.modelElementId).sort()).toEqual(['component-api', 'component-db']);
+    expect(nodes.find(node => node.modelElementId === 'component-api')).toEqual(
+      expect.objectContaining({ x: 100, y: 50, width: 160, height: 90 })
+    );
+    expect(edges).toHaveLength(1);
+    expect(edges[0].points).toEqual([{ x: 180, y: 140 }, { x: 480, y: 260 }]);
   });
 });

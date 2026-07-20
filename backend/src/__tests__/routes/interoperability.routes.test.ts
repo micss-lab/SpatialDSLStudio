@@ -8,6 +8,7 @@ const siriusInteropServiceMock = {
   importOdesign: jest.fn(),
   importAird: jest.fn(),
   exportOdesign: jest.fn(),
+  exportAird: jest.fn(),
 };
 
 jest.mock('../../services', () => ({
@@ -158,4 +159,32 @@ describe('interoperability Sirius routes', () => {
     expect(res.status).toBe(400);
     expect(siriusInteropServiceMock.importOdesign).not.toHaveBeenCalled();
   });
+
+  it('exports Sirius .aird views for a model', async () => {
+    siriusInteropServiceMock.exportAird.mockResolvedValue({
+      filename: 'demo-model.aird', content: '<xmi:XMI/>', report: { supported: true },
+    });
+
+    const res = await request(buildApp())
+      .post('/api/interoperability/sirius/aird/export')
+      .send({ modelId: 'model-1', options: { includeAird: true } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.filename).toBe('demo-model.aird');
+    expect(siriusInteropServiceMock.exportAird).toHaveBeenCalledWith(
+      expect.objectContaining({ modelId: 'model-1' }),
+      'user-1'
+    );
+  });
+
+  it('rejects .aird export requests without a modelId', async () => {
+    const res = await request(buildApp())
+      .post('/api/interoperability/sirius/aird/export')
+      .send({ options: { includeAird: true } });
+
+    expect(res.status).toBe(400);
+    expect(siriusInteropServiceMock.exportAird).not.toHaveBeenCalled();
+  });
+
 });

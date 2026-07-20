@@ -150,6 +150,19 @@ class SiriusInteropService {
     });
   }
 
+  /** Export SpatialDSL views of a model as a Sirius `.aird` session (inverse of importAird). */
+  async exportAird(
+    modelId: string,
+    diagramIds?: string[],
+    options?: Partial<SiriusExportOptions>
+  ): Promise<SiriusExportResult> {
+    return apiClient.post<SiriusExportResult>(API_ENDPOINTS.SIRIUS_AIRD_EXPORT, {
+      modelId,
+      diagramIds,
+      options: { includeAird: true, ...options },
+    });
+  }
+
   async exportProjectZip(
     metamodelId: string,
     viewpointIds?: string[]

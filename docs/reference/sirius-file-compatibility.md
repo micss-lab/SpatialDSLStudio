@@ -8,8 +8,8 @@ SpatialDSL Studio currently supports partial semantic interchange through
 Ecore metamodel files and EMF-style XMI model files. The backend Sirius
 interoperability API also supports an initial `.odesign` validate/import/export
 subset for diagram Viewpoint Specification Models, plus an initial `.aird`
-view-import subset that turns Sirius diagram representations into SpatialDSL
-views. `.aird` export remains deferred.
+view import/export subset that round-trips Sirius diagram representations and
+SpatialDSL views.
 
 ## Source Concepts
 
@@ -70,7 +70,7 @@ segments. Exporters must generate stable relative paths.
 | `.ecore` | Supported subset | Import and export single-package Ecore metamodels with named classes, attributes, references, containment, inheritance, enums, `nsURI`, and `nsPrefix`. Report unsupported annotations, custom datatype details, unresolved references, and cross-package references. |
 | `.xmi` | Supported subset | Import and export semantic model resources against a matching metamodel. Preserve stable `xmi:id` values when present. Report unresolved non-containment references and any presentation data found in semantic resources. |
 | `.odesign` | Supported subset | Import and export one or more Viewpoints with diagram Representation Descriptions using the subset below. Report unsupported Sirius specifier features. |
-| `.aird` | Supported import subset | Import diagram representations as SpatialDSL views, resolving semantic targets and viewpoint/representation references against an already-imported model and viewpoint, and preserving GMF notation layout. Export remains deferred. See the `.aird` subset below. |
+| `.aird` | Supported import/export subset | Import diagram representations as SpatialDSL views, resolving semantic targets and viewpoint/representation references against an already-imported model and viewpoint, and preserving GMF notation layout. Export serializes a model's views back into a Sirius session with GMF layout, round-tripping with import. See the `.aird` subsets below. |
 | `.representation/*.srm` | Deferred | Detect references to lazy representation resources and report them as deferred or unresolved if the referenced file is missing. |
 | project `.zip` | Supported wrapper | Treat as a relative-path bundle containing the files above. Validate paths and sizes before parsing XML. |
 
@@ -122,6 +122,25 @@ Warning codes specific to `.aird` import: `SIRIUS_AIRD_MODEL_REQUIRED`,
 `SIRIUS_AIRD_TARGET_AMBIGUOUS`, `SIRIUS_AIRD_TARGET_MISSING`,
 `SIRIUS_AIRD_EDGE_ENDPOINT_UNRESOLVED`, and
 `SIRIUS_AIRD_REPRESENTATION_UNRESOLVED`.
+
+## `.aird` Supported Export Subset
+
+`.aird` export is the inverse of import: it serializes a SpatialDSL model's views
+into one Sirius `.aird` session (`POST /interoperability/sirius/aird/export` with
+a `modelId`, optional `diagramIds`). Each view becomes one `DSemanticDiagram`
+grouped under an `ownedViews` per viewpoint, plus a `notation:Diagram` carrying
+GMF layout. An exported session re-imports to the same nodes, edges, and layout.
+
+| SpatialDSL Source | Sirius Output | Notes |
+|---|---|---|
+| Model | `DAnalysis` + `semanticResources` | One session per export; the semantic resource path is derived from the model name. |
+| View (`Diagram`) | `DSemanticDiagram` (`ownedRepresentations`) | `name`, `uid`, and `description` (the representation description) are emitted. |
+| View node / edge | `ownedDiagramElements` | `target` references the model element by id; edges emit `sourceNode`/`targetNode`. Elements whose target is not in the model are dropped with a report entry. |
+| Node `x`/`y`/`width`/`height` | GMF `notation:Node` `Bounds` | Emitted when present. |
+| Edge `points` | GMF `notation:Edge` waypoints | Emitted when present. |
+
+Warning codes specific to `.aird` export: `SPATIALDSL_AIRD_NODE_TARGET_UNRESOLVED`,
+`SPATIALDSL_AIRD_EDGE_TARGET_UNRESOLVED`, and `SPATIALDSL_AIRD_EDGE_ENDPOINT_MISSING`.
 
 ## Unsupported Sirius Features
 

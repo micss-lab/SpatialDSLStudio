@@ -89,6 +89,12 @@ interface ExportInput {
   options?: Partial<SiriusExportOptions>;
 }
 
+interface ExportAirdInput {
+  modelId: string;
+  diagramIds?: string[];
+  options?: Partial<SiriusExportOptions>;
+}
+
 const MAX_XML_BYTES = 1024 * 1024;
 const MAX_ZIP_BYTES = 5 * 1024 * 1024;
 const MAX_XML_NODES = 5000;
@@ -261,6 +267,202 @@ class SiriusInteropService {
       content,
       report,
     };
+  }
+
+  /** Export SpatialDSL views of a model as a Sirius `.aird` session (inverse of importAird). */
+  async exportAird(input: ExportAirdInput, userId: string): Promise<SiriusExportResult> {
+    const options = { ...DEFAULT_EXPORT_OPTIONS, ...input.options };
+    if (!options.includeAird) {
+      throw new ApiError(400, 'includeAird must be enabled to export .aird content');
+    }
+
+    const model = await this.getReadableModel(input.modelId, userId);
+    const allDiagrams = await diagramService.getByModelId(input.modelId, userId);
+    if (input.diagramIds?.length) {
+      const availableIds = new Set(allDiagrams.map(diagram => diagram.id));
+      const missingIds = input.diagramIds.filter(diagramId => !availableIds.has(diagramId));
+      if (missingIds.length > 0) {
+        throw new ApiError(404, `Requested view IDs not found: ${missingIds.join(', ')}`);
+      }
+    }
+    const selected = input.diagramIds?.length
+      ? allDiagrams.filter(diagram => input.diagramIds!.includes(diagram.id))
+      : allDiagrams;
+
+    if (selected.length === 0) {
+      throw new ApiError(404, 'No views found for Sirius .aird export');
+    }
+
+    const report = this.createReport('aird', 'sirius-project');
+    const content = this.buildAirdXml(model, selected, report);
+    if (options.failOnUnsupportedFeatures && report.droppedFeatures.length > 0) {
+      throw new ApiError(400, 'SpatialDSL views contain data unsupported by Sirius .aird export');
+    }
+
+    this.finalizeReport(report);
+    return {
+      filename: `${this.toFileSlug(model.name || 'spatialdsl')}.aird`,
+      content,
+      report,
+    };
+  }
+
+  private buildAirdXml(model: Model, diagrams: Diagram[], report: SiriusCompatibilityReport): string {
+    const semanticResource = `${this.toFileSlug(model.name || 'model')}.xmi`;
+    const analysisId = `analysis-${this.toFileSlug(model.name || model.id)}`;
+    const elementById = new Map(model.elements.map(element => [element.id, element] as const));
+    const rootTarget = model.elements[0]?.id;
+
+    const lines: string[] = [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<xmi:XMI xmi:version="2.0"',
+      '    xmlns:xmi="http://www.omg.org/XMI"',
+      '    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"',
+      '    xmlns:viewpoint="http://www.eclipse.org/sirius/1.1.0"',
+      '    xmlns:diagram="http://www.eclipse.org/sirius/diagram/1.1.0"',
+      '    xmlns:notation="http://www.eclipse.org/gmf/runtime/1.0.2/notation">',
+      `  <viewpoint:DAnalysis xmi:id="${this.escapeXml(analysisId)}">`,
+      `    <semanticResources>${this.escapeXml(semanticResource)}</semanticResources>`,
+    ];
+
+    // One <ownedViews> per distinct viewpoint, matching how Sirius groups representations.
+    const groups = new Map<string, Diagram[]>();
+    for (const diagram of diagrams) {
+      const key = diagram.viewpointId || '';
+      const bucket = groups.get(key);
+      if (bucket) bucket.push(diagram);
+      else groups.set(key, [diagram]);
+    }
+
+    const gmfBlocks: string[] = [];
+    let viewIndex = 0;
+    for (const [viewpointId, groupDiagrams] of groups) {
+      viewIndex += 1;
+      const viewpointAttr = viewpointId ? ` viewpoint="#${this.escapeXml(viewpointId)}"` : '';
+      lines.push(`    <ownedViews xmi:id="${this.escapeXml(`sirius-view-${viewIndex}`)}"${viewpointAttr}>`);
+      for (const diagram of groupDiagrams) {
+        this.appendAirdRepresentation(lines, gmfBlocks, diagram, elementById, semanticResource, rootTarget, report);
+      }
+      lines.push('    </ownedViews>');
+    }
+
+    lines.push('  </viewpoint:DAnalysis>');
+    lines.push(...gmfBlocks);
+    lines.push('</xmi:XMI>');
+    return `${lines.join('\n')}\n`;
+  }
+
+  private appendAirdRepresentation(
+    lines: string[],
+    gmfBlocks: string[],
+    diagram: Diagram,
+    elementById: Map<string, ModelElement>,
+    semanticResource: string,
+    rootTarget: string | undefined,
+    report: SiriusCompatibilityReport
+  ): void {
+    const reprId = diagram.id;
+    const descriptionAttr = diagram.representationDescriptionId
+      ? ` description="#${this.escapeXml(diagram.representationDescriptionId)}"`
+      : '';
+    const targetAttr = rootTarget ? ` target="${this.escapeXml(`${semanticResource}#${rootTarget}`)}"` : '';
+
+    lines.push(
+      `      <ownedRepresentations xsi:type="diagram:DSemanticDiagram" xmi:id="${this.escapeXml(reprId)}"` +
+      ` name="${this.escapeXml(diagram.name)}" uid="${this.escapeXml(reprId)}"${targetAttr}${descriptionAttr}>`
+    );
+
+    const exportedNodeIds = new Set<string>();
+    const gmfNodeLines: string[] = [];
+    const gmfEdgeLines: string[] = [];
+
+    const semanticName = (element: DiagramElement): string => {
+      const model = elementById.get(element.modelElementId);
+      return model?.name || (model?.style?.name as string) || element.modelElementId;
+    };
+    const mappingAttr = (element: DiagramElement, suffix: 'node' | 'edge'): string => (
+      diagram.representationDescriptionId
+        ? ` mapping="#${this.escapeXml(`${diagram.representationDescriptionId}-${element.modelElementId}-${suffix}`)}"`
+        : ''
+    );
+
+    // Nodes first so edges can reference them.
+    for (const element of diagram.elements.filter(candidate => candidate.type === 'node')) {
+      if (!elementById.has(element.modelElementId)) {
+        this.addWarning(report, 'unresolvedReferences', {
+          severity: 'warning',
+          code: 'SPATIALDSL_AIRD_NODE_TARGET_UNRESOLVED',
+          message: `View node "${element.id}" references model element "${element.modelElementId}" which is not in model "${diagram.modelId}"; the node was dropped.`,
+          spatialElementId: element.id,
+        });
+        continue;
+      }
+      exportedNodeIds.add(element.id);
+      lines.push(
+        `        <ownedDiagramElements xmi:id="${this.escapeXml(element.id)}"` +
+        ` name="${this.escapeXml(semanticName(element))}"` +
+        ` target="${this.escapeXml(`${semanticResource}#${element.modelElementId}`)}"${mappingAttr(element, 'node')}/>`
+      );
+
+      const hasBounds = element.x !== undefined || element.y !== undefined;
+      gmfNodeLines.push(
+        `    <children xsi:type="notation:Node" xmi:id="${this.escapeXml(`gmf-${element.id}`)}" element="#${this.escapeXml(element.id)}">`
+      );
+      if (hasBounds) {
+        gmfNodeLines.push(
+          `      <layoutConstraint xsi:type="notation:Bounds" x="${element.x ?? 0}" y="${element.y ?? 0}"` +
+          ` width="${element.width ?? 0}" height="${element.height ?? 0}"/>`
+        );
+      }
+      gmfNodeLines.push('    </children>');
+    }
+
+    // Edges reference already-exported nodes.
+    for (const element of diagram.elements.filter(candidate => candidate.type === 'edge')) {
+      if (!elementById.has(element.modelElementId)) {
+        this.addWarning(report, 'unresolvedReferences', {
+          severity: 'warning',
+          code: 'SPATIALDSL_AIRD_EDGE_TARGET_UNRESOLVED',
+          message: `View edge "${element.id}" references model element "${element.modelElementId}" which is not in model "${diagram.modelId}"; the edge was dropped.`,
+          spatialElementId: element.id,
+        });
+        continue;
+      }
+      if (!element.sourceId || !element.targetId || !exportedNodeIds.has(element.sourceId) || !exportedNodeIds.has(element.targetId)) {
+        this.addWarning(report, 'droppedFeatures', {
+          severity: 'warning',
+          code: 'SPATIALDSL_AIRD_EDGE_ENDPOINT_MISSING',
+          message: `View edge "${element.id}" has an unresolved source/target node and was dropped.`,
+          spatialElementId: element.id,
+        });
+        continue;
+      }
+      lines.push(
+        `        <ownedDiagramElements xmi:id="${this.escapeXml(element.id)}"` +
+        ` name="${this.escapeXml(semanticName(element))}"` +
+        ` target="${this.escapeXml(`${semanticResource}#${element.modelElementId}`)}"${mappingAttr(element, 'edge')}` +
+        ` sourceNode="#${this.escapeXml(element.sourceId)}" targetNode="#${this.escapeXml(element.targetId)}"/>`
+      );
+
+      const openTag =
+        `    <edges xsi:type="notation:Edge" xmi:id="${this.escapeXml(`gmf-${element.id}`)}" element="#${this.escapeXml(element.id)}"` +
+        ` source="${this.escapeXml(`gmf-${element.sourceId}`)}" target="${this.escapeXml(`gmf-${element.targetId}`)}">`;
+      if (element.points && element.points.length > 0) {
+        gmfEdgeLines.push(openTag);
+        for (const point of element.points) {
+          gmfEdgeLines.push(`      <points x="${point.x}" y="${point.y}"/>`);
+        }
+        gmfEdgeLines.push('    </edges>');
+      } else {
+        gmfEdgeLines.push(openTag.replace(/>$/, '/>'));
+      }
+    }
+
+    lines.push('      </ownedRepresentations>');
+
+    gmfBlocks.push(`  <notation:Diagram xmi:id="${this.escapeXml(`gmf-${reprId}`)}" type="Sirius" element="#${this.escapeXml(reprId)}">`);
+    gmfBlocks.push(...gmfNodeLines, ...gmfEdgeLines);
+    gmfBlocks.push('  </notation:Diagram>');
   }
 
   private async getReadableMetamodel(metamodelId: string, userId: string): Promise<Metamodel> {

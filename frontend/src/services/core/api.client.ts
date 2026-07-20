@@ -296,6 +296,7 @@ export const API_ENDPOINTS = {
   SIRIUS_VALIDATE: '/interoperability/sirius/validate',
   SIRIUS_IMPORT: '/interoperability/sirius/import',
   SIRIUS_AIRD_IMPORT: '/interoperability/sirius/aird/import',
+  SIRIUS_AIRD_EXPORT: '/interoperability/sirius/aird/export',
   SIRIUS_EXPORT: '/interoperability/sirius/export',
   
   // Transformations

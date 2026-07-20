@@ -10,6 +10,7 @@ jest.mock('../../services/core', () => ({
     SIRIUS_VALIDATE: '/interoperability/sirius/validate',
     SIRIUS_IMPORT: '/interoperability/sirius/import',
     SIRIUS_AIRD_IMPORT: '/interoperability/sirius/aird/import',
+    SIRIUS_AIRD_EXPORT: '/interoperability/sirius/aird/export',
     SIRIUS_EXPORT: '/interoperability/sirius/export',
   },
 }));
@@ -125,6 +126,23 @@ describe('siriusInteropService', () => {
       modelId: 'model-1',
       viewpointId: 'viewpoint-1',
       options: undefined,
+    });
+  });
+
+  it('exports a model\'s views through the dedicated .aird export endpoint', async () => {
+    mockedApiClient.post.mockResolvedValue({
+      filename: 'demo-model.aird',
+      content: '<xmi:XMI/>',
+      report: { supported: true, warnings: [], droppedFeatures: [], unresolvedReferences: [] },
+    });
+
+    const result = await siriusInteropService.exportAird('model-1');
+
+    expect(result.filename).toBe('demo-model.aird');
+    expect(mockedApiClient.post).toHaveBeenCalledWith('/interoperability/sirius/aird/export', {
+      modelId: 'model-1',
+      diagramIds: undefined,
+      options: { includeAird: true },
     });
   });
 });
