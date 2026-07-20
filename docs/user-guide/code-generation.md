@@ -47,6 +47,30 @@ For new projects provide:
 - target metamodel
 - optional description
 
+## Import a project JSON
+
+You can import a reusable code generation project without bundling it into the
+application.
+
+1. Open the Projects tab.
+2. Click Import Project.
+3. Select a `.json` file containing a code generation project.
+
+The importer accepts:
+
+- a single project object
+- an array of project objects
+- an object with a `projects` array
+
+Imported projects are normal user projects. If an imported project or template ID
+collides with an existing one, the importer keeps your existing project and
+generates a new ID for the imported copy.
+
+Importable Smart Warehouse examples are available under `examples/codegen-projects/`:
+
+- `smart-warehouse-omniverse-project.json`: generates an Omniverse/OpenUSD scene script.
+- `smart-warehouse-visual-components-project.json`: generates Visual Components setup, OPC UA, MAS config, and position files.
+
 ## Manage templates in a project
 
 Projects support multiple templates (tabbed editor inside project dialog).
@@ -168,4 +192,6 @@ Fix: create a new project when branching template sets.
 
 - [Metamodels](metamodels.md)
 - [Models](models.md)
+- [Visual Components Code Generation](visual-components-code-generation.md)
+- [Omniverse Code Generation](omniverse-code-generation.md)
 - [API Reference](../reference/api.md)
