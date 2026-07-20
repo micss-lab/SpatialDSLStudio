@@ -13,8 +13,9 @@ projects unless several targets need the same generic capability.
 
 Implemented:
 
-- code generation project import in PR #14
-- Smart Warehouse Visual Components and Omniverse projects in PR #16
+- code generation project import from merged PR #14
+- Smart Warehouse Visual Components and Omniverse projects consolidated on
+  current-main PR #30
 - eight Visual Components outputs, including OPC UA configuration
 - OpenUSD scene generation for 25 physical warehouse elements
 - model-driven OPC UA port and namespace values
@@ -23,18 +24,38 @@ Implemented:
 - a `MobileRobot` asset reference with placeholder fallback
 
 The included CC0 vehicle is a composition demonstrator, not a production AMR.
+The generated USD is a static scene, not an executable warehouse simulation.
 
 ## Release Gates
 
-- [ ] Merge PR #14.
-- [ ] Retarget PR #16 to `main` after PR #14 merges.
-- [ ] Run the normal CI workflow on PR #16.
+- [x] Merge PR #14.
+- [x] Consolidate the PR #16 work onto PR #30 against current `main`.
+- [x] Run the normal CI workflow on PR #30.
 - [ ] Import and generate all eight files in the deployed application.
 - [ ] Load the generated setup script and connectivity XML in Visual Components.
 - [ ] Confirm the OPC UA application URI advertised by the real server.
 - [ ] Run the generated OpenUSD script in Isaac Sim.
-- [ ] Confirm referenced assets resolve when `--asset-root` is supplied.
+- [ ] Confirm referenced assets resolve when the asset-root argument is supplied.
 - [ ] Confirm missing assets produce visible cube fallbacks rather than an invalid stage.
+
+## Isaac Sim Simulation Status
+
+The current output has no simulation clock, route scheduler, robot controller,
+package lifecycle, collision behavior, or event logger. Pressing Play in a USD
+viewer or in Isaac Sim therefore does not make robots deliver packages.
+
+Isaac Sim on a supported NVIDIA RTX workstation or cloud instance is the
+required runtime for the physical simulation. The next implementation must add:
+
+- collision and rigid-body schemas
+- robot articulation and controllers
+- navigation and obstacle handling
+- sensors and synthetic-data capture
+- runtime telemetry and event export
+
+Running the current generator inside Isaac Sim is necessary for this target but
+is not sufficient by itself; the physics and behavior layers above remain
+future work.
 
 ## Real USD Asset Support
 
@@ -108,7 +129,7 @@ should not expose arbitrary filesystem access in browser code.
 - [ ] Add missing-asset diagnostics to the generated script and UI.
 - [ ] Decide whether production assets live in Git LFS, object storage, or Nucleus.
 
-### P2: Omniverse Simulation Fidelity
+### P2: Isaac Sim Simulation Fidelity
 
 - [ ] Replace remaining class cubes with reviewed warehouse assets.
 - [ ] Add collision approximations and rigid-body schemas.
@@ -143,6 +164,13 @@ should not expose arbitrary filesystem access in browser code.
 Do not ship an implicit `1 pixel = 1 millimetre` conversion. The current Smart
 Warehouse fixture uses independent diagram and physical coordinate systems.
 
+### Optional: Portable Analytical Simulation
+
+After the Isaac Sim path works, a SimPy-based discrete-event model could provide
+fast scheduling experiments, deterministic event logs, and throughput metrics.
+This is a nice-to-have analytical backend, not a replacement for Isaac Sim and
+not a release gate for physical simulation.
+
 ## Suggested PR Sequence
 
 1. Asset manifest and generated-script parameterization.
@@ -150,7 +178,8 @@ Warehouse fixture uses independent diagram and physical coordinate systems.
 3. One production-grade AMR asset with collision and Isaac Sim QA.
 4. Static assets for conveyors, stations, and output locations.
 5. Layered USD output and physics.
-6. Spatial coordinate contract and constraint context in a separate core PR.
+6. Isaac Sim robot control, navigation, package behavior, and telemetry.
+7. Spatial coordinate contract and constraint context in a separate core PR.
 
 ## Definition Of Done
 

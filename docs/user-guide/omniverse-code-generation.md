@@ -115,17 +115,22 @@ If generation returns no files, check that the Smart Warehouse model and
 metamodel are loaded and that the imported project targets the Smart Warehouse
 metamodel ID.
 
-## Set Up Omniverse Or Isaac Sim
+## Set Up Isaac Sim
 
-For this first workflow, use NVIDIA Isaac Sim as the Omniverse runtime. The
-generated script only needs the OpenUSD Python modules bundled with
-Omniverse/Isaac Sim, so you do not need to write an Omniverse extension.
+Use NVIDIA Isaac Sim as the runtime for this workflow. The generated script
+uses the OpenUSD `pxr` modules bundled with Isaac Sim to create the warehouse
+scene; it does not require an Omniverse extension.
+
+The current generator creates a static layout. Isaac Sim is the required target
+for PhysX dynamics, robot controllers, navigation, sensors, and runtime
+telemetry, but those simulation layers are not generated yet. Opening the
+current scene in Isaac Sim and pressing Play does not automatically make robots
+deliver packages.
 
 Isaac Sim's workstation application currently supports Windows 11 and Ubuntu
 22.04/24.04 on a compatible NVIDIA RTX GPU. It does not run natively on macOS.
-When using SpatialDSL Studio on a Mac, export the generator there, then move the
-generator and asset directory to a supported Isaac Sim workstation or cloud
-host before creating the final USD scene.
+When using SpatialDSL Studio on a Mac, export the generator there and execute it
+on a supported Isaac Sim workstation or cloud host.
 
 1. Check the current Isaac Sim requirements:
 
@@ -150,9 +155,9 @@ host before creating the final USD scene.
    - Linux: `python.sh`
    - Windows: `python.bat`
 
-The generated `generate_warehouse_usd.py` script imports `pxr`, so it must run
-inside an Omniverse/Isaac Sim Python environment. Running it with system Python
-will usually fail with:
+The generated `generate_warehouse_usd.py` script imports `pxr`, so run it with
+the Isaac Sim Python environment. Running it with an ordinary system Python
+interpreter will usually fail with:
 
 ```text
 ModuleNotFoundError: No module named 'pxr'
@@ -161,7 +166,7 @@ ModuleNotFoundError: No module named 'pxr'
 That error means the script is correct, but the wrong Python interpreter was
 used.
 
-## Move A macOS Export To The Isaac Sim Host
+## Move An Export To The Isaac Sim Host
 
 Copy both of these items to the Windows or Linux machine:
 
