@@ -4,11 +4,33 @@ import { metamodelService } from '../metamodel';
 import { modelInheritanceUtilsService } from './model-inheritance-utils.service';
 import { modelReferenceService } from './model-reference.service';
 
+const pixelDeltaToMm = (pixels: number): number => pixels;
+
 /**
  * Service for CRUD operations on model elements
  */
 export class ModelElementCrudService {
   private newlyCreatedElements: Set<string> = new Set();
+
+  private withSyncedSpatialPosition(
+    current: ModelElementPresentation | undefined,
+    updates: ModelElementPresentation
+  ): ModelElementPresentation {
+    if (!updates.position2D || updates.position3D || !current?.position2D || !current?.position3D) {
+      return updates;
+    }
+
+    const deltaX = pixelDeltaToMm(updates.position2D.x - current.position2D.x);
+    const deltaY = pixelDeltaToMm(updates.position2D.y - current.position2D.y);
+
+    return {
+      ...updates,
+      position3D: {
+        x: current.position3D.x + deltaX,
+        y: current.position3D.y + deltaY,
+      },
+    };
+  }
 
   /**
    * Add a model element conforming to a metaclass
@@ -194,9 +216,14 @@ export class ModelElementCrudService {
     const element = model.elements.find(e => e.id === elementId);
     if (!element) return false;
 
+    const presentation = this.withSyncedSpatialPosition(element.presentation, {
+      position2D: position
+    });
+
     element.presentation = {
       ...(element.presentation || {}),
-      position2D: position
+      position2D: presentation.position2D,
+      position3D: presentation.position3D || element.presentation?.position3D,
     };
     element.style = {
       ...(element.style || {}),
@@ -221,15 +248,17 @@ export class ModelElementCrudService {
     const element = model.elements.find(e => e.id === elementId);
     if (!element) return false;
 
+    const syncedPresentation = this.withSyncedSpatialPosition(element.presentation, presentation);
+
     element.presentation = {
       ...(element.presentation || {}),
-      ...presentation,
-      position2D: presentation.position2D || element.presentation?.position2D,
-      position3D: presentation.position3D || element.presentation?.position3D,
-      size2D: presentation.size2D || element.presentation?.size2D,
-      size3D: presentation.size3D || element.presentation?.size3D,
-      appearance: Object.prototype.hasOwnProperty.call(presentation, 'appearance')
-        ? presentation.appearance
+      ...syncedPresentation,
+      position2D: syncedPresentation.position2D || element.presentation?.position2D,
+      position3D: syncedPresentation.position3D || element.presentation?.position3D,
+      size2D: syncedPresentation.size2D || element.presentation?.size2D,
+      size3D: syncedPresentation.size3D || element.presentation?.size3D,
+      appearance: Object.prototype.hasOwnProperty.call(syncedPresentation, 'appearance')
+        ? syncedPresentation.appearance
         : element.presentation?.appearance,
     };
 

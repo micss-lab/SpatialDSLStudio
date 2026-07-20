@@ -5,6 +5,8 @@ node_modules/
 **/build/
 **/dist/
 **/*.tsbuildinfo
+**/__pycache__/
+**/*.pyc
 
 # Logs and runtime artifacts
 **/logs/

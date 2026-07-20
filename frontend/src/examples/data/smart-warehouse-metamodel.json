@@ -39,6 +39,14 @@
           "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
         },
         {
+          "id": "attr-1764621062130",
+          "name": "ApplicationURI",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570"
+        },
+        {
           "id": "attr-1764621032130",
           "name": "UpdateInterval",
           "type": "number",
@@ -105,6 +113,32 @@
           "name": "contains",
           "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
           "target": "10000000-0000-4000-8000-000000000105",
+          "containment": true,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": true,
+          "attributes": []
+        },
+        {
+          "id": "ref-contains-rack",
+          "name": "contains",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "10000000-0000-4000-8000-00000000010a",
+          "containment": true,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": true,
+          "attributes": []
+        },
+        {
+          "id": "ref-contains-dock",
+          "name": "contains",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "10000000-0000-4000-8000-00000000010b",
           "containment": true,
           "cardinality": {
             "lowerBound": 0,
@@ -389,6 +423,279 @@
         "x": -90.39293524628356,
         "y": 422.8593129936458
       }
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000107",
+      "name": "WarehouseController",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "attr-ctrl-name",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "defaultValue": ""
+        },
+        {
+          "id": "attr-ctrl-dispatch",
+          "name": "DispatchPolicy",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "defaultValue": "nearest-first"
+        },
+        {
+          "id": "attr-ctrl-interval",
+          "name": "UpdateInterval",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "defaultValue": 500
+        }
+      ],
+      "references": [
+        {
+          "id": "ref-ctrl-controls",
+          "name": "controls",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "10000000-0000-4000-8000-000000000102",
+          "containment": false,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": -1
+          },
+          "allowSelfReference": false,
+          "attributes": []
+        },
+        {
+          "id": "ref-ctrl-monitors",
+          "name": "monitors",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "10000000-0000-4000-8000-000000000103",
+          "containment": false,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": -1
+          },
+          "allowSelfReference": false,
+          "attributes": []
+        }
+      ]
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000108",
+      "name": "Task",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "attr-task-name",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "defaultValue": ""
+        },
+        {
+          "id": "attr-task-status",
+          "name": "Status",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "defaultValue": "Pending"
+        },
+        {
+          "id": "attr-task-priority",
+          "name": "Priority",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "defaultValue": 1
+        }
+      ],
+      "references": [
+        {
+          "id": "ref-task-assigned",
+          "name": "assignedTo",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "10000000-0000-4000-8000-000000000102",
+          "containment": false,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": false,
+          "attributes": []
+        },
+        {
+          "id": "ref-task-pickup",
+          "name": "pickup",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "10000000-0000-4000-8000-000000000103",
+          "containment": false,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": false,
+          "attributes": []
+        },
+        {
+          "id": "ref-task-dropoff",
+          "name": "dropoff",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "10000000-0000-4000-8000-000000000104",
+          "containment": false,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": false,
+          "attributes": []
+        }
+      ]
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000109",
+      "name": "Product",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "attr-prod-name",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "defaultValue": ""
+        },
+        {
+          "id": "attr-prod-sku",
+          "name": "Sku",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "defaultValue": ""
+        },
+        {
+          "id": "attr-prod-weight",
+          "name": "WeightKg",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "defaultValue": 1
+        }
+      ],
+      "references": [
+        {
+          "id": "ref-prod-located",
+          "name": "locatedAt",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "10000000-0000-4000-8000-00000000010a",
+          "containment": false,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": false,
+          "attributes": []
+        }
+      ]
+    },
+    {
+      "id": "10000000-0000-4000-8000-00000000010a",
+      "name": "StorageRack",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "attr-rack-name",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "defaultValue": ""
+        },
+        {
+          "id": "attr-rack-init",
+          "name": "InitialPositions",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": false,
+          "many": false
+        },
+        {
+          "id": "attr-rack-capacity",
+          "name": "Capacity",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "defaultValue": 100
+        },
+        {
+          "id": "attr-rack-levels",
+          "name": "Levels",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "defaultValue": 4
+        }
+      ],
+      "references": []
+    },
+    {
+      "id": "10000000-0000-4000-8000-00000000010b",
+      "name": "Dock",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "attr-dock-name",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "defaultValue": ""
+        },
+        {
+          "id": "attr-dock-init",
+          "name": "InitialPositions",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": false,
+          "many": false
+        },
+        {
+          "id": "attr-dock-gate",
+          "name": "GateNumber",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "defaultValue": 1
+        }
+      ],
+      "references": []
     }
   ],
   "conformsTo": "8b8a9170-bd78-4e15-80dd-e018f295e8cc",

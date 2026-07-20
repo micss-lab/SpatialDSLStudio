@@ -38,7 +38,7 @@ export interface TemplateEditorProps {
 export interface ProjectTemplate {
   id: string;
   name: string;
-  language: 'java' | 'python';
+  language: 'java' | 'python' | 'json' | 'xml' | 'plaintext';
   content: string;
   outputPattern: string;
   isNew?: boolean;

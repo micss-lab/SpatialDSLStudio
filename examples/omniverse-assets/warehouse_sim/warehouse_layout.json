@@ -1,0 +1,101 @@
+{
+  "units": "mm",
+  "robots": [
+    {
+      "name": "Mobile Robot Resource",
+      "x": 4527.32751114,
+      "y": 16706.0891961,
+      "batteryLevel": 100,
+      "lowBattery": 1,
+      "chargeRate": 10
+    },
+    {
+      "name": "Mobile Robot Resource #2",
+      "x": 3804.86905984,
+      "y": -15858.3726788,
+      "batteryLevel": 100,
+      "lowBattery": 1,
+      "chargeRate": 10
+    }
+  ],
+  "obstacles": [
+    {
+      "name": "Storage Rack",
+      "asset": "warehouse-kit/storage_rack.usda",
+      "x": 10000,
+      "y": 12000,
+      "length": 2000,
+      "width": 1000,
+      "height": 2500
+    },
+    {
+      "name": "Storage Rack #2",
+      "asset": "warehouse-kit/storage_rack.usda",
+      "x": 14000,
+      "y": 12000,
+      "length": 2000,
+      "width": 1000,
+      "height": 2500
+    },
+    {
+      "name": "Loading Dock",
+      "asset": "warehouse-kit/dock.usda",
+      "x": -18000,
+      "y": 15000,
+      "length": 5000,
+      "width": 3000,
+      "height": 500
+    }
+  ],
+  "pickups": [
+    {
+      "name": "Conveyor",
+      "asset": "warehouse-kit/conveyor.usda",
+      "x": -22140.676,
+      "y": -9669.243,
+      "length": 6000,
+      "width": 2000,
+      "height": 3000
+    },
+    {
+      "name": "Conveyor #2",
+      "asset": "warehouse-kit/conveyor.usda",
+      "x": -21906.9869673,
+      "y": 10129.7838605,
+      "length": 6000,
+      "width": 2000,
+      "height": 3000
+    }
+  ],
+  "dropoffs": [
+    {
+      "name": "Output Location",
+      "asset": "warehouse-kit/output_location.usda",
+      "x": 32090.567,
+      "y": 577,
+      "length": 6000,
+      "width": 3000,
+      "height": 3000
+    }
+  ],
+  "chargers": [
+    {
+      "name": "Idle Location",
+      "asset": "warehouse-kit/charging_station.usda",
+      "x": 3897.20166951,
+      "y": 18420.7445771,
+      "length": 2000,
+      "width": 2000,
+      "height": 6000
+    },
+    {
+      "name": "Idle Location #2",
+      "asset": "warehouse-kit/charging_station.usda",
+      "x": 3673.28218994,
+      "y": -18004.326837,
+      "length": 2000,
+      "width": 2000,
+      "height": 6000
+    }
+  ]
+}

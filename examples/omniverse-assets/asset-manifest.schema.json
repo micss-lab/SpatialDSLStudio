@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://spatialdsl-studio/schemas/omniverse-asset-manifest.schema.json",
+  "title": "Omniverse Asset Manifest",
+  "description": "Versioned manifest mapping DSL classes and elements to referenced Omniverse USD assets.",
+  "type": "object",
+  "required": ["version", "defaults"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Manifest schema version."
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Per-class asset mapping, keyed by DSL class name.",
+      "additionalProperties": {
+        "$ref": "#/definitions/assetMapping"
+      }
+    },
+    "overrides": {
+      "type": "object",
+      "description": "Per-element asset mapping, keyed by element name. Wins over defaults.",
+      "additionalProperties": {
+        "$ref": "#/definitions/assetMapping"
+      }
+    }
+  },
+  "definitions": {
+    "assetMapping": {
+      "type": "object",
+      "required": ["asset"],
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path to the USD asset, relative to the asset root."
+        },
+        "scaleMode": {
+          "type": "string",
+          "enum": ["uniform", "fit"],
+          "default": "uniform",
+          "description": "How the referenced asset is scaled. 'uniform' applies uniformScale (for pre-sized assets). 'fit' scales a 1 m unit asset to the element's modelled length/width/height."
+        },
+        "uniformScale": {
+          "type": "number",
+          "default": 1.0,
+          "description": "Uniform scale factor applied to the referenced asset."
+        },
+        "rotateXDeg": {
+          "type": "number",
+          "default": 0.0,
+          "description": "Rotation about the X axis, in degrees, applied to the referenced asset."
+        },
+        "zOffsetM": {
+          "type": "number",
+          "default": 0.0,
+          "description": "Additional Z offset, in meters, applied to the referenced asset."
+        }
+      }
+    }
+  }
+}

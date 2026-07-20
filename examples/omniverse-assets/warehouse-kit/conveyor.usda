@@ -1,0 +1,65 @@
+#usda 1.0
+(
+    defaultPrim = "Conveyor"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "Conveyor"
+{
+    def Cube "Belt"
+    {
+        double size = 1
+        color3f[] primvars:displayColor = [(0.2, 0.2, 0.23)]
+        matrix4d xformOp:transform = ( (0.98, 0, 0, 0), (0, 0.7, 0, 0), (0, 0, 0.12, 0), (0.0, 0.0, 0.06, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def Cube "RailL"
+    {
+        double size = 1
+        color3f[] primvars:displayColor = [(0.5, 0.5, 0.55)]
+        matrix4d xformOp:transform = ( (0.98, 0, 0, 0), (0, 0.06, 0, 0), (0, 0, 0.18, 0), (0.0, -0.34, 0.05, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def Cube "RailR"
+    {
+        double size = 1
+        color3f[] primvars:displayColor = [(0.5, 0.5, 0.55)]
+        matrix4d xformOp:transform = ( (0.98, 0, 0, 0), (0, 0.06, 0, 0), (0, 0, 0.18, 0), (0.0, 0.34, 0.05, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def Cube "Leg_FL"
+    {
+        double size = 1
+        color3f[] primvars:displayColor = [(0.35, 0.35, 0.4)]
+        matrix4d xformOp:transform = ( (0.05, 0, 0, 0), (0, 0.05, 0, 0), (0, 0, 0.55, 0), (-0.45, -0.3, -0.225, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def Cube "Leg_FR"
+    {
+        double size = 1
+        color3f[] primvars:displayColor = [(0.35, 0.35, 0.4)]
+        matrix4d xformOp:transform = ( (0.05, 0, 0, 0), (0, 0.05, 0, 0), (0, 0, 0.55, 0), (0.45, -0.3, -0.225, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def Cube "Leg_BL"
+    {
+        double size = 1
+        color3f[] primvars:displayColor = [(0.35, 0.35, 0.4)]
+        matrix4d xformOp:transform = ( (0.05, 0, 0, 0), (0, 0.05, 0, 0), (0, 0, 0.55, 0), (-0.45, 0.3, -0.225, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def Cube "Leg_BR"
+    {
+        double size = 1
+        color3f[] primvars:displayColor = [(0.35, 0.35, 0.4)]
+        matrix4d xformOp:transform = ( (0.05, 0, 0, 0), (0, 0.05, 0, 0), (0, 0, 0.55, 0), (0.45, 0.3, -0.225, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}

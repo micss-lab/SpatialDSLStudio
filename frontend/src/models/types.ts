@@ -489,7 +489,7 @@ export interface Diagram {
 export interface CodeGenerationTemplate {
   id: string;
   name: string;
-  language: 'java' | 'python';
+  language: 'java' | 'python' | 'json' | 'xml' | 'plaintext';
   templateContent: string; // Handlebars template
   targetMetamodelId: string;
   outputPattern: string; // E.g., "{{name}}.java"

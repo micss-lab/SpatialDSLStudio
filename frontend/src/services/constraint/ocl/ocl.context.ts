@@ -1,8 +1,9 @@
-import { 
-  Model, 
+import {
+  Model,
   ModelElement,
   Metamodel
 } from '../../../models/types';
+import { spatialContextFields, boundsOf, overlaps, clearance } from '../spatial.helpers';
 
 /**
  * Prepare model elements for OCL evaluation
@@ -23,9 +24,15 @@ export function prepareContextForOCL(
   // Placement data from element.presentation is exposed too, with style taking precedence.
   const context: any = {
     ...element.presentation,
+    ...spatialContextFields(element),
     ...element.style,
     id: element.id,
     _type: metaClass.name, // Used by the typeDeterminer function
+    spatial: {
+      boundsOf,
+      overlaps,
+      clearance
+    },
   };
 
   // Handle references properly

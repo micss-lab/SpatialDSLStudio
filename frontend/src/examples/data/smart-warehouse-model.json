@@ -11,6 +11,7 @@
         "name": "WarehouseMAS",
         "OpcuaServerPort": 4840,
         "NamespaceURI": "urn:warehouse:mas",
+        "ApplicationURI": "urn:localhost:4840/WarehouseMAS",
         "UpdateInterval": 1000
       },
       "references": {},
@@ -996,6 +997,199 @@
           "strokeColor": "black",
           "strokeWidth": 1,
           "modelFileId": "model_1764645384071_lqrcu9nnd"
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000101",
+      "modelElementId": "10000000-0000-4000-8000-000000000107",
+      "style": {
+        "name": "Main Controller",
+        "DispatchPolicy": "nearest-first",
+        "UpdateInterval": 500
+      },
+      "references": {
+        "controls": [
+          "20000000-0000-4000-8000-000000000002",
+          "20000000-0000-4000-8000-000000000003"
+        ],
+        "monitors": [
+          "20000000-0000-4000-8000-000000000004",
+          "20000000-0000-4000-8000-000000000005"
+        ]
+      },
+      "presentation": {
+        "position2D": {
+          "x": 120,
+          "y": 380
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000102",
+      "modelElementId": "10000000-0000-4000-8000-000000000108",
+      "style": {
+        "name": "Task 1",
+        "Status": "Pending",
+        "Priority": 1
+      },
+      "references": {
+        "assignedTo": "20000000-0000-4000-8000-000000000002",
+        "pickup": "20000000-0000-4000-8000-000000000004",
+        "dropoff": "20000000-0000-4000-8000-000000000006"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 280,
+          "y": 360
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000103",
+      "modelElementId": "10000000-0000-4000-8000-000000000108",
+      "style": {
+        "name": "Task 2",
+        "Status": "InProgress",
+        "Priority": 2
+      },
+      "references": {
+        "assignedTo": "20000000-0000-4000-8000-000000000003",
+        "pickup": "20000000-0000-4000-8000-000000000005",
+        "dropoff": "20000000-0000-4000-8000-000000000006"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 280,
+          "y": 460
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000104",
+      "modelElementId": "10000000-0000-4000-8000-000000000109",
+      "style": {
+        "name": "Pallet 1",
+        "Sku": "SKU-0001",
+        "WeightKg": 12
+      },
+      "references": {
+        "locatedAt": "20000000-0000-4000-8000-000000000106"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 440,
+          "y": 360
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000105",
+      "modelElementId": "10000000-0000-4000-8000-000000000109",
+      "style": {
+        "name": "Pallet 2",
+        "Sku": "SKU-0002",
+        "WeightKg": 8
+      },
+      "references": {
+        "locatedAt": "20000000-0000-4000-8000-000000000107"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 440,
+          "y": 460
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000106",
+      "modelElementId": "10000000-0000-4000-8000-00000000010a",
+      "style": {
+        "name": "Storage Rack",
+        "InitialPositions": "",
+        "Capacity": 100,
+        "Levels": 4
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 520,
+          "y": 300
+        },
+        "size2D": {
+          "width": 80,
+          "height": 120
+        },
+        "position3D": {
+          "x": 10000,
+          "y": 12000
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 2000,
+          "heightMm": 1000,
+          "depthMm": 2500
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000107",
+      "modelElementId": "10000000-0000-4000-8000-00000000010a",
+      "style": {
+        "name": "Storage Rack #2",
+        "InitialPositions": "",
+        "Capacity": 100,
+        "Levels": 4
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 620,
+          "y": 300
+        },
+        "size2D": {
+          "width": 80,
+          "height": 120
+        },
+        "position3D": {
+          "x": 14000,
+          "y": 12000
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 2000,
+          "heightMm": 1000,
+          "depthMm": 2500
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000108",
+      "modelElementId": "10000000-0000-4000-8000-00000000010b",
+      "style": {
+        "name": "Loading Dock",
+        "InitialPositions": "",
+        "GateNumber": 1
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 200,
+          "y": 200
+        },
+        "size2D": {
+          "width": 160,
+          "height": 100
+        },
+        "position3D": {
+          "x": -18000,
+          "y": 15000
+        },
+        "rotationZ": 0,
+        "size3D": {
+          "widthMm": 5000,
+          "heightMm": 3000,
+          "depthMm": 500
         }
       }
     }

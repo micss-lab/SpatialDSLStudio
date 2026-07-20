@@ -425,10 +425,13 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ modelId }) => {
                     <Select
                       value={template.language}
                       label="Language"
-                      onChange={(e) => templateManagement.updateTemplateTab(index, { language: e.target.value as 'java' | 'python' })}
+                      onChange={(e) => templateManagement.updateTemplateTab(index, { language: e.target.value as 'java' | 'python' | 'json' | 'xml' | 'plaintext' })}
                     >
                       <MenuItem value="java">Java</MenuItem>
                       <MenuItem value="python">Python</MenuItem>
+                      <MenuItem value="json">JSON</MenuItem>
+                      <MenuItem value="xml">XML</MenuItem>
+                      <MenuItem value="plaintext">Plain Text</MenuItem>
                     </Select>
                   </FormControl>
                 </Box>
