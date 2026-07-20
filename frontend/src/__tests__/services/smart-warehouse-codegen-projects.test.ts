@@ -145,7 +145,6 @@ describe('Smart Warehouse code generation project fixtures', () => {
     expect(outputs['generate_warehouse_usd.py']).toContain('GetReferences().AddReference');
     expect(outputs['generate_warehouse_usd.py']).toContain('Asset not found; using placeholder');
     expect(outputs['generate_warehouse_usd.py']).toContain('Referenced assets: ');
-    expect(outputs['generate_warehouse_usd.py']).toContain('python -m pip install usd-core');
     expect(outputs['generate_warehouse_usd.py'].match(/"class_name":/g)).toHaveLength(25);
     expect(outputs['generate_warehouse_usd.py']).toContain(
       'print("Elements: " + str(len(ELEMENTS)))'

@@ -115,19 +115,22 @@ If generation returns no files, check that the Smart Warehouse model and
 metamodel are loaded and that the imported project targets the Smart Warehouse
 metamodel ID.
 
-## Set Up Omniverse Or Isaac Sim
+## Set Up Isaac Sim
 
-For the complete Omniverse workflow, use NVIDIA Isaac Sim as the runtime. The
-generated script itself only needs the core OpenUSD `pxr` modules. It can create
-the static USD scene with either standalone OpenUSD Python bindings or the
-bindings bundled with Omniverse/Isaac Sim; it does not require an Omniverse
-extension.
+Use NVIDIA Isaac Sim as the runtime for this workflow. The generated script
+uses the OpenUSD `pxr` modules bundled with Isaac Sim to create the warehouse
+scene; it does not require an Omniverse extension.
+
+The current generator creates a static layout. Isaac Sim is the required target
+for PhysX dynamics, robot controllers, navigation, sensors, and runtime
+telemetry, but those simulation layers are not generated yet. Opening the
+current scene in Isaac Sim and pressing Play does not automatically make robots
+deliver packages.
 
 Isaac Sim's workstation application currently supports Windows 11 and Ubuntu
 22.04/24.04 on a compatible NVIDIA RTX GPU. It does not run natively on macOS.
-Apple Silicon can nevertheless generate, validate, flatten, and inspect the
-static OpenUSD scene locally. Physics, sensors, OmniGraph, RTX rendering, and
-the Isaac Sim UI still require a supported workstation or cloud host.
+When using SpatialDSL Studio on a Mac, export the generator there and execute it
+on a supported Isaac Sim workstation or cloud host.
 
 1. Check the current Isaac Sim requirements:
 
@@ -152,90 +155,18 @@ the Isaac Sim UI still require a supported workstation or cloud host.
    - Linux: `python.sh`
    - Windows: `python.bat`
 
-The generated `generate_warehouse_usd.py` script imports `pxr`. Use either an
-OpenUSD virtual environment or the Omniverse/Isaac Sim Python environment.
-Running it with a Python interpreter that has no OpenUSD bindings fails with:
+The generated `generate_warehouse_usd.py` script imports `pxr`, so run it with
+the Isaac Sim Python environment. Running it with an ordinary system Python
+interpreter will usually fail with:
 
 ```text
 ModuleNotFoundError: No module named 'pxr'
 ```
 
-That error means the script is correct, but the selected Python interpreter
-does not contain OpenUSD bindings.
+That error means the script is correct, but the wrong Python interpreter was
+used.
 
-## Generate Natively On Apple Silicon
-
-This route creates and validates the current static warehouse scene without
-renting a GPU. It does not install or emulate Isaac Sim.
-
-The current scene does not run warehouse behavior. It contains no simulation
-clock, physics schemas, robot controller, route execution, package lifecycle,
-or event logger. Opening it in Blender or another USD viewer displays the
-warehouse, but playing the timeline does not make robots deliver packages.
-
-1. Put the generated script and assets in one export directory:
-
-   ```bash
-   mkdir -p ~/spatialdsl-export
-   cp ~/Downloads/generate_warehouse_usd.py ~/spatialdsl-export/
-   cp -R /absolute/path/to/SpatialDSLStudio/examples/omniverse-assets \
-     ~/spatialdsl-export/omniverse-assets
-   cd ~/spatialdsl-export
-   ```
-
-2. Create an isolated Python environment and install the tested OpenUSD
-   bindings:
-
-   ```bash
-   python3 -m venv .venv-openusd
-   source .venv-openusd/bin/activate
-   python -m pip install "usd-core==26.3"
-   python -c "from pxr import Usd; print(Usd.GetVersion())"
-   ```
-
-   OpenUSD 26.3 publishes a universal macOS wheel for both ARM64 and x86-64.
-
-3. Generate the warehouse scene:
-
-   ```bash
-   python generate_warehouse_usd.py \
-     warehouse_scene.usda \
-     omniverse-assets
-   ```
-
-   Expected output remains:
-
-   ```text
-   Generated USD scene: /Users/you/spatialdsl-export/warehouse_scene.usda
-   Elements: 25
-   Referenced assets: 2
-   ```
-
-4. Validate the result with the OpenUSD tools included by current macOS
-   releases:
-
-   ```bash
-   /usr/bin/usdchecker warehouse_scene.usda
-   /usr/bin/usdcat -l warehouse_scene.usda
-   ```
-
-5. To inspect the scene in Blender on Apple Silicon, flatten its composition
-   arcs first because Blender's USD importer does not fully support references:
-
-   ```bash
-   /usr/bin/usdcat --flatten warehouse_scene.usda \
-     -o warehouse_scene_flat.usda
-   ```
-
-   In Blender, select `File > Import > Universal Scene Description (.usd)` and
-   open `warehouse_scene_flat.usda`. Blender is useful for geometry and material
-   inspection, but its result is not an Isaac Sim execution.
-
-The current `usd-core` wheel can print an `ArchWarn` cache-line warning on some
-Apple Silicon versions. The warning is non-fatal when the script completes and
-`usdchecker` reports `Success`.
-
-## Move A macOS Export To The Isaac Sim Host
+## Move An Export To The Isaac Sim Host
 
 Copy both of these items to the Windows or Linux machine:
 
