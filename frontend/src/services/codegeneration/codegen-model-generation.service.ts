@@ -153,7 +153,7 @@ export class CodegenModelGenerationService {
             elements: []
         };
         
-        m.elements.forEach(elem => {
+        codegenContextBuilderService.sortElementsForGeneration(m.elements).forEach(elem => {
             const elemName = elem.style?.name;
             if (elemName) {
                 const elemContext = codegenContextBuilderService.prepareSingleElementContext(elem);
@@ -168,7 +168,7 @@ export class CodegenModelGenerationService {
     return {
       ...elementContext,
       ...allElementsContext,
-      elements: model.elements.map((el: any) => codegenContextBuilderService.prepareSingleElementContext(el)),
+      elements: codegenContextBuilderService.prepareElementsContext(model.elements),
       currentElement: elementContext,
       metamodel: {
         id: metamodel.id,
@@ -184,7 +184,7 @@ export class CodegenModelGenerationService {
       model: {
         id: model.id,
         name: model.name,
-        elements: model.elements.map((el: any) => codegenContextBuilderService.prepareSingleElementContext(el))
+        elements: codegenContextBuilderService.prepareElementsContext(model.elements)
       },
       ...metamodelsContext,
       ...modelsContext,

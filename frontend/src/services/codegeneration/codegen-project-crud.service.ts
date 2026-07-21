@@ -88,7 +88,7 @@ export class CodegenProjectCrudService {
   addTemplateToProject(
     projectId: string, 
     name: string,
-    language: 'java' | 'python',
+    language: 'java' | 'python' | 'json' | 'xml' | 'plaintext',
     templateContent: string,
     outputPattern: string
   ): CodeGenerationTemplate | null {
@@ -186,8 +186,9 @@ export class CodegenProjectCrudService {
       if (!template.name || typeof template.name !== 'string') {
         throw new Error(`Template ${index + 1} is missing a valid name`);
       }
-      if (template.language !== 'java' && template.language !== 'python') {
-        throw new Error(`Template "${template.name}" must use language "java" or "python"`);
+      const validLanguages = ['java', 'python', 'json', 'xml', 'plaintext'];
+      if (!validLanguages.includes(template.language as string)) {
+        throw new Error(`Template "${template.name}" must use a valid language (${validLanguages.join(', ')})`);
       }
       if (typeof template.templateContent !== 'string') {
         throw new Error(`Template "${template.name}" is missing templateContent`);

@@ -193,22 +193,25 @@ class DiagramService {
     };
   }
 
-  private presentationFromDiagramElement(element: Partial<DiagramElement>): ModelElementPresentation {
+  private presentationFromDiagramElement(
+    element: Partial<DiagramElement>,
+    current?: ModelElementPresentation
+  ): ModelElementPresentation {
     const style = element.style || {};
     const rawElement = element as Partial<DiagramElement> & Record<string, any>;
     const presentation: ModelElementPresentation = {};
 
     if (typeof element.x === 'number' || typeof element.y === 'number') {
       presentation.position2D = {
-        x: typeof element.x === 'number' ? element.x : 0,
-        y: typeof element.y === 'number' ? element.y : 0,
+        x: typeof element.x === 'number' ? element.x : (current?.position2D?.x ?? 0),
+        y: typeof element.y === 'number' ? element.y : (current?.position2D?.y ?? 0),
       };
     }
 
     if (typeof element.width === 'number' || typeof element.height === 'number') {
       presentation.size2D = {
-        width: typeof element.width === 'number' ? element.width : 120,
-        height: typeof element.height === 'number' ? element.height : 80,
+        width: typeof element.width === 'number' ? element.width : (current?.size2D?.width ?? 120),
+        height: typeof element.height === 'number' ? element.height : (current?.size2D?.height ?? 80),
       };
     }
 
@@ -219,9 +222,9 @@ class DiagramService {
     const hasSize3D = ['widthMm', 'heightMm', 'depthMm'].some(key => typeof style[key] === 'number');
     if (hasSize3D) {
       presentation.size3D = {
-        widthMm: typeof style.widthMm === 'number' ? style.widthMm : 500,
-        heightMm: typeof style.heightMm === 'number' ? style.heightMm : 800,
-        depthMm: typeof style.depthMm === 'number' ? style.depthMm : 200,
+        widthMm: typeof style.widthMm === 'number' ? style.widthMm : (current?.size3D?.widthMm ?? 500),
+        heightMm: typeof style.heightMm === 'number' ? style.heightMm : (current?.size3D?.heightMm ?? 800),
+        depthMm: typeof style.depthMm === 'number' ? style.depthMm : (current?.size3D?.depthMm ?? 200),
       };
     }
 
@@ -259,18 +262,37 @@ class DiagramService {
     return presentation;
   }
 
+  private withSyncedSpatialPosition(
+    current: ModelElementPresentation | undefined,
+    updates: ModelElementPresentation
+  ): ModelElementPresentation {
+    if (!updates.position2D || updates.position3D || !current?.position2D || !current?.position3D) {
+      return updates;
+    }
+
+    return {
+      ...updates,
+      position3D: {
+        x: current.position3D.x + (updates.position2D.x - current.position2D.x),
+        y: current.position3D.y + (updates.position2D.y - current.position2D.y),
+      },
+    };
+  }
+
   private mergePresentation(
     current: ModelElementPresentation | undefined,
     updates: ModelElementPresentation
   ): ModelElementPresentation {
+    const syncedUpdates = this.withSyncedSpatialPosition(current, updates);
+
     return {
       ...(current || {}),
-      ...updates,
-      position2D: updates.position2D || current?.position2D,
-      position3D: updates.position3D || current?.position3D,
-      size2D: updates.size2D || current?.size2D,
-      size3D: updates.size3D || current?.size3D,
-      appearance: updates.appearance || current?.appearance,
+      ...syncedUpdates,
+      position2D: syncedUpdates.position2D || current?.position2D,
+      position3D: syncedUpdates.position3D || current?.position3D,
+      size2D: syncedUpdates.size2D || current?.size2D,
+      size3D: syncedUpdates.size3D || current?.size3D,
+      appearance: syncedUpdates.appearance || current?.appearance,
     };
   }
 
@@ -1003,7 +1025,7 @@ class DiagramService {
         throw new ApiError(404, 'Model element not found');
       }
 
-      const presentation = this.presentationFromDiagramElement(updates);
+      const presentation = this.presentationFromDiagramElement(updates, modelElements[elementIndex].presentation);
       const styleUpdates = this.stripPresentationKeys(updates.style || {});
       const mergedPresentation = this.mergePresentation(modelElements[elementIndex].presentation, presentation);
       let nextModelElement: ModelElement = {

@@ -1,8 +1,9 @@
-import { 
-  Model, 
+import {
+  Model,
   ModelElement,
   Metamodel
 } from '../../../models/types';
+import { spatialContextFields, boundsOf, overlaps, clearance } from '../spatial.helpers';
 
 /**
  * Prepare context for JavaScript evaluation
@@ -12,13 +13,10 @@ export function prepareContextForJS(
   model: Model,
   metamodel: Metamodel
 ): Record<string, any> {
-  // Create a clean context.
-  // Placement data (position2D/position3D/size3D/rotationZ/attachment fields) lives in
-  // element.presentation; expose it to constraints with style taking precedence, mirroring
-  // the codegen context builder.
+  // Create a clean context
   const context: Record<string, any> = {
     self: {
-      ...element.presentation,
+      ...spatialContextFields(element),
       ...element.style,
       id: element.id,
       type: element.modelElementId
@@ -27,15 +25,20 @@ export function prepareContextForJS(
       id: model.id,
       name: model.name,
       elements: model.elements.map(e => ({
-        ...e.presentation,
-        ...e.style,
         id: e.id,
-        type: e.modelElementId
+        type: e.modelElementId,
+        ...spatialContextFields(e),
+        ...e.style
       }))
     },
     metamodel: {
       id: metamodel.id,
       name: metamodel.name
+    },
+    spatial: {
+      boundsOf,
+      overlaps,
+      clearance
     }
   };
 
@@ -49,7 +52,7 @@ export function prepareContextForJS(
             const refElement = model.elements.find(e => e.id === refId);
             if (refElement) {
               return {
-                ...refElement.presentation,
+                ...spatialContextFields(refElement),
                 ...refElement.style,
                 id: refElement.id,
                 type: refElement.modelElementId
@@ -62,7 +65,7 @@ export function prepareContextForJS(
           const refElement = model.elements.find(e => e.id === refValue);
           if (refElement) {
             context.self[refName] = {
-              ...refElement.presentation,
+              ...spatialContextFields(refElement),
               ...refElement.style,
               id: refElement.id,
               type: refElement.modelElementId

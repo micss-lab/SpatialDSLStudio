@@ -16,13 +16,13 @@ export class CodegenTemplateCrudService {
     return this.exampleTemplates.find(t => t.id === id);
   }
 
-  getTemplatesByLanguage(language: 'java' | 'python'): CodeGenerationTemplate[] {
+  getTemplatesByLanguage(language: 'java' | 'python' | 'json' | 'xml' | 'plaintext'): CodeGenerationTemplate[] {
     return this.exampleTemplates.filter(t => t.language === language);
   }
 
   createTemplate(
     name: string,
-    language: 'java' | 'python',
+    language: 'java' | 'python' | 'json' | 'xml' | 'plaintext',
     templateContent: string,
     targetMetamodelId: string,
     outputPattern: string

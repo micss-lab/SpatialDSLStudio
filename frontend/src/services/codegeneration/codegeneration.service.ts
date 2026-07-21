@@ -59,13 +59,13 @@ class CodeGenerationService {
     return codegenTemplateCrudService.getTemplateById(id);
   }
 
-  getTemplatesByLanguage(language: 'java' | 'python'): CodeGenerationTemplate[] {
+  getTemplatesByLanguage(language: 'java' | 'python' | 'json' | 'xml' | 'plaintext'): CodeGenerationTemplate[] {
     return codegenTemplateCrudService.getTemplatesByLanguage(language);
   }
 
   createTemplate(
     name: string,
-    language: 'java' | 'python',
+    language: 'java' | 'python' | 'json' | 'xml' | 'plaintext',
     templateContent: string,
     targetMetamodelId: string,
     outputPattern: string
@@ -139,7 +139,7 @@ class CodeGenerationService {
   addTemplateToProject(
     projectId: string, 
     name: string,
-    language: 'java' | 'python',
+    language: 'java' | 'python' | 'json' | 'xml' | 'plaintext',
     templateContent: string,
     outputPattern: string
   ): CodeGenerationTemplate | null {

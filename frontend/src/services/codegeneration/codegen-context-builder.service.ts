@@ -13,6 +13,34 @@ import { codegenInheritanceUtilsService } from './codegen-inheritance-utils.serv
  * Service for building template contexts from diagram and model elements
  */
 export class CodegenContextBuilderService {
+  private getStableElementSortParts(element: DiagramElement | ModelElement): [string, string, string] {
+    const name = element.style?.name || (element as any).name || '';
+    return [
+      name.toLowerCase(),
+      element.modelElementId || '',
+      element.id || '',
+    ];
+  }
+
+  sortElementsForGeneration<T extends DiagramElement | ModelElement>(elements: T[]): T[] {
+    return [...elements].sort((left, right) => {
+      const leftParts = this.getStableElementSortParts(left);
+      const rightParts = this.getStableElementSortParts(right);
+
+      for (let index = 0; index < leftParts.length; index += 1) {
+        if (leftParts[index] < rightParts[index]) return -1;
+        if (leftParts[index] > rightParts[index]) return 1;
+      }
+
+      return 0;
+    });
+  }
+
+  prepareElementsContext(elements: Array<DiagramElement | ModelElement>): any[] {
+    return this.sortElementsForGeneration(elements)
+      .map(element => this.prepareSingleElementContext(element));
+  }
+
   /**
    * Prepares a context for a single model element
    * @param element The model element or diagram element
@@ -229,7 +257,7 @@ export class CodegenContextBuilderService {
     console.log('Metaclass ID to Name mapping:', metaclassIdToName);
     
     // First, index all elements by their name for direct access
-    elements.forEach(element => {
+    this.sortElementsForGeneration(elements).forEach(element => {
       const name = element.style.name;
       if (!name) return;
       

@@ -53,16 +53,18 @@ The importable project contains eight templates:
 - `ChargingStationLocation.json`: charging station placement.
 - `OPCUAConfig.xml`: OPC UA connectivity configuration.
 
-The code generation UI currently supports `java` and `python` as template
-language tags. The JSON and XML templates are tagged as `java` for editor
-compatibility, but their output patterns still generate `.json` and `.xml`
-files.
+The code generation UI supports `java`, `python`, `json`, `xml`, and `plaintext`
+template content types. The five location templates are tagged `json` and the
+connectivity template is tagged `xml`, so each template's content type now
+matches the file it produces. `MASConfig` stays `java` and `SimulationScript`
+stays `python`.
 
-The OPC UA template reads `OpcuaServerPort` and `NamespaceURI` from the
-`WarehouseMAS` model element. It defaults the server application URI to
-`urn:localhost:<port>/WarehouseMAS` and leaves the private-key path unset. If
-your OPC UA server advertises a different application URI, update that URI in
-the imported template before loading the connectivity configuration.
+The OPC UA template reads `OpcuaServerPort`, `NamespaceURI`, and `ApplicationURI`
+from the `WarehouseMAS` model element. The application URI is a model attribute
+(`ApplicationURI`, defaulting to `urn:localhost:4840/WarehouseMAS`) rather than a
+hard-coded string. If your OPC UA server advertises a different application URI,
+edit `ApplicationURI` on the `WarehouseMAS` element in the model before
+generating, instead of editing the template.
 
 ## Import The Project
 

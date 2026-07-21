@@ -20,6 +20,7 @@ Use this page to find the right documentation based on your goal.
 - [Code Generation](user-guide/code-generation.md)
 - [Visual Components Code Generation](user-guide/visual-components-code-generation.md)
 - [Omniverse Code Generation](user-guide/omniverse-code-generation.md)
+- [End-to-End: Smart Warehouse to Isaac Sim on NVIDIA Brev](user-guide/end-to-end-omniverse.md)
 - [Roles and Sharing](user-guide/roles-and-sharing.md)
 
 ### I want technical internals
@@ -27,7 +28,6 @@ Use this page to find the right documentation based on your goal.
 - [API Reference](reference/api.md)
 - [Data Model](reference/data-model.md)
 - [Architecture](reference/architecture.md)
-- [Smart Warehouse Codegen Future Work](../smart-warehouse-codegen-future-work.md)
 - [Sirius Desktop Compatibility](reference/sirius-compatibility.md)
 - [Sirius File Compatibility](reference/sirius-file-compatibility.md)
 
@@ -51,6 +51,7 @@ Recommended reading path for first-time onboarding:
 7. user-guide/code-generation.md
 8. user-guide/visual-components-code-generation.md
 9. user-guide/omniverse-code-generation.md
-10. reference/sirius-compatibility.md
-11. reference/sirius-file-compatibility.md
-12. reference/architecture.md
+10. user-guide/end-to-end-omniverse.md
+11. reference/sirius-compatibility.md
+12. reference/sirius-file-compatibility.md
+13. reference/architecture.md

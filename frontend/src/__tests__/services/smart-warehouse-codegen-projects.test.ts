@@ -9,7 +9,7 @@ import { CodegenHandlebarsService } from '../../services/codegeneration/codegen-
 
 interface ProjectTemplateFixture {
   name: string;
-  language: 'java' | 'python';
+  language: 'java' | 'python' | 'json' | 'xml' | 'plaintext';
   templateContent: string;
   outputPattern: string;
   targetMetamodelId?: string;
@@ -74,7 +74,7 @@ function buildContext(model: Model, metamodel: Metamodel): Record<string, any> {
 }
 
 function renderProject(project: ProjectFixture): Record<string, string> {
-  const model = smartWarehouseModel as Model;
+  const model = smartWarehouseModel as unknown as Model;
   const metamodel = smartWarehouseMetamodel as Metamodel;
   const context = buildContext(model, metamodel);
 
@@ -136,7 +136,10 @@ describe('Smart Warehouse code generation project fixtures', () => {
     const outputs = renderProject(project);
 
     expect(project.targetMetamodelId).toBe(smartWarehouseMetamodel.id);
-    expect(Object.keys(outputs)).toEqual(['generate_warehouse_usd.py']);
+    expect(Object.keys(outputs)).toEqual(
+      expect.arrayContaining(['generate_warehouse_usd.py', 'warehouse_layout.json'])
+    );
+    expect(JSON.parse(outputs['warehouse_layout.json']).robots).toHaveLength(2);
     expect(outputs['generate_warehouse_usd.py']).toContain('Usd.Stage.CreateNew');
     expect(outputs['generate_warehouse_usd.py']).toContain('ASSET_MAP = {');
     expect(outputs['generate_warehouse_usd.py']).toContain(
@@ -145,7 +148,7 @@ describe('Smart Warehouse code generation project fixtures', () => {
     expect(outputs['generate_warehouse_usd.py']).toContain('GetReferences().AddReference');
     expect(outputs['generate_warehouse_usd.py']).toContain('Asset not found; using placeholder');
     expect(outputs['generate_warehouse_usd.py']).toContain('Referenced assets: ');
-    expect(outputs['generate_warehouse_usd.py'].match(/"class_name":/g)).toHaveLength(25);
+    expect(outputs['generate_warehouse_usd.py'].match(/"class_name":/g)).toHaveLength(28);
     expect(outputs['generate_warehouse_usd.py']).toContain(
       'print("Elements: " + str(len(ELEMENTS)))'
     );
@@ -195,7 +198,7 @@ describe('Smart Warehouse code generation project fixtures', () => {
       expect(project.targetMetamodelId).toBe(smartWarehouseMetamodel.id);
       expect(project.templates.length).toBeGreaterThan(0);
       project.templates.forEach(template => {
-        expect(['java', 'python']).toContain(template.language);
+        expect(['java', 'python', 'json', 'xml', 'plaintext']).toContain(template.language);
         expect(template.templateContent).toBeTruthy();
         expect(template.outputPattern).toBeTruthy();
         expect(template.targetMetamodelId ?? project.targetMetamodelId).toBe(smartWarehouseMetamodel.id);

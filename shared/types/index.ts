@@ -422,7 +422,7 @@ export interface TransformationExecution {
 export interface CodeGenerationTemplate {
   id: string;
   name: string;
-  language: 'java' | 'python';
+  language: 'java' | 'python' | 'json' | 'xml' | 'plaintext';
   templateContent: string;
   targetMetamodelId: string;
   outputPattern: string;

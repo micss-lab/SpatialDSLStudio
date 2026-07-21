@@ -21,7 +21,7 @@ A project contains:
 
 Each template contains:
 
-- language (`java` or `python`)
+- content type (`java`, `python`, `json`, `xml`, or `plaintext`)
 - template content (Handlebars-style)
 - output filename pattern
 
@@ -78,7 +78,7 @@ Projects support multiple templates (tabbed editor inside project dialog).
 Template fields:
 
 - template name
-- language (Java/Python)
+- content type (Java, Python, JSON, XML, or Plain Text)
 - output filename pattern (example: `{{name}}.java`)
 - template content
 
@@ -194,4 +194,5 @@ Fix: create a new project when branching template sets.
 - [Models](models.md)
 - [Visual Components Code Generation](visual-components-code-generation.md)
 - [Omniverse Code Generation](omniverse-code-generation.md)
+- [End-to-End Walkthrough: Smart Warehouse to Isaac Sim on NVIDIA Brev](end-to-end-omniverse.md)
 - [API Reference](../reference/api.md)

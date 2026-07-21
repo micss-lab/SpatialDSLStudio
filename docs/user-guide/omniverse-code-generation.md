@@ -3,6 +3,12 @@
 This guide explains how to generate an NVIDIA Omniverse/OpenUSD scene from a
 SpatialDSL Studio model by importing a code generation project JSON.
 
+For a single continuous path that starts at metamodel import and ends with the
+scene running on a cloud GPU, see
+[End-to-End Walkthrough: Smart Warehouse to Isaac Sim on NVIDIA Brev](end-to-end-omniverse.md).
+This guide is the deeper reference for the code generation and local-run parts of
+that path.
+
 The current project is intentionally an importable example, not app-seeded
 example data. That keeps the code generation feature generic: any team can
 import a project JSON for a different target platform, DSL, or runtime without
@@ -12,20 +18,32 @@ changing the app bundle.
 
 - Importable codegen project:
   `examples/codegen-projects/smart-warehouse-omniverse-project.json`
-- Vendored CC0 demonstration assets:
+- Versioned asset manifest and schema:
+  `examples/omniverse-assets/asset-manifest.json`,
+  `examples/omniverse-assets/asset-manifest.schema.json`
+- Warehouse prop assets (authored, CC0, one per physical class):
+  `examples/omniverse-assets/warehouse-kit/`
+- Vendored CC0 vehicle assets (the mobile robot):
   `examples/omniverse-assets/cc0-mini-vehicle-kit/`
 - Example source model:
   `frontend/src/examples/data/smart-warehouse-model.json`
 - Example target metamodel:
   `frontend/src/examples/data/smart-warehouse-metamodel.json`
 
-## What The Template Generates
+## What The Templates Generate
 
-The importable project contains one template:
+The importable project contains two templates:
 
-- Template name: `Generate Omniverse USD Scene`
-- Output file: `generate_warehouse_usd.py`
-- Target metamodel ID: `10000000-0000-4000-8000-000000000100`
+- `Generate Omniverse USD Scene` (Python) produces `generate_warehouse_usd.py`,
+  the static scene builder described below.
+- `Generate Warehouse Layout` (JSON) produces `warehouse_layout.json`, the model
+  data (robots, obstacles, pickups, drop-offs) read by the live navigation
+  simulation. See `examples/omniverse-assets/warehouse_sim/README.md` for the
+  simulation (an external OPC UA brain plus an Isaac Sim bridge, mirroring the
+  Visual Components MAS architecture).
+
+Both target metamodel ID `10000000-0000-4000-8000-000000000100`. The rest of this
+guide covers the scene script.
 
 The generated Python script creates a `.usda` USD stage with:
 
@@ -37,8 +55,13 @@ The generated Python script creates a `.usda` USD stage with:
   - `OutputLocation`
   - `ChargingStation`
   - `MobileRobot`
-- a referenced CC0 vehicle asset for each `MobileRobot` when the asset root is available
-- a placeholder cube for unmapped classes or unavailable asset files
+  - `StorageRack`
+  - `Dock`
+- a referenced USD asset for each physical class the manifest maps, when the
+  asset root is available: reviewed `warehouse-kit` props for conveyors,
+  charging stations, output locations, pathway areas, storage racks, and docks,
+  and a CC0 vehicle for each `MobileRobot`
+- a placeholder cube only for unmapped classes or unavailable asset files
 - source metadata attributes such as `spatialDsl:sourceName`,
   `spatialDsl:className`, and source coordinates in millimeters
 
@@ -56,16 +79,65 @@ The Smart Warehouse model already stores useful 3D scene data:
 - Z rotation, through `presentation.rotationZ`
 - size in millimeters, through `presentation.size3D`
 
-The template maps those values into OpenUSD transforms. `MobileRobot` elements
-reference `cc0-mini-vehicle-kit/demo_forklift.usda`; all remaining classes use
-deterministic cube geometry. If the asset root is missing, robots also fall back
-to cubes and the script prints the unresolved path.
+The template maps those values into OpenUSD transforms. Which asset each element
+references is resolved through a versioned asset manifest rather than a hard-coded
+map, so you can retarget assets without editing the template.
+
+### Asset Manifest
+
+`examples/omniverse-assets/asset-manifest.json` holds the class-to-asset mapping:
+
+```json
+{
+  "version": 1,
+  "defaults": {
+    "MobileRobot": {
+      "asset": "cc0-mini-vehicle-kit/demo_forklift.usda",
+      "uniformScale": 0.01,
+      "rotateXDeg": 90,
+      "zOffsetM": 0.0
+    },
+    "StorageRack": {
+      "asset": "warehouse-kit/storage_rack.usda",
+      "scaleMode": "fit"
+    }
+  },
+  "overrides": {}
+}
+```
+
+- `defaults` maps a class name to an asset mapping (asset path relative to the
+  asset root, plus optional scale settings).
+- `overrides` maps a specific element name to an asset mapping, and takes
+  precedence over the class default. Use it when one instance needs a different
+  asset from the rest of its class.
+- `scaleMode` chooses how the asset is scaled:
+  - `fit` (used by the `warehouse-kit` props) scales a 1 m unit asset to each
+    element's modeled length, width, and height, so instances match their
+    modeled dimensions. Author `fit` assets normalized to a 1 x 1 x 1 m box
+    centered on XY with the base at `z = -0.5`.
+  - `uniform` (the default, used by the CC0 robot) applies `uniformScale` and
+    `rotateXDeg` to a pre-sized asset without stretching it.
+- `asset-manifest.schema.json` is the draft-07 JSON Schema for the manifest.
+
+The frontend exposes `validateAssetManifest` and `resolveAssetForElement` in
+`frontend/src/services/codegeneration/asset-manifest.service.ts` for validating a
+manifest and resolving an element to its mapping (override first, then class
+default).
+
+At generation time the manifest values are also embedded in the generated script.
+When the script runs, it loads `asset-manifest.json` from the asset root if
+present and otherwise uses the embedded copy, so a locally edited manifest wins
+over the baked-in defaults. By default every physical class is mapped: robots
+reference the CC0 vehicle, and the other classes reference reviewed
+`warehouse-kit` props. Any class without a mapping uses deterministic cube
+geometry. If the asset root is missing, mapped elements also fall back to cubes,
+and the script prints a warning naming the element and class.
 
 The included vehicle subset is CC0 and demonstrates USD composition, materials,
 textures, instancing, Y-up to Z-up orientation, and scaling. It is not a
 production autonomous mobile robot. See the asset directory's `SOURCE.md` for
-provenance and the root-level `smart-warehouse-codegen-future-work.md` for the
-production asset roadmap.
+provenance.
 
 ## Import The Project
 
@@ -117,20 +189,15 @@ metamodel ID.
 
 ## Set Up Isaac Sim
 
-Use NVIDIA Isaac Sim as the runtime for this workflow. The generated script
-uses the OpenUSD `pxr` modules bundled with Isaac Sim to create the warehouse
-scene; it does not require an Omniverse extension.
+For this first workflow, use NVIDIA Isaac Sim as the Omniverse runtime. The
+generated script only needs the OpenUSD Python modules bundled with
+Omniverse/Isaac Sim, so you do not need to write an Omniverse extension.
 
-The current generator creates a static layout. Isaac Sim is the required target
-for PhysX dynamics, robot controllers, navigation, sensors, and runtime
-telemetry, but those simulation layers are not generated yet. Opening the
-current scene in Isaac Sim and pressing Play does not automatically make robots
-deliver packages.
-
-Isaac Sim's workstation application currently supports Windows 11 and Ubuntu
-22.04/24.04 on a compatible NVIDIA RTX GPU. It does not run natively on macOS.
-When using SpatialDSL Studio on a Mac, export the generator there and execute it
-on a supported Isaac Sim workstation or cloud host.
+No local GPU? Run Isaac Sim on a cloud GPU through NVIDIA Brev instead of a
+workstation install. The
+[End-to-End Walkthrough](end-to-end-omniverse.md#stage-5-register-on-nvidia-brev-and-launch-isaac-sim)
+covers registering on Brev, launching Isaac Sim, uploading the script and assets,
+and running it. The rest of this section covers the local workstation route.
 
 1. Check the current Isaac Sim requirements:
 
@@ -155,9 +222,9 @@ on a supported Isaac Sim workstation or cloud host.
    - Linux: `python.sh`
    - Windows: `python.bat`
 
-The generated `generate_warehouse_usd.py` script imports `pxr`, so run it with
-the Isaac Sim Python environment. Running it with an ordinary system Python
-interpreter will usually fail with:
+The generated `generate_warehouse_usd.py` script imports `pxr`, so it must run
+inside an Omniverse/Isaac Sim Python environment. Running it with system Python
+will usually fail with:
 
 ```text
 ModuleNotFoundError: No module named 'pxr'
@@ -165,170 +232,6 @@ ModuleNotFoundError: No module named 'pxr'
 
 That error means the script is correct, but the wrong Python interpreter was
 used.
-
-## Move An Export To The Isaac Sim Host
-
-Copy both of these items to the Windows or Linux machine:
-
-```text
-generate_warehouse_usd.py
-examples/omniverse-assets/
-```
-
-For example, place them together as:
-
-```text
-spatialdsl-export/
-  generate_warehouse_usd.py
-  omniverse-assets/
-```
-
-Run the generator on that destination machine. The current template resolves
-asset references while generating the scene, so copying only a `.usda` created
-on another machine can leave references pointing at paths that do not exist on
-the Isaac Sim host.
-
-## Run In A Browser With NVIDIA Brev
-
-NVIDIA does not run Isaac Sim directly inside the browser. NVIDIA Brev rents a
-remote GPU instance, and the Isaac Launchable provides two browser tabs:
-
-- a Visual Studio Code tab for files and terminal commands
-- an Isaac Sim tab streamed from the GPU with WebRTC
-
-Brev bills running instances by the hour. The current price is displayed before
-deployment. Stop the instance when taking a break; stopped instances do not
-incur compute charges, although a small storage charge can remain. Deleting the
-instance stops all charges and permanently removes its files.
-
-### 1. Export The Generator From SpatialDSL Studio
-
-Follow `Import The Project` and `Generate The Python Script` above on the Mac.
-Keep the downloaded file named:
-
-```text
-generate_warehouse_usd.py
-```
-
-### 2. Deploy The Isaac Launchable
-
-1. Open NVIDIA's current Isaac Launchable instructions:
-
-   ```text
-   https://docs.isaacsim.omniverse.nvidia.com/latest/installation/install_advanced_cloud_setup_launchable.html
-   ```
-
-2. Open the `Isaac Launchable` link and create or sign in to an NVIDIA Brev
-   account.
-3. Review the displayed GPU, storage, provider, and hourly price.
-4. Click `Deploy Launchable`.
-5. Wait until the instance is running, built, and its setup script has
-   completed. The first deployment and first shader warmup can take several
-   minutes.
-6. On the instance page, find `Using Secure Links` and open the shareable URL.
-   Sign in again if prompted. This opens browser-based Visual Studio Code.
-
-The preconfigured Launchable is the simplest first run. When creating a manual
-Brev VM instead, NVIDIA currently recommends one L40S GPU. Avoid A100 for a
-streamed session because it does not provide the NVENC encoder required by
-Isaac Sim livestreaming.
-
-### 3. Prepare The Export In Browser VS Code
-
-Open a terminal in the browser-based VS Code and run:
-
-```bash
-cd /workspace
-git clone --depth 1 https://github.com/micss-lab/SpatialDSLStudio.git
-mkdir -p /workspace/spatialdsl-export
-cp -R /workspace/SpatialDSLStudio/examples/omniverse-assets \
-  /workspace/spatialdsl-export/omniverse-assets
-```
-
-In the VS Code Explorer, drag the downloaded `generate_warehouse_usd.py` from
-the Mac into:
-
-```text
-/workspace/spatialdsl-export/
-```
-
-The directory should now contain:
-
-```text
-/workspace/spatialdsl-export/
-  generate_warehouse_usd.py
-  omniverse-assets/
-```
-
-### 4. Generate The USD Scene In The Cloud
-
-In the VS Code terminal, use Isaac Sim's bundled Python:
-
-```bash
-ACCEPT_EULA=y /isaac-sim/python.sh \
-  /workspace/spatialdsl-export/generate_warehouse_usd.py \
-  /workspace/spatialdsl-export/warehouse_scene.usda \
-  /workspace/spatialdsl-export/omniverse-assets
-```
-
-Expected output:
-
-```text
-Generated USD scene: /workspace/spatialdsl-export/warehouse_scene.usda
-Elements: 25
-Referenced assets: 2
-```
-
-Do not use the terminal's ordinary `python3`; it may not contain the `pxr`
-modules required by the generator.
-
-### 5. Start The Browser-Streamed Isaac Sim UI
-
-Run the following command and leave it running:
-
-```bash
-ACCEPT_EULA=y /isaac-sim/runheadless.sh
-```
-
-Wait until the terminal reports that the application is ready. Copy the secure
-VS Code URL into a new Chrome or Chromium tab and change the end of the URL to:
-
-```text
-/viewer/
-```
-
-For example:
-
-```text
-https://isaac.example-brev-host/viewer/
-```
-
-The page can display `Waiting for stream...` while Isaac Sim warms its shader
-cache. Keep only one viewer tab connected to the instance.
-
-In the streamed Isaac Sim UI:
-
-1. Select `File > Open`.
-2. Enter or browse to:
-
-   ```text
-   /workspace/spatialdsl-export/warehouse_scene.usda
-   ```
-
-3. Open `/World/MobileRobot` in the Stage tree and confirm that two vehicle
-   references load.
-4. Inspect the remaining class groups under `/World`; their boxes are expected
-   placeholder geometry in the current template.
-
-### 6. End The Paid Session
-
-1. In Isaac Sim, select `File > Exit`.
-2. Return to the Brev console.
-3. Stop the instance and confirm its state changes to `Stopped`.
-4. Download or push any files that must survive before deleting the instance.
-
-Do not rely on closing the browser tab to stop billing. A Brev instance can
-continue running after its VS Code and viewer tabs are closed.
 
 ## Run With Isaac Sim Python
 
@@ -340,23 +243,23 @@ Python environment before running the packaged interpreter. On Windows, use
 From your Isaac Sim installation directory:
 
 ```bash
-./python.sh /absolute/path/to/spatialdsl-export/generate_warehouse_usd.py \
-  /absolute/path/to/spatialdsl-export/warehouse_scene.usda \
-  /absolute/path/to/spatialdsl-export/omniverse-assets
+./python.sh /absolute/path/to/generate_warehouse_usd.py \
+  /absolute/path/to/warehouse_scene.usda \
+  /absolute/path/to/SpatialDSLStudio/examples/omniverse-assets
 ```
 
 On Windows:
 
 ```powershell
-python.bat C:\path\to\spatialdsl-export\generate_warehouse_usd.py C:\path\to\spatialdsl-export\warehouse_scene.usda C:\path\to\spatialdsl-export\omniverse-assets
+python.bat C:\path\to\generate_warehouse_usd.py C:\path\to\warehouse_scene.usda C:\path\to\SpatialDSLStudio\examples\omniverse-assets
 ```
 
 Expected terminal output:
 
 ```text
 Generated USD scene: /absolute/path/to/warehouse_scene.usda
-Elements: 25
-Referenced assets: 2
+Elements: 28
+Referenced assets: 28
 ```
 
 The element count excludes the root `WarehouseSystem` object because the template
@@ -392,8 +295,8 @@ viewer or Isaac Sim:
 2. Use `File > Open`.
 3. Select the generated `warehouse_scene.usda`.
 4. Inspect `/World/PathwayArea`, `/World/Conveyor`,
-   `/World/OutputLocation`, `/World/ChargingStation`, and
-   `/World/MobileRobot`.
+   `/World/OutputLocation`, `/World/ChargingStation`,
+   `/World/MobileRobot`, `/World/StorageRack`, and `/World/Dock`.
 
 ## Alternative: Run From Kit With `--exec`
 
@@ -416,13 +319,15 @@ Cause: the script was run with system Python.
 
 Fix: run the generated script with Isaac Sim's `python.sh` or `python.bat`.
 
-### Some elements still look like simple boxes
+### Everything looks like plain boxes
 
-Cause: only `MobileRobot` currently has a real asset mapping. Other classes use
-fallback geometry by design.
+Cause: the asset root was not passed (or is wrong), so no `warehouse-kit` or CC0
+assets resolved and every element fell back to a cube.
 
-Fix: this is expected. Add reviewed assets to the class map for conveyors,
-charging stations, output locations, and pathway surfaces.
+Fix: pass `examples/omniverse-assets` as the third script argument. Every physical
+class is mapped by default, so with a valid asset root you should see props, not
+bare boxes. To change a class's geometry, edit its entry in `asset-manifest.json`
+under `defaults` (per class) or `overrides` (per element).
 
 ### `Asset not found; using placeholder`
 
@@ -454,7 +359,7 @@ The current project JSON is meant to be edited or copied for other targets.
 Common next changes:
 
 - Replace remaining placeholder cubes with references to reviewed USD assets.
-- Add a class-to-asset map such as `MobileRobot -> assets/mobile_robot.usd`.
+- Extend `asset-manifest.json` with more class defaults or per-element overrides.
 - Emit physics APIs and collision approximations.
 - Emit a second script for robot motion or event logic.
 - Generate separate USD layers, for example:

@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "defaults": {
+    "MobileRobot": {
+      "asset": "cc0-mini-vehicle-kit/demo_forklift.usda",
+      "uniformScale": 0.01,
+      "rotateXDeg": 90,
+      "zOffsetM": 0
+    },
+    "Conveyor": {
+      "asset": "warehouse-kit/conveyor.usda",
+      "scaleMode": "fit"
+    },
+    "ChargingStation": {
+      "asset": "warehouse-kit/charging_station.usda",
+      "scaleMode": "fit"
+    },
+    "OutputLocation": {
+      "asset": "warehouse-kit/output_location.usda",
+      "scaleMode": "fit"
+    },
+    "PathwayArea": {
+      "asset": "warehouse-kit/pathway_area.usda",
+      "scaleMode": "fit"
+    },
+    "StorageRack": {
+      "asset": "warehouse-kit/storage_rack.usda",
+      "scaleMode": "fit"
+    },
+    "Dock": {
+      "asset": "warehouse-kit/dock.usda",
+      "scaleMode": "fit"
+    }
+  },
+  "overrides": {}
+}
