@@ -298,4 +298,29 @@ describe('ViewpointManager', () => {
       );
     });
   });
+
+  it('authors a create-node tool and persists it on the representation', async () => {
+    renderManager();
+
+    fireEvent.click(await screen.findByRole('button', { name: /^edit$/i }));
+
+    expect(screen.getByText('Tools')).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByTestId('add-tool-select'));
+    fireEvent.click(await screen.findByRole('option', { name: /^create node$/i }));
+
+    expect(await screen.findByDisplayValue('Create node')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('save-representation'));
+
+    await waitFor(() => {
+      expect(mockedViewpointService.updateRepresentationDescription).toHaveBeenCalledWith(
+        'viewpoint-1',
+        'representation-1',
+        expect.objectContaining({
+          toolDefinitions: [expect.objectContaining({ type: 'create-node', name: 'Create node' })],
+        })
+      );
+    });
+  });
 });

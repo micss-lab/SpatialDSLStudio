@@ -45,6 +45,7 @@ import {
   RepresentationDescription,
   RepresentationEdgeMapping,
   RepresentationKind,
+  ToolDefinition,
   SiriusCompatibilityReport,
   SiriusInteropWarning,
   Viewpoint
@@ -79,6 +80,16 @@ const shapeOptions = [
 ];
 const fallbackShapeOptions = ['box', 'sphere', 'cylinder'];
 const arrowOptions = ['none', 'open', 'filled', 'diamond'];
+const toolTypeOptions: Array<{ value: string; label: string; target: 'node' | 'edge' | 'none' }> = [
+  { value: 'create-node', label: 'Create node', target: 'node' },
+  { value: 'create-edge', label: 'Create edge', target: 'edge' },
+  { value: 'delete', label: 'Delete', target: 'none' },
+  { value: 'direct-edit', label: 'Direct edit', target: 'node' },
+  { value: 'reconnect', label: 'Reconnect edge', target: 'edge' },
+];
+const toolTargetKind = (type?: string): 'node' | 'edge' | 'none' => (
+  toolTypeOptions.find(option => option.value === type)?.target || 'none'
+);
 
 const emptyViewpointDraft = (): ViewpointDraft => ({
   name: '',
@@ -1156,6 +1167,27 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
     onChange({ ...draft, edgeMappings: edgeMappings.filter(mapping => mapping.id !== id) });
   };
 
+  const toolDefinitions = draft.toolDefinitions || [];
+
+  const addTool = (type: string) => {
+    const label = toolTypeOptions.find(option => option.value === type)?.label || 'Tool';
+    onChange({
+      ...draft,
+      toolDefinitions: [...toolDefinitions, { id: uuidv4(), name: label, type }],
+    });
+  };
+
+  const updateTool = (id: string, patch: Partial<ToolDefinition>) => {
+    onChange({
+      ...draft,
+      toolDefinitions: toolDefinitions.map(tool => (tool.id === id ? { ...tool, ...patch } : tool)),
+    });
+  };
+
+  const removeTool = (id: string) => {
+    onChange({ ...draft, toolDefinitions: toolDefinitions.filter(tool => tool.id !== id) });
+  };
+
   const updateClass2D = (key: string, value: any) => {
     updateClassSyntax({
       ...classSyntax,
@@ -1609,6 +1641,76 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
                             {arrowOptions.map(arrow => <MenuItem key={arrow} value={arrow}>{arrow}</MenuItem>)}
                           </Select>
                         </FormControl>
+                      </Stack>
+                    </Paper>
+                  );
+                })}
+              </Stack>
+            )}
+          </Paper>
+
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>Tools</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              Palette and interaction tools for this representation: node/edge creation, delete, direct edit, and reconnect. Tool names round-trip through .odesign export.
+            </Typography>
+            {!readOnly && (
+              <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                <InputLabel>Add tool</InputLabel>
+                <Select
+                  label="Add tool"
+                  value=""
+                  SelectDisplayProps={{ 'data-testid': 'add-tool-select' } as any}
+                  onChange={event => event.target.value && addTool(event.target.value as string)}
+                >
+                  {toolTypeOptions.map(option => (
+                    <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+            {toolDefinitions.length === 0 ? (
+              <Typography color="text.secondary">No tools. The default palette uses creatable metaclasses.</Typography>
+            ) : (
+              <Stack spacing={1.5}>
+                {toolDefinitions.map(tool => {
+                  const targetKind = toolTargetKind(tool.type);
+                  return (
+                    <Paper key={tool.id} variant="outlined" sx={{ p: 1.5 }}>
+                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
+                        <TextField label="Name" size="small" value={tool.name} disabled={readOnly} sx={{ minWidth: 160 }} onChange={event => updateTool(tool.id, { name: event.target.value })} />
+                        <FormControl size="small" sx={{ minWidth: 150 }}>
+                          <InputLabel>Type</InputLabel>
+                          <Select
+                            label="Type"
+                            value={tool.type || 'create-node'}
+                            disabled={readOnly}
+                            onChange={event => updateTool(tool.id, { type: event.target.value as string, metaClassId: undefined, referenceId: undefined })}
+                          >
+                            {toolTypeOptions.map(option => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}
+                          </Select>
+                        </FormControl>
+                        {targetKind === 'node' && (
+                          <FormControl size="small" sx={{ minWidth: 150 }}>
+                            <InputLabel>Metaclass</InputLabel>
+                            <Select label="Metaclass" value={tool.metaClassId || ''} disabled={readOnly} onChange={event => updateTool(tool.id, { metaClassId: event.target.value as string })}>
+                              {concreteClasses.map(cls => <MenuItem key={cls.id} value={cls.id}>{cls.name}</MenuItem>)}
+                            </Select>
+                          </FormControl>
+                        )}
+                        {targetKind === 'edge' && (
+                          <FormControl size="small" sx={{ minWidth: 170 }}>
+                            <InputLabel>Reference</InputLabel>
+                            <Select label="Reference" value={tool.referenceId || ''} disabled={readOnly} onChange={event => updateTool(tool.id, { referenceId: event.target.value as string })}>
+                              {references.map(entry => <MenuItem key={entry.reference.id} value={entry.reference.id}>{entry.sourceClass.name}.{entry.reference.name}</MenuItem>)}
+                            </Select>
+                          </FormControl>
+                        )}
+                        {!readOnly && (
+                          <Tooltip title="Remove tool">
+                            <IconButton size="small" color="error" onClick={() => removeTool(tool.id)}><DeleteIcon fontSize="small" /></IconButton>
+                          </Tooltip>
+                        )}
                       </Stack>
                     </Paper>
                   );
