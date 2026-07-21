@@ -30,11 +30,12 @@ Use this page to find the right documentation based on your goal.
 - [Architecture](reference/architecture.md)
 - [Sirius Desktop Compatibility](reference/sirius-compatibility.md)
 - [Sirius File Compatibility](reference/sirius-file-compatibility.md)
+- [Sirius Desktop Interoperability and Parity Check](reference/sirius-desktop-interop.md)
 
 ## By Audience
 
 - Product users: user-guide/
-- Sirius/EMF users: user-guide/viewpoints.md + reference/sirius-compatibility.md + reference/sirius-file-compatibility.md
+- Sirius/EMF users: user-guide/viewpoints.md + reference/sirius-compatibility.md + reference/sirius-file-compatibility.md + reference/sirius-desktop-interop.md
 - New developers: getting-started/ + reference/architecture.md
 - Backend/frontend contributors: reference/api.md + reference/data-model.md
 
