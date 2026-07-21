@@ -54,7 +54,7 @@ Creation flow:
 
 If no models exist, the UI prompts you to create a model first.
 
-Only executable `diagram` representation descriptions are selectable when creating a view. Reserved `table` and `tree` specifications are hidden until editors for those kinds exist.
+Executable `diagram` and `table` representation descriptions are selectable when creating a view. A `table` view opens as a read-only table of the model's elements. Reserved `tree` specifications are hidden until an editor for that kind exists.
 
 ## Switch between 2D and 3D
 

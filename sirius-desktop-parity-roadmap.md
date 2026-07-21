@@ -50,7 +50,7 @@ In progress / planned:
 
 - richer example coverage and walkthrough documentation
 - broader workflow tests and docs
-- container mapping editor, tool execution/operations, and table/tree representations
+- container mapping editor, tool execution/operations, tree representations, and richer table editing
 
 ## Parity Areas
 
@@ -136,9 +136,9 @@ SpatialDSL target:
 Tracker:
 
 - [x] `RepresentationKind = 'diagram' | 'table' | 'tree'`
-- [ ] table representation editor
+- [x] table representation (executable, read-only)
 - [ ] tree representation editor
-- [ ] Create View support for executable table/tree when implemented
+- [x] Create View support for executable table (tree pending)
 
 ### 5. Semantic EMF/Ecore/XMI Fidelity
 

@@ -1310,7 +1310,7 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
               onChange={event => onChange({ ...draft, kind: event.target.value as RepresentationKind })}
             >
               <MenuItem value="diagram">visual view</MenuItem>
-              <MenuItem value="table" disabled>table (planned)</MenuItem>
+              <MenuItem value="table">table</MenuItem>
               <MenuItem value="tree" disabled>tree (planned)</MenuItem>
             </Select>
           </FormControl>
@@ -1320,7 +1320,7 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
             onChange={(_, checked) => onChange({ ...draft, isDefault: checked })}
           />
           <Typography variant="caption" color="text.secondary">
-            Visual views are executable now; table and tree are reserved.
+            Visual and table views are executable; tree is reserved.
           </Typography>
 
           <Divider />
