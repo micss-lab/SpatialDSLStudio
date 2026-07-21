@@ -74,6 +74,13 @@ Current executable behavior:
 
 Visible metaclasses control which model elements appear in a view. Creatable metaclasses control which new-instance entries appear in the view palette. Creatable classes must be concrete and visible.
 
+## Node And Edge Mappings
+
+The representation editor also exposes Sirius-style mappings:
+
+- **Node mappings**: every visible concrete metaclass is a node mapping. Each row shows its notation source, a creatable toggle, and a jump to its style editor.
+- **Edge mappings**: with no edge mappings, every metamodel reference can be drawn as an edge. Add an edge mapping to restrict which references become edges (by source and target metaclass) and to give that edge its own line color, width, and arrowhead. Edge mappings round-trip through `.odesign` export/import.
+
 ## Notation Resolution
 
 When a view is rendered, notation is resolved in this order:

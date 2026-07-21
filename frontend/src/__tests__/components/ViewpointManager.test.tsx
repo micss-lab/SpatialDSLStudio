@@ -23,7 +23,16 @@ const mockMetamodel: Metamodel = {
       abstract: false,
       superTypes: [],
       attributes: [],
-      references: [],
+      references: [
+        {
+          id: 'ref-next',
+          name: 'next',
+          eClass: 'ereference',
+          target: 'task',
+          containment: false,
+          cardinality: { lowerBound: 0, upperBound: '*' },
+        },
+      ],
     },
     {
       id: 'abstract-base',
@@ -260,6 +269,33 @@ describe('ViewpointManager', () => {
     await waitFor(() => {
       expect(mockedSiriusInteropService.exportOdesign).toHaveBeenCalledWith('metamodel-1');
       expect(mockedSiriusInteropService.downloadText).toHaveBeenCalledWith('workflow.odesign', '<description:Group/>');
+    });
+  });
+
+  it('authors an edge mapping and persists it on the representation', async () => {
+    renderManager();
+
+    fireEvent.click(await screen.findByRole('button', { name: /^edit$/i }));
+
+    expect(screen.getByText('Edge Mappings')).toBeInTheDocument();
+    expect(screen.getByText('Node Mappings')).toBeInTheDocument();
+    expect(screen.getByText(/all references are drawable as edges/i)).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByTestId('add-edge-mapping-select'));
+    fireEvent.click(await screen.findByRole('option', { name: /Task\.next/i }));
+
+    expect(await screen.findByText(/Task\.next to Task/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('save-representation'));
+
+    await waitFor(() => {
+      expect(mockedViewpointService.updateRepresentationDescription).toHaveBeenCalledWith(
+        'viewpoint-1',
+        'representation-1',
+        expect.objectContaining({
+          edgeMappings: [expect.objectContaining({ referenceId: 'ref-next', referenceName: 'next' })],
+        })
+      );
     });
   });
 });
