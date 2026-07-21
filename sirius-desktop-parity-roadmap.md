@@ -70,8 +70,8 @@ Tracker:
 - [x] embedded representation descriptions
 - [x] Viewpoint management UI
 - [x] Representation Description editor
-- [ ] `.odesign` export
-- [ ] `.odesign` import
+- [x] `.odesign` export
+- [x] `.odesign` import
 
 ### 2. Diagram Representation Descriptions
 
