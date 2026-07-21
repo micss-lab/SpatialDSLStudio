@@ -81,6 +81,10 @@ The representation editor also exposes Sirius-style mappings:
 - **Node mappings**: every visible concrete metaclass is a node mapping. Each row shows its notation source, a creatable toggle, and a jump to its style editor.
 - **Edge mappings**: with no edge mappings, every metamodel reference can be drawn as an edge. Add an edge mapping to restrict which references become edges (by source and target metaclass) and to give that edge its own line color, width, and arrowhead. Edge mappings round-trip through `.odesign` export/import.
 
+## Tools
+
+The representation editor also authors palette and interaction tools: node creation (targeting a metaclass), edge creation (targeting a reference), delete, direct edit, and reconnect. Tool names round-trip through `.odesign` export. Tool definitions are authored per representation description; execution currently falls back to the default palette built from creatable metaclasses.
+
 ## Notation Resolution
 
 When a view is rendered, notation is resolved in this order:

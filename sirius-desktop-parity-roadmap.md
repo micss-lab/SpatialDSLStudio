@@ -50,7 +50,7 @@ In progress / planned:
 
 - richer example coverage and walkthrough documentation
 - broader workflow tests and docs
-- container mapping editor, tool definitions, and table/tree representations
+- container mapping editor, tool execution/operations, and table/tree representations
 
 ## Parity Areas
 
@@ -114,12 +114,13 @@ Tracker:
 
 - [x] basic create model element in view
 - [x] basic add existing model element to view
-- [ ] representation-specific tool editor
-- [ ] create node tool definitions
-- [ ] create edge tool definitions
-- [ ] delete tools
-- [ ] direct edit tools
-- [ ] reconnect tools
+- [x] representation-specific tool editor
+- [x] create node tool definitions
+- [x] create edge tool definitions
+- [x] delete tool definitions
+- [x] direct edit tool definitions
+- [x] reconnect tool definitions
+- [ ] tool execution in the palette/editor (currently authored, executes via default palette)
 - [ ] model operation language
 
 ### 4. Table And Tree Representations
