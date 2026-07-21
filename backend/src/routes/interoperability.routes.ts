@@ -67,4 +67,17 @@ router.post(
   })
 );
 
+router.post(
+  '/sirius/aird/export',
+  validate([
+    body('modelId').isString().notEmpty().withMessage('modelId is required'),
+    body('diagramIds').optional().isArray().withMessage('diagramIds must be an array'),
+    body('options').optional().isObject().withMessage('options must be an object'),
+  ]),
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const result = await siriusInteropService.exportAird(req.body, req.user!.userId);
+    res.json({ success: true, data: result });
+  })
+);
+
 export default router;

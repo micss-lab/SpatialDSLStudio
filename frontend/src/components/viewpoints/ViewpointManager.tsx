@@ -401,6 +401,31 @@ const ViewpointManager: React.FC = () => {
     }
   };
 
+  const handleExportSiriusAird = async () => {
+    if (!metamodelId) return;
+    setIsSiriusBusy(true);
+    setError('');
+    setSiriusStatus('');
+    try {
+      const models = modelService.getModelsByMetamodelId(metamodelId);
+      if (models.length === 0) {
+        throw new Error('Create a model with views before exporting a Sirius .aird session.');
+      }
+      // .aird export serializes the model's views; mirror .aird import's model resolution.
+      const model = models[0];
+      const result = await siriusInteropService.exportAird(model.id);
+      siriusInteropService.downloadText(result.filename, result.content);
+      setSiriusReport(result.report);
+      const fromModel = models.length > 1 ? ` for model "${model.name}"` : '';
+      setSiriusStatus(`Exported ${result.filename}${fromModel}.`);
+      setIsSiriusReportOpen(true);
+    } catch (error: any) {
+      setError(error.message || 'Failed to export Sirius .aird view');
+    } finally {
+      setIsSiriusBusy(false);
+    }
+  };
+
   const handleExportSiriusProjectZip = async () => {
     if (!metamodelId) return;
     setIsSiriusBusy(true);
@@ -756,6 +781,17 @@ const ViewpointManager: React.FC = () => {
           >
             Export .odesign
           </Button>
+          {canEditMetamodel && (
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<FileDownloadIcon />}
+              disabled={isSiriusBusy}
+              onClick={handleExportSiriusAird}
+            >
+              Export .aird View
+            </Button>
+          )}
           <Button
             size="small"
             variant="outlined"

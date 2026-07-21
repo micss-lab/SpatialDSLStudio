@@ -44,12 +44,13 @@ Implemented foundation:
 - pin creation, drag, validation, and edge anchoring support
 - `.odesign` viewpoint import/export subset
 - `.aird` view import subset (resolves against an imported model/viewpoint, preserves GMF layout)
+- `.aird` view export subset (serializes SpatialDSL views back to a Sirius session with GMF layout; round-trips with import)
 
 In progress / planned:
 
 - richer example coverage and walkthrough documentation
 - broader workflow tests and docs
-- `.aird` export (Phase 5)
+- `.odesign` node/container/edge mapping editors and tool definitions
 
 ## Parity Areas
 
@@ -153,7 +154,7 @@ Tracker:
 - [x] Ecore-oriented metamodel model
 - [x] XMI-oriented model services foundation
 - [ ] multi-resource model sessions
-- [ ] sidecar representation export
+- [x] sidecar representation export (`.aird` session/representation export with GMF layout)
 - [ ] explicit warnings for SpatialDSL-specific presentation data
 - [ ] higher-fidelity Ecore constraints/opposites/containment handling
 
@@ -214,7 +215,7 @@ After those are done, revisit this roadmap and choose the next parity area:
 
 ## Current Interoperability Position
 
-SpatialDSL supports partial semantic interchange with EMF tooling through Ecore metamodel import/export and XMI model import/export. It imports and exports a Sirius `.odesign` viewpoint-specification subset, and imports a Sirius `.aird` view subset (diagram representations resolved against an already-imported model and viewpoint, with GMF notation layout preserved). It does not yet export `.aird` representation/session files.
+SpatialDSL supports partial semantic interchange with EMF tooling through Ecore metamodel import/export and XMI model import/export. It imports and exports a Sirius `.odesign` viewpoint-specification subset, and both imports and exports a Sirius `.aird` view subset (diagram representations resolved against an already-imported model and viewpoint, with GMF notation layout preserved). Export round-trips with import: an exported `.aird` re-imports to the same nodes, edges, and layout.
 
 ## References
 
