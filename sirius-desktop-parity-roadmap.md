@@ -50,7 +50,7 @@ In progress / planned:
 
 - richer example coverage and walkthrough documentation
 - broader workflow tests and docs
-- `.odesign` node/container/edge mapping editors and tool definitions
+- container mapping editor, tool definitions, and table/tree representations
 
 ## Parity Areas
 
@@ -92,9 +92,9 @@ Tracker:
 - [x] creatable metaclass filtering
 - [x] metaclass notation override contract
 - [x] reference notation override contract
-- [ ] node mapping editor
+- [x] node mapping editor
 - [ ] container mapping editor
-- [ ] edge mapping editor
+- [x] edge mapping editor
 - [ ] conditional styles
 - [ ] layers
 - [ ] filters

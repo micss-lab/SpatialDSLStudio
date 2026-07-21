@@ -43,6 +43,7 @@ import {
   MetaReference,
   Metamodel,
   RepresentationDescription,
+  RepresentationEdgeMapping,
   RepresentationKind,
   SiriusCompatibilityReport,
   SiriusInteropWarning,
@@ -1128,6 +1129,33 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
     onChange({ ...draft, concreteSyntaxByMetaClassId: next });
   };
 
+  const edgeMappings = draft.edgeMappings || [];
+  const mappedReferenceIds = new Set(edgeMappings.map(mapping => mapping.referenceId).filter(Boolean));
+  const addableReferences = references.filter(entry => !mappedReferenceIds.has(entry.reference.id));
+
+  const addEdgeMapping = (referenceId: string) => {
+    const entry = references.find(candidate => candidate.reference.id === referenceId);
+    if (!entry) return;
+    onChange({
+      ...draft,
+      edgeMappings: [
+        ...edgeMappings,
+        { id: uuidv4(), referenceId: entry.reference.id, referenceName: entry.reference.name },
+      ],
+    });
+  };
+
+  const updateEdgeMapping = (id: string, patch: Partial<RepresentationEdgeMapping>) => {
+    onChange({
+      ...draft,
+      edgeMappings: edgeMappings.map(mapping => (mapping.id === id ? { ...mapping, ...patch } : mapping)),
+    });
+  };
+
+  const removeEdgeMapping = (id: string) => {
+    onChange({ ...draft, edgeMappings: edgeMappings.filter(mapping => mapping.id !== id) });
+  };
+
   const updateClass2D = (key: string, value: any) => {
     updateClassSyntax({
       ...classSyntax,
@@ -1224,7 +1252,7 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
         <Typography variant="h6">Representation Editor</Typography>
         <Stack direction="row" spacing={1}>
-          {!readOnly && <Button variant="contained" startIcon={<SaveIcon />} onClick={onSave}>Save</Button>}
+          {!readOnly && <Button data-testid="save-representation" variant="contained" startIcon={<SaveIcon />} onClick={onSave}>Save</Button>}
           <Button onClick={onCancel}>Close</Button>
         </Stack>
       </Stack>
@@ -1464,6 +1492,128 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
               </Stack>
             ) : (
               <Typography color="text.secondary">No references are defined in this metamodel.</Typography>
+            )}
+          </Paper>
+
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>Node Mappings</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              Each visible concrete metaclass is a node mapping. Toggle whether it can be created from the palette and jump to its style.
+            </Typography>
+            {concreteClasses.filter(cls => visibleSet.has(cls.id)).length === 0 ? (
+              <Typography color="text.secondary">No visible concrete metaclasses yet.</Typography>
+            ) : (
+              <Stack spacing={1}>
+                {concreteClasses.filter(cls => visibleSet.has(cls.id)).map(cls => (
+                  <Stack key={cls.id} direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
+                    <Typography variant="body2" sx={{ minWidth: 140, fontWeight: 500 }}>{cls.name}</Typography>
+                    <Chip size="small" variant="outlined" label={getClassSyntaxSource(cls)} />
+                    <FormControlLabel
+                      control={<Checkbox size="small" checked={creatableSet.has(cls.id)} disabled={readOnly} onChange={(_, checked) => setCreatable(cls.id, checked)} />}
+                      label={<Typography variant="caption">creatable</Typography>}
+                    />
+                    <Button size="small" onClick={() => onSelectClassNotation(cls.id)}>Edit style</Button>
+                  </Stack>
+                ))}
+              </Stack>
+            )}
+          </Paper>
+
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>Edge Mappings</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              With no edge mappings, every metamodel reference can be drawn as an edge. Add mappings to restrict which references become edges (by source/target metaclass) and to style them.
+            </Typography>
+            {!readOnly && (
+              <FormControl fullWidth size="small" sx={{ mb: 2 }} disabled={addableReferences.length === 0}>
+                <InputLabel>Add edge mapping</InputLabel>
+                <Select
+                  label="Add edge mapping"
+                  value=""
+                  SelectDisplayProps={{ 'data-testid': 'add-edge-mapping-select' } as any}
+                  onChange={event => event.target.value && addEdgeMapping(event.target.value as string)}
+                >
+                  {addableReferences.map(entry => (
+                    <MenuItem key={entry.reference.id} value={entry.reference.id}>
+                      {entry.sourceClass.name}.{entry.reference.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+            {edgeMappings.length === 0 ? (
+              <Typography color="text.secondary">No edge mappings. All references are drawable as edges.</Typography>
+            ) : (
+              <Stack spacing={2}>
+                {edgeMappings.map(mapping => {
+                  const refEntry = references.find(entry => entry.reference.id === mapping.referenceId);
+                  const targetName = refEntry ? (metamodel.classes.find(cls => cls.id === refEntry.reference.target)?.name || '?') : '';
+                  const syntax = mapping.concreteSyntax || {};
+                  const updateSyntax = (patch: Partial<ConcreteSyntaxEdge>) => updateEdgeMapping(mapping.id, { concreteSyntax: { ...syntax, ...patch } });
+                  return (
+                    <Paper key={mapping.id} variant="outlined" sx={{ p: 1.5 }}>
+                      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {refEntry ? `${refEntry.sourceClass.name}.${refEntry.reference.name} to ${targetName}` : (mapping.referenceName || 'Unresolved reference')}
+                        </Typography>
+                        {!readOnly && (
+                          <Tooltip title="Remove edge mapping">
+                            <IconButton size="small" color="error" onClick={() => removeEdgeMapping(mapping.id)}><DeleteIcon fontSize="small" /></IconButton>
+                          </Tooltip>
+                        )}
+                      </Stack>
+                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
+                        <FormControl size="small" sx={{ minWidth: 160 }}>
+                          <InputLabel>Source metaclasses</InputLabel>
+                          <Select
+                            multiple
+                            label="Source metaclasses"
+                            value={mapping.sourceMetaClassIds || []}
+                            disabled={readOnly}
+                            onChange={event => updateEdgeMapping(mapping.id, { sourceMetaClassIds: (event.target.value as string[]) })}
+                            renderValue={selected => `${(selected as string[]).length || 'any'} class(es)`}
+                          >
+                            {concreteClasses.map(cls => (
+                              <MenuItem key={cls.id} value={cls.id}>
+                                <Checkbox size="small" checked={(mapping.sourceMetaClassIds || []).includes(cls.id)} />
+                                {cls.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <FormControl size="small" sx={{ minWidth: 160 }}>
+                          <InputLabel>Target metaclasses</InputLabel>
+                          <Select
+                            multiple
+                            label="Target metaclasses"
+                            value={mapping.targetMetaClassIds || []}
+                            disabled={readOnly}
+                            onChange={event => updateEdgeMapping(mapping.id, { targetMetaClassIds: (event.target.value as string[]) })}
+                            renderValue={selected => `${(selected as string[]).length || 'any'} class(es)`}
+                          >
+                            {concreteClasses.map(cls => (
+                              <MenuItem key={cls.id} value={cls.id}>
+                                <Checkbox size="small" checked={(mapping.targetMetaClassIds || []).includes(cls.id)} />
+                                {cls.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Stack>
+                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
+                        <ColorSwatchField label="Line" value={syntax.lineColor || '#000000'} disabled={readOnly} onChange={value => updateSyntax({ lineColor: value })} />
+                        <TextField label="Width" type="number" size="small" sx={{ width: 90 }} value={syntax.lineWidth ?? 2} disabled={readOnly} onChange={event => updateSyntax({ lineWidth: Number(event.target.value) })} />
+                        <FormControl size="small" sx={{ minWidth: 110 }}>
+                          <InputLabel>Arrow</InputLabel>
+                          <Select label="Arrow" value={syntax.arrowHead || 'filled'} disabled={readOnly} onChange={event => updateSyntax({ arrowHead: event.target.value as any })}>
+                            {arrowOptions.map(arrow => <MenuItem key={arrow} value={arrow}>{arrow}</MenuItem>)}
+                          </Select>
+                        </FormControl>
+                      </Stack>
+                    </Paper>
+                  );
+                })}
+              </Stack>
             )}
           </Paper>
         </Stack>
