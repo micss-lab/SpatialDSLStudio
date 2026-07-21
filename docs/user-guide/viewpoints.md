@@ -70,7 +70,8 @@ Core fields:
 Current executable behavior:
 
 - `diagram` is executable in the 2D/3D view editors
-- `table` and `tree` are reserved and do not appear as executable Create View choices
+- `table` is executable as a read-only table view (rows are model elements of the visible metaclasses; columns are their attributes) and is selectable in Create View
+- `tree` is reserved and does not yet appear as an executable Create View choice
 
 Visible metaclasses control which model elements appear in a view. Creatable metaclasses control which new-instance entries appear in the view palette. Creatable classes must be concrete and visible.
 

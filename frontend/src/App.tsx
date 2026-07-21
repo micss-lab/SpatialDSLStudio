@@ -41,6 +41,7 @@ import MetamodelManager from './components/metamodel/MetamodelManager';
 import { ViewpointManager } from './components/viewpoints';
 import ModelManager from './components/model/ModelManager';
 import DiagramEditor from './components/diagram/DiagramEditor';
+import TableView from './components/diagram/TableView';
 import Diagram3DEditor from './components/diagram/Diagram3DEditor';
 import CodeGenerator from './components/codegeneration/CodeGenerator';
 import TransformationDashboard from './components/transformation/TransformationDashboard';
@@ -1458,7 +1459,7 @@ const DiagramsPage: React.FC = () => {
     [availableViewpoints, selectedViewpointId]
   );
   const selectableRepresentationDescriptions = useMemo(
-    () => (selectedViewpoint?.representationDescriptions || []).filter(description => description.kind === 'diagram'),
+    () => (selectedViewpoint?.representationDescriptions || []).filter(description => description.kind === 'diagram' || description.kind === 'table'),
     [selectedViewpoint]
   );
 
@@ -2025,7 +2026,8 @@ const DiagramEditorPage: React.FC = () => {
   const fallbackContext = viewpointService.resolveDefaultForMetamodel(metamodelId);
   const viewpoint = explicitContext.viewpoint || fallbackContext.viewpoint;
   const representationDescription = explicitContext.representationDescription || fallbackContext.representationDescription;
-  
+  const isTable = representationDescription?.kind === 'table';
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }} data-diagram-version={diagramVersion}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2, py: 1, borderBottom: '1px solid #e4e7ec' }}>
@@ -2037,24 +2039,30 @@ const DiagramEditorPage: React.FC = () => {
             {viewpoint?.name || 'Default'} / {representationDescription?.name || 'Default Visual'}
           </Typography>
         </Box>
-        <Button 
-          variant={mode === '2D' ? 'contained' : 'outlined'} 
-          onClick={() => setMode('2D')}
-          sx={{ mr: 1 }}
-        >
-          2D Mode
-        </Button>
-        <Button 
-          variant={mode === '3D' ? 'contained' : 'outlined'} 
-          onClick={() => setMode('3D')}
-          sx={{ ml: 1 }}
-        >
-          3D Mode
-        </Button>
+        {!isTable && (
+          <>
+            <Button
+              variant={mode === '2D' ? 'contained' : 'outlined'}
+              onClick={() => setMode('2D')}
+              sx={{ mr: 1 }}
+            >
+              2D Mode
+            </Button>
+            <Button
+              variant={mode === '3D' ? 'contained' : 'outlined'}
+              onClick={() => setMode('3D')}
+              sx={{ ml: 1 }}
+            >
+              3D Mode
+            </Button>
+          </>
+        )}
       </Box>
-      
+
       <Box sx={{ flexGrow: 1 }}>
-        {mode === '2D' ? (
+        {isTable ? (
+          <TableView diagramId={diagramId} />
+        ) : mode === '2D' ? (
           <DiagramEditor diagramId={diagramId} />
         ) : (
           <div style={{ height: '100%', width: '100%', position: 'relative' }} className="diagram3d-container">
