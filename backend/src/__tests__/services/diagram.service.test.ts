@@ -212,6 +212,49 @@ describe('DiagramService', () => {
       expect(result.name).toBe('TestDiagram');
     });
 
+    it('persists a tree representation as an executable view', async () => {
+      const treeViewpointRow = {
+        ...mockViewpointRow,
+        representationDescriptions: [
+          {
+            ...mockViewpointRow.representationDescriptions[0],
+            id: 'tree-representation-1',
+            name: 'Robot Tree',
+            kind: 'tree',
+          },
+        ],
+      };
+      prismaMock.viewpoint.findFirst.mockResolvedValue(treeViewpointRow as any);
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: true });
+      prismaMock.model.findFirst.mockResolvedValue(mockModelRow as any);
+      (prismaMock.diagram.create as any).mockImplementation(async ({ data }: any) => ({
+        ...mockDiagramRow,
+        ...data,
+      }));
+
+      const result = await diagramService.create(
+        {
+          id: 'tree-view-1',
+          name: 'Robot Tree',
+          modelId: 'model-uuid-1',
+          viewpointId: 'viewpoint-uuid-1',
+          representationDescriptionId: 'tree-representation-1',
+          elements: [],
+          gridSettings: { sizeX: 20000, sizeY: 20000 },
+        },
+        'user-uuid-1',
+        'DSL_DESIGNER'
+      );
+
+      expect(result.representationDescriptionId).toBe('tree-representation-1');
+      expect(prismaMock.diagram.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          viewpointId: 'viewpoint-uuid-1',
+          representationDescriptionId: 'tree-representation-1',
+        }),
+      }));
+    });
+
     it('throws 403 for VIEWER role', async () => {
       await expect(
         diagramService.create(
@@ -327,6 +370,40 @@ describe('DiagramService', () => {
   });
 
   describe('createModelElementInView', () => {
+    it('rejects diagram-only mutations for tree representations', async () => {
+      const treeViewpointRow = {
+        ...mockViewpointRow,
+        representationDescriptions: [
+          {
+            ...mockViewpointRow.representationDescriptions[0],
+            id: 'tree-representation-1',
+            kind: 'tree',
+          },
+        ],
+      };
+      prismaMock.viewpoint.findFirst.mockResolvedValue(treeViewpointRow as any);
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: true });
+      prismaMock.diagram.findFirst.mockResolvedValue({
+        ...mockDiagramRow,
+        viewpointId: 'viewpoint-uuid-1',
+        representationDescriptionId: 'tree-representation-1',
+      });
+      prismaMock.model.findFirst.mockResolvedValue(mockModelRow as any);
+      prismaMock.metamodel.findFirst.mockResolvedValue(mockMetamodelRow as any);
+
+      await expect(
+        diagramService.createModelElementInView(
+          'diag-uuid-1',
+          'cls-1',
+          'user-uuid-1',
+          'DSL_DESIGNER'
+        )
+      ).rejects.toThrow('only supported for diagram representations');
+
+      expect(prismaMock.model.update).not.toHaveBeenCalled();
+      expect(prismaMock.diagram.update).not.toHaveBeenCalled();
+    });
+
     it('creates a model element and includes it in the current view', async () => {
       sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: true });
       prismaMock.diagram.findFirst.mockResolvedValue(mockDiagramRow);

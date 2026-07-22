@@ -33,7 +33,16 @@ const mockMetamodelRow = {
       abstract: false,
       superTypes: [],
       attributes: [],
-      references: [],
+      references: [
+        {
+          id: 'ref-parts',
+          name: 'parts',
+          eClass: 'EReference',
+          target: 'cls-1',
+          containment: true,
+          cardinality: { lowerBound: 0, upperBound: '*' },
+        },
+      ],
     },
   ],
   enums: [],
@@ -108,6 +117,38 @@ describe('ViewpointService', () => {
               kind: 'diagram',
               visibleMetaClassIds: ['cls-1', 'cls-1'],
               creatableMetaClassIds: ['cls-1'],
+              tableColumns: ['name', 'name'],
+              containerMappings: [
+                {
+                  id: 'container-robots',
+                  containerMetaClassId: ' cls-1 ',
+                  containmentReferenceId: ' ref-parts ',
+                  childMetaClassIds: ['cls-1', 'cls-1'],
+                  concreteSyntax: { two_d: { shape: 'rectangle' } },
+                },
+              ],
+              propertySections: [
+                {
+                  id: 'properties-robot',
+                  name: '  Robot status  ',
+                  metaClassIds: ['cls-1', 'cls-1'],
+                  attributeNames: ['name', 'battery', 'name'],
+                  referenceNames: ['parts', 'parts'],
+                },
+              ],
+              toolDefinitions: [
+                {
+                  id: 'tool-create',
+                  name: '  Create configured robot  ',
+                  type: 'node',
+                  metaClassId: 'cls-1',
+                  payload: {
+                    operations: [
+                      { type: 'set-attribute', attributeName: 'name', value: 'Configured robot' },
+                    ],
+                  },
+                },
+              ],
               isDefault: true,
             },
           ],
@@ -135,7 +176,103 @@ describe('ViewpointService', () => {
         name: 'Main Diagram',
         viewpointId: 'viewpoint-uuid-1',
         visibleMetaClassIds: ['cls-1'],
+        tableColumns: ['name'],
+        containerMappings: [
+          {
+            id: 'container-robots',
+            containerMetaClassId: 'cls-1',
+            containmentReferenceId: 'ref-parts',
+            childMetaClassIds: ['cls-1'],
+            concreteSyntax: { two_d: { shape: 'rectangle' } },
+          },
+        ],
+        propertySections: [
+          {
+            id: 'properties-robot',
+            name: 'Robot status',
+            metaClassIds: ['cls-1'],
+            attributeNames: ['name', 'battery'],
+            referenceNames: ['parts'],
+          },
+        ],
+        toolDefinitions: [expect.objectContaining({
+          id: 'tool-create',
+          name: 'Create configured robot',
+          type: 'create-node',
+          metaClassId: 'cls-1',
+          payload: {
+            operations: [
+              { type: 'set-attribute', attributeName: 'name', value: 'Configured robot' },
+            ],
+          },
+        })],
       }));
+    });
+
+    it('rejects property sections on non-diagram representations', async () => {
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: true });
+      prismaMock.metamodel.findFirst.mockResolvedValue(mockMetamodelRow as any);
+      prismaMock.viewpoint.findMany.mockResolvedValue([]);
+
+      await expect(viewpointService.create(
+        {
+          name: 'Invalid table panels',
+          metamodelId: 'metamodel-uuid-1',
+          representationDescriptions: [
+            {
+              id: 'rep-table',
+              name: 'Robot table',
+              viewpointId: 'viewpoint-table',
+              kind: 'table',
+              visibleMetaClassIds: ['cls-1'],
+              creatableMetaClassIds: [],
+              propertySections: [{ id: 'section-1', name: 'Details' }],
+            },
+          ],
+        },
+        'metamodel-owner-1',
+        'DSL_DESIGNER'
+      )).rejects.toMatchObject({ statusCode: 400 });
+    });
+
+    it('rejects executable tool payloads with non-scalar operation values', async () => {
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: true });
+      prismaMock.metamodel.findFirst.mockResolvedValue(mockMetamodelRow as any);
+      prismaMock.viewpoint.findMany.mockResolvedValue([]);
+
+      await expect(viewpointService.create(
+        {
+          name: 'Unsafe tools',
+          metamodelId: 'metamodel-uuid-1',
+          representationDescriptions: [
+            {
+              id: 'rep-unsafe',
+              name: 'Unsafe Diagram',
+              viewpointId: 'viewpoint-unsafe',
+              kind: 'diagram',
+              visibleMetaClassIds: ['cls-1'],
+              creatableMetaClassIds: ['cls-1'],
+              toolDefinitions: [
+                {
+                  id: 'tool-unsafe',
+                  name: 'Unsafe create',
+                  type: 'create-node',
+                  metaClassId: 'cls-1',
+                  payload: {
+                    operations: [
+                      { type: 'set-attribute', attributeName: 'name', value: { expression: 'run()' } as any },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        'metamodel-owner-1',
+        'DSL_DESIGNER'
+      )).rejects.toThrow('must be a scalar or null');
+
+      expect(prismaMock.viewpoint.create).not.toHaveBeenCalled();
     });
 
     it('rejects duplicate viewpoint names case-insensitively within a metamodel', async () => {

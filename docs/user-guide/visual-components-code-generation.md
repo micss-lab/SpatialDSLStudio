@@ -35,17 +35,26 @@ It uses the current model-based code generation context:
 - `elementsByClassName.OutputLocation`
 - `elementsByClassName.ChargingStation`
 - `elementsByClassName.PathwayArea`
+- `elementsByClassName.WarehouseController`
+- `elementsByClassName.Task`
+- `elementsByClassName.Product`
 - `countByClassName.*`
 - `WarehouseModel.WarehouseMAS`
 - `WarehouseModel["Mobile Robot Resource"]`
 - 3D placement fields: `X`, `Y`, `RZ`, `Length`, `Width`
+- stable generated identifiers such as `opcNodeId`, `controlId`, `taskId`, and
+  `productId`
+- `resolvedReferences.<referenceName>` target summaries (ID, name, class, and
+  stable OPC/control identifier), while the original raw reference IDs remain
+  available for backwards compatibility
 
 ## What The Project Generates
 
 The importable project contains eight templates:
 
 - `SimulationScript.py`: Visual Components setup script.
-- `Config.java`: JADE/MAS configuration.
+- `Config.java`: JADE/MAS configuration, including model-driven controller,
+  task, and product records.
 - `PathwayAreaLocation.json`: pathway area placement and dimensions.
 - `RobotLocation.json`: mobile robot placement.
 - `ConveyorLocation.json`: conveyor placement.
@@ -65,6 +74,29 @@ from the `WarehouseMAS` model element. The application URI is a model attribute
 hard-coded string. If your OPC UA server advertises a different application URI,
 edit `ApplicationURI` on the `WarehouseMAS` element in the model before
 generating, instead of editing the template.
+
+`Config.java` no longer hard-codes only a coordinator. It generates
+`ControllerSpec`, `TaskSpec`, and `ProductSpec` records from the model. A task's
+assigned robot, pickup, and dropoff are resolved by semantic reference, so the
+generated source contains stable names such as `Robot1`, `Conveyor`, and
+`Output Location` instead of opaque element UUIDs. Controller policy,
+update interval, controlled robots, and monitored conveyors are emitted the same
+way.
+
+The connectivity XML and Java constants share the Isaac Sim bridge contract:
+
+```text
+Robot{n}/Location
+Robot{n}/Target
+Robot{n}/State
+Robot{n}/HasProduct
+Robot{n}/BatteryLevel
+```
+
+`SimulationScript.py` creates the corresponding `State` property, and
+`OPCUAConfig.xml` maps it in the server-to-simulation group. Stable robot numbering
+comes from deterministic generation ordering, so controller/task references and
+OPC XML address the same agents.
 
 ## Import The Project
 

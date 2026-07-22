@@ -17,14 +17,20 @@ Implemented:
 - Smart Warehouse Visual Components and Omniverse projects consolidated on
   current-main PR #30
 - eight Visual Components outputs, including OPC UA configuration
-- OpenUSD scene generation for 25 physical warehouse elements
+- OpenUSD scene generation for 28 physical warehouse elements
 - model-driven OPC UA port and namespace values
 - automated Handlebars rendering, JSON parsing, and XML parsing tests
-- a vendored CC0 USD vehicle subset for asset-reference testing
-- a `MobileRobot` asset reference with placeholder fallback
+- a normalized MIT-licensed NVIDIA F1TENTH AMR with provenance, collision, and
+  optional articulation layers
+- four generated USD layers (layout, assets, physics, and composed simulation)
+- kinematic, dynamic rigid-body, and differential-drive bridge modes
+- model-driven Visual Components controller/task/product configuration with a
+  shared stable OPC UA node contract
 
-The included CC0 vehicle is a composition demonstrator, not a production AMR.
-The generated USD is a static scene, not an executable warehouse simulation.
+The CC0 vehicle remains a composition regression fixture. The generated scene
+now contains structural PhysX opinions and a controllable production AMR, while
+route/package/event/deterministic-output work remains in the longer simulation
+plan below.
 
 ## Release Gates
 
@@ -35,21 +41,19 @@ The generated USD is a static scene, not an executable warehouse simulation.
 - [ ] Load the generated setup script and connectivity XML in Visual Components.
 - [ ] Confirm the OPC UA application URI advertised by the real server.
 - [ ] Run the generated OpenUSD script in Isaac Sim.
-- [ ] Confirm referenced assets resolve when the asset-root argument is supplied.
-- [ ] Confirm missing assets produce visible cube fallbacks rather than an invalid stage.
+- [x] Confirm referenced assets resolve when the asset-root argument is supplied (automated).
+- [x] Confirm missing assets produce visible cube fallbacks rather than an invalid stage (automated).
 
 ## Isaac Sim Simulation Status
 
-The current output has no simulation clock, route scheduler, robot controller,
-package lifecycle, collision behavior, or event logger. Pressing Play in a USD
-viewer or in Isaac Sim therefore does not make robots deliver packages.
+The current output has a physics scene, collision/mass schemas, and three robot
+control modes, but no generated simulation clock, route scheduler, package
+lifecycle, contact-event logger, or deterministic output bundle. The external
+MAS brain supplies navigation and repeated pickup/dropoff behavior.
 
 Isaac Sim on a supported NVIDIA RTX workstation or cloud instance is the
 required runtime for the physical simulation. The next implementation must add:
 
-- collision and rigid-body schemas
-- robot articulation and controllers
-- navigation and obstacle handling
 - sensors and synthetic-data capture
 - runtime telemetry and event export
 
@@ -72,12 +76,9 @@ behavior, event, and output contracts. Only the runtime launcher and physics
 adapter should differ. Do not maintain separate Isaac Sim and `ovphysx` package
 state machines or event schemas.
 
-The current codegen project format already supports multiple templates in one
-project. It does not support project inheritance or shared templates, and its
-template language is limited to `java` and `python`. Before adding production
-JSON, JSON Lines, text, or Docker outputs, add appropriate content types or
-generate Python configuration files temporarily. Do not permanently label
-non-code artifacts as Java or Python.
+The current codegen project format already supports multiple templates and
+`java`, `python`, `json`, `xml`, and `plaintext` content types. It does not
+support project inheritance, shared templates, or project-level binary assets.
 
 ### Generated Bundle Contract
 
@@ -326,24 +327,26 @@ files must not drift:
 
 ## Real USD Asset Support
 
-### Implemented Demonstrator
+### Implemented Production AMR
 
-The initial asset library is under:
-
-```text
-examples/omniverse-assets/cc0-mini-vehicle-kit/
-```
-
-The generated script maps `MobileRobot` to:
+The normalized AMR package is under:
 
 ```text
-cc0-mini-vehicle-kit/demo_forklift.usda
+examples/omniverse-assets/nvidia-f1tenth-amr/
 ```
 
-The script accepts an asset root as its second command-line argument. Assets are
-added through USD references, so geometry and materials remain external and can
-be reused by every robot instance. If the mapped file is unavailable, generation
-continues with the existing cube representation.
+The manifest maps `MobileRobot` to:
+
+```text
+nvidia-f1tenth-amr/f1tenth_amr_collision.usda
+```
+
+The package is a lightweight USDA re-authoring of NVIDIA's MIT-licensed
+F1TENTH sample at revision
+`ccf6b3ee65a3df82160b217a4cd1b523b2f7c351`. It records metre/Z-up/+X-forward
+normalization, provenance, materials, collision proxies, and an optional
+differential-drive articulation root. The legacy Python builder still uses a
+cube when any mapped asset is unavailable.
 
 ### Production Asset Onboarding
 
@@ -362,12 +365,14 @@ Every production asset should pass this sequence:
 
 ### Asset Manifest
 
-Move the hard-coded demonstration mapping into a versioned manifest:
+The versioned manifest now records portable paths, provenance, orientation,
+body mode, mass, wheel geometry, and joint mappings:
 
 ```json
 {
   "MobileRobot": {
-    "asset": "robots/amr/model.usd",
+    "asset": "nvidia-f1tenth-amr/f1tenth_amr_collision.usda",
+    "articulationAsset": "nvidia-f1tenth-amr/f1tenth_amr_articulation.usda",
     "uniformScale": 1.0,
     "rotateXDeg": 0,
     "zOffsetM": 0.0
@@ -375,8 +380,9 @@ Move the hard-coded demonstration mapping into a versioned manifest:
 }
 ```
 
-The manifest should support project defaults plus per-element overrides. It
-should not expose arbitrary filesystem access in browser code.
+The manifest supports project defaults plus per-element overrides. Both browser
+validation and the filesystem validator reject absolute/traversal paths; the
+latter recursively verifies local USDA dependencies.
 
 ## Prioritized Backlog
 
@@ -388,35 +394,35 @@ should not expose arbitrary filesystem access in browser code.
 
 ### P1: Asset Pipeline Hardening
 
-- [ ] Add a versioned asset manifest and schema validation.
-- [ ] Package referenced assets with generated downloads or produce a deployment manifest.
-- [ ] Add per-class and per-element asset selection.
-- [ ] Calculate scale from source bounds and modeled dimensions.
-- [ ] Normalize Y-up assets into the Z-up generated stage.
+- [x] Add a versioned asset manifest and schema validation.
+- [x] Package referenced assets in a portable repository asset root.
+- [x] Add per-class and per-element asset selection.
+- [x] Calculate fit scale from modeled dimensions and preserve normalized AMR scale.
+- [x] Normalize the production AMR into the Z-up generated stage.
 - [ ] Add missing-asset diagnostics to the generated script and UI.
 - [ ] Decide whether production assets live in Git LFS, object storage, or Nucleus.
 
 ### P2: Physics And Runtime Codegen
 
 - [ ] Complete the model and codegen prerequisites in Phase 0.
-- [ ] Generate the layered scene, collision, rigid-body, and mass contract.
-- [ ] Generate the differential-drive articulation and shared controller API.
+- [x] Generate the layered scene, collision, rigid-body, and mass contract.
+- [x] Generate the differential-drive articulation and shared controller API.
 - [ ] Generate route, package, contact, event, and deterministic output logic.
 - [ ] Add the CPU-only `ovphysx` codegen project and Ubuntu runtime test.
 - [ ] Validate the same simulation contract in Isaac Sim on RTX.
 
 ### P3: Visual Components Hardening
 
-- [ ] Make OPC UA application URI a model attribute or generation parameter.
+- [x] Make OPC UA application URI a model attribute or generation parameter.
 - [ ] Detect supported Visual Components installation and library paths.
 - [ ] Verify Python API compatibility for each supported Visual Components version.
 - [ ] Test generated OPC UA node IDs against the live WarehouseMAS server.
-- [ ] Replace `java` language tags on JSON/XML templates when generic content types exist.
+- [x] Replace `java` language tags on JSON/XML templates with native content types.
 
 ### P4: Core Codegen Improvements
 
-- [ ] Add native `json`, `xml`, and plain-text template content types.
-- [ ] Make generated ordering deterministic without changing semantic model order.
+- [x] Add native `json`, `xml`, and plain-text template content types.
+- [x] Make generated ordering deterministic without changing semantic model order.
 - [ ] Add project-level static assets or binary attachment support.
 - [ ] Add end-to-end import, generate, and ZIP-download coverage.
 

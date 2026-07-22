@@ -38,6 +38,29 @@ export class CodegenHandlebarsService {
       if (typeof str !== 'string') return '';
       return str.replace(/\s+/g, '_').toLowerCase();
     });
+
+    // OpenUSD prim identifiers cannot contain spaces, punctuation, or begin
+    // with a digit. Keep this deterministic so independently generated USD
+    // layers address exactly the same prims.
+    Handlebars.registerHelper('usdIdentifier', function(value) {
+      const cleaned = String(value ?? '')
+        .trim()
+        .replace(/[^A-Za-z0-9_]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '');
+      if (!cleaned) return 'Prim';
+      return /^\d/.test(cleaned) ? '_' + cleaned : cleaned;
+    });
+
+    Handlebars.registerHelper('meters', function(value) {
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric / 1000 : 0;
+    });
+
+    Handlebars.registerHelper('halfMeters', function(value) {
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric / 2000 : 0;
+    });
     
     // Helper to quote string values but leave numbers and booleans as is
     Handlebars.registerHelper('quote', function(value) {
@@ -45,6 +68,13 @@ export class CodegenHandlebarsService {
         return `"${value}"`;
       }
       return value;
+    });
+
+    // JSON string escaping is also valid for Java string literals for the
+    // model data emitted by the bundled generators. The helper includes the
+    // surrounding quotes and prevents names from breaking generated source.
+    Handlebars.registerHelper('javaString', function(value) {
+      return JSON.stringify(String(value ?? ''));
     });
     
     // Add equality comparison helper

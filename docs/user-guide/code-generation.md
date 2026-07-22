@@ -118,8 +118,17 @@ Common helper examples in UI:
 - `lowercase`
 - `camelCase`
 - `snakeCase`
+- `usdIdentifier` (portable OpenUSD prim identifier)
+- `meters` / `halfMeters` (millimeter model values to metres)
+- `javaString` (quoted, escaped Java string literal)
 
 The editor also includes autocompletion support for template authoring.
+
+Multi-element contexts retain raw semantic reference IDs and also expose
+`resolvedReferences`, whose target summaries include stable name/class data and
+generated runtime identifiers. Smart Warehouse robots and conveyors receive
+deterministic `Robot{n}` / `Conveyor{n}` OPC IDs, allowing separate templates to
+generate consistent source, XML, and USD layers without hard-coded UUIDs.
 
 ## Generated outputs
 

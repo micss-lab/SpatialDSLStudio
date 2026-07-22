@@ -1,0 +1,248 @@
+#usda 1.0
+(
+    defaultPrim = "F1TenthAMR"
+    documentation = "Primitive-based visual re-authoring of NVIDIA's MIT-licensed F1TENTH sample."
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "F1TenthAMR" (
+    kind = "component"
+)
+{
+    custom string spatialDsl:assetVersion = "1.0.0-spatialdsl"
+    custom string spatialDsl:className = "MobileRobot"
+    custom string spatialDsl:forwardAxis = "+X"
+    custom string spatialDsl:license = "MIT"
+    custom string spatialDsl:sourceRevision = "ccf6b3ee65a3df82160b217a4cd1b523b2f7c351"
+
+    def Xform "Visual"
+    {
+        def Cube "LowerDeck" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            float size = 1
+            rel material:binding = </F1TenthAMR/Looks/Carbon>
+            double3 xformOp:scale = (0.46, 0.245, 0.012)
+            double3 xformOp:translate = (0, 0, 0.09)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Cube "UpperDeck" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            float size = 1
+            rel material:binding = </F1TenthAMR/Looks/Carbon>
+            double3 xformOp:scale = (0.37, 0.225, 0.012)
+            double3 xformOp:translate = (-0.015, 0, 0.178)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Cube "FrontBumper" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            float size = 1
+            rel material:binding = </F1TenthAMR/Looks/BodyRed>
+            double3 xformOp:scale = (0.045, 0.315, 0.052)
+            double3 xformOp:translate = (0.255, 0, 0.082)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Cube "RearBumper" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            float size = 1
+            rel material:binding = </F1TenthAMR/Looks/BodyRed>
+            double3 xformOp:scale = (0.04, 0.29, 0.045)
+            double3 xformOp:translate = (-0.255, 0, 0.082)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Cube "BatteryPack" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            float size = 1
+            rel material:binding = </F1TenthAMR/Looks/BodyRed>
+            double3 xformOp:scale = (0.19, 0.118, 0.07)
+            double3 xformOp:translate = (-0.06, 0, 0.132)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Cube "ComputeModule" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            float size = 1
+            rel material:binding = </F1TenthAMR/Looks/Aluminium>
+            double3 xformOp:scale = (0.14, 0.13, 0.055)
+            double3 xformOp:translate = (0.075, 0, 0.218)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Cube "LeftSideRail" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            float size = 1
+            rel material:binding = </F1TenthAMR/Looks/Aluminium>
+            double3 xformOp:scale = (0.33, 0.012, 0.025)
+            double3 xformOp:translate = (-0.01, 0.145, 0.135)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Cube "RightSideRail" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            float size = 1
+            rel material:binding = </F1TenthAMR/Looks/Aluminium>
+            double3 xformOp:scale = (0.33, 0.012, 0.025)
+            double3 xformOp:translate = (-0.01, -0.145, 0.135)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Xform "Wheels"
+        {
+            def Cylinder "FrontLeft" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                uniform token axis = "Z"
+                float height = 0.052
+                float radius = 0.057
+                rel material:binding = </F1TenthAMR/Looks/Rubber>
+                float3 xformOp:rotateXYZ = (90, 0, 0)
+                double3 xformOp:translate = (0.174, 0.162, 0.058)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+            }
+            def Cylinder "FrontRight" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                uniform token axis = "Z"
+                float height = 0.052
+                float radius = 0.057
+                rel material:binding = </F1TenthAMR/Looks/Rubber>
+                float3 xformOp:rotateXYZ = (90, 0, 0)
+                double3 xformOp:translate = (0.174, -0.162, 0.058)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+            }
+            def Cylinder "RearLeft" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                uniform token axis = "Z"
+                float height = 0.052
+                float radius = 0.057
+                rel material:binding = </F1TenthAMR/Looks/Rubber>
+                float3 xformOp:rotateXYZ = (90, 0, 0)
+                double3 xformOp:translate = (-0.174, 0.162, 0.058)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+            }
+            def Cylinder "RearRight" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                uniform token axis = "Z"
+                float height = 0.052
+                float radius = 0.057
+                rel material:binding = </F1TenthAMR/Looks/Rubber>
+                float3 xformOp:rotateXYZ = (90, 0, 0)
+                double3 xformOp:translate = (-0.174, -0.162, 0.058)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+            }
+        }
+
+        def Xform "Suspension"
+        {
+            def Cube "FrontAxle" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float size = 1
+                rel material:binding = </F1TenthAMR/Looks/Aluminium>
+                double3 xformOp:scale = (0.035, 0.255, 0.018)
+                double3 xformOp:translate = (0.174, 0, 0.075)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            }
+            def Cube "RearAxle" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float size = 1
+                rel material:binding = </F1TenthAMR/Looks/Aluminium>
+                double3 xformOp:scale = (0.035, 0.255, 0.018)
+                double3 xformOp:translate = (-0.174, 0, 0.075)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            }
+        }
+
+        def Xform "Sensors"
+        {
+            def Cylinder "LidarMast" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                uniform token axis = "Z"
+                float height = 0.075
+                float radius = 0.012
+                rel material:binding = </F1TenthAMR/Looks/Aluminium>
+                double3 xformOp:translate = (-0.085, 0, 0.247)
+                uniform token[] xformOpOrder = ["xformOp:translate"]
+            }
+            def Cylinder "LidarBase" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                uniform token axis = "Z"
+                float height = 0.038
+                float radius = 0.047
+                rel material:binding = </F1TenthAMR/Looks/SensorBlack>
+                double3 xformOp:translate = (-0.085, 0, 0.3)
+                uniform token[] xformOpOrder = ["xformOp:translate"]
+            }
+            def Cube "StereoCamera" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float size = 1
+                rel material:binding = </F1TenthAMR/Looks/SensorBlack>
+                double3 xformOp:scale = (0.035, 0.105, 0.038)
+                double3 xformOp:translate = (0.172, 0, 0.242)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            }
+            def Sphere "LeftLens" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float radius = 0.012
+                rel material:binding = </F1TenthAMR/Looks/Lens>
+                double3 xformOp:translate = (0.192, 0.033, 0.244)
+                uniform token[] xformOpOrder = ["xformOp:translate"]
+            }
+            def Sphere "RightLens" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float radius = 0.012
+                rel material:binding = </F1TenthAMR/Looks/Lens>
+                double3 xformOp:translate = (0.192, -0.033, 0.244)
+                uniform token[] xformOpOrder = ["xformOp:translate"]
+            }
+            def Sphere "StatusBeacon" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float radius = 0.014
+                rel material:binding = </F1TenthAMR/Looks/StatusBlue>
+                double3 xformOp:translate = (-0.165, 0, 0.225)
+                uniform token[] xformOpOrder = ["xformOp:translate"]
+            }
+        }
+    }
+}

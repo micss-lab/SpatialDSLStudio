@@ -1,0 +1,11 @@
+#usda 1.0
+(
+    defaultPrim = "F1TenthAMR"
+    documentation = "Optional differential-drive physics proxy composed over the normalized F1TENTH visual/collision asset."
+    metersPerUnit = 1
+    upAxis = "Z"
+    subLayers = [
+        @./layers/articulation.usda@,
+        @./f1tenth_amr_collision.usda@
+    ]
+)

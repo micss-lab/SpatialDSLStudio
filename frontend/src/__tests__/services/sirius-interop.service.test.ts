@@ -12,6 +12,7 @@ jest.mock('../../services/core', () => ({
     SIRIUS_AIRD_IMPORT: '/interoperability/sirius/aird/import',
     SIRIUS_AIRD_EXPORT: '/interoperability/sirius/aird/export',
     SIRIUS_EXPORT: '/interoperability/sirius/export',
+    SIRIUS_PROJECT_EXPORT: '/interoperability/sirius/project/export',
   },
 }));
 
@@ -71,12 +72,18 @@ describe('siriusInteropService', () => {
     ]));
   });
 
-  it('packages .odesign export into a Sirius project ZIP', async () => {
+  it('downloads the complete Sirius project ZIP assembled by the backend', async () => {
     mockedApiClient.post.mockResolvedValue({
-      filename: 'workflow.odesign',
-      content: '<description:Group/>',
+      filename: 'workflow.sirius-project.zip',
+      content: btoa('PK\u0003\u0004bundle'),
+      entries: [
+        'model/workflow.ecore',
+        'model/sample.xmi',
+        'description/workflow.odesign',
+        'representations.aird',
+      ],
       report: {
-        sourceFormat: 'odesign',
+        sourceFormat: 'project-zip',
         targetFormat: 'sirius-project',
         supported: true,
         warnings: [],
@@ -85,12 +92,16 @@ describe('siriusInteropService', () => {
       },
     });
 
-    const result = await siriusInteropService.exportProjectZip('metamodel-1');
+    const result = await siriusInteropService.exportProjectZip('metamodel-1', 'model-1');
 
     expect(result.filename).toBe('workflow.sirius-project.zip');
-    expect(result.report.droppedFeatures).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: 'SIRIUS_DEFERRED_AIRD_EXPORT' }),
-    ]));
+    expect(mockedApiClient.post).toHaveBeenCalledWith('/interoperability/sirius/project/export', {
+      metamodelId: 'metamodel-1',
+      modelId: 'model-1',
+      viewpointIds: undefined,
+      diagramIds: undefined,
+    });
+    expect(result.report.droppedFeatures).toEqual([]);
     expect(result.blob.size).toBeGreaterThan(0);
   });
 

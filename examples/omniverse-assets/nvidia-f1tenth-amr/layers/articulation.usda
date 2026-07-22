@@ -1,0 +1,88 @@
+#usda 1.0
+(
+    documentation = "Simulation-grade differential-drive proxy; select this asset explicitly instead of the default kinematic collision root."
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+over "F1TenthAMR" (
+    prepend apiSchemas = ["PhysicsArticulationRootAPI", "PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+)
+{
+    bool physics:kinematicEnabled = false
+    float physics:mass = 3.1
+    custom string spatialDsl:controlInterface = "differential-drive"
+    custom string spatialDsl:leftWheelJoint = "Drive/LeftWheelJoint"
+    custom string spatialDsl:rightWheelJoint = "Drive/RightWheelJoint"
+    custom float spatialDsl:wheelRadiusM = 0.057
+    custom float spatialDsl:wheelSeparationM = 0.324
+
+    def Xform "Drive"
+    {
+        def Cylinder "LeftWheelBody" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            uniform token purpose = "guide"
+            token visibility = "invisible"
+            float height = 0.052
+            float radius = 0.057
+            float physics:mass = 0.12
+            float3 xformOp:rotateXYZ = (90, 0, 0)
+            double3 xformOp:translate = (0, 0.162, 0.058)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+        }
+
+        def Cylinder "RightWheelBody" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            uniform token purpose = "guide"
+            token visibility = "invisible"
+            float height = 0.052
+            float radius = 0.057
+            float physics:mass = 0.12
+            float3 xformOp:rotateXYZ = (90, 0, 0)
+            double3 xformOp:translate = (0, -0.162, 0.058)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+        }
+
+        def PhysicsRevoluteJoint "LeftWheelJoint" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </F1TenthAMR>
+            rel physics:body1 = </F1TenthAMR/Drive/LeftWheelBody>
+            point3f physics:localPos0 = (0, 0.162, 0.058)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            uniform token physics:drive:angular:type = "force"
+            float physics:drive:angular:targetVelocity = 0
+            float physics:drive:angular:stiffness = 0
+            float physics:drive:angular:damping = 1.5
+            float physics:drive:angular:maxForce = 18
+        }
+
+        def PhysicsRevoluteJoint "RightWheelJoint" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </F1TenthAMR>
+            rel physics:body1 = </F1TenthAMR/Drive/RightWheelBody>
+            point3f physics:localPos0 = (0, -0.162, 0.058)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            uniform token physics:drive:angular:type = "force"
+            float physics:drive:angular:targetVelocity = 0
+            float physics:drive:angular:stiffness = 0
+            float physics:drive:angular:damping = 1.5
+            float physics:drive:angular:maxForce = 18
+        }
+    }
+}

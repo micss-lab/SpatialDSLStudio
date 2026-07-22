@@ -42,10 +42,17 @@ import {
   MetaClass,
   MetaReference,
   Metamodel,
+  RepresentationContainerMapping,
+  RepresentationConditionalStyle,
   RepresentationDescription,
   RepresentationEdgeMapping,
+  RepresentationFilter,
   RepresentationKind,
+  RepresentationLayer,
+  RepresentationPropertySection,
   ToolDefinition,
+  ToolOperation,
+  ToolOperationValue,
   SiriusCompatibilityReport,
   SiriusInteropWarning,
   Viewpoint
@@ -53,7 +60,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { metamodelService } from '../../services/metamodel';
 import { diagramService } from '../../services/diagram';
-import { modelService } from '../../services/model';
+import { modelInheritanceUtilsService, modelService } from '../../services/model';
 import viewpointService from '../../services/viewpoint.service';
 import { siriusInteropService } from '../../services/interoperability';
 import ColorSwatchField from '../common/ColorSwatchField';
@@ -87,8 +94,11 @@ const toolTypeOptions: Array<{ value: string; label: string; target: 'node' | 'e
   { value: 'direct-edit', label: 'Direct edit', target: 'node' },
   { value: 'reconnect', label: 'Reconnect edge', target: 'edge' },
 ];
+const normalizedToolType = (type?: string): string => (
+  type === 'node' ? 'create-node' : type === 'edge' ? 'create-edge' : type || 'create-node'
+);
 const toolTargetKind = (type?: string): 'node' | 'edge' | 'none' => (
-  toolTypeOptions.find(option => option.value === type)?.target || 'none'
+  toolTypeOptions.find(option => option.value === normalizedToolType(type))?.target || 'none'
 );
 
 const emptyViewpointDraft = (): ViewpointDraft => ({
@@ -110,8 +120,13 @@ const emptyRepresentationDraft = (
   creatableMetaClassIds: metamodel.classes.filter(cls => !cls.abstract).map(cls => cls.id),
   concreteSyntaxByMetaClassId: {},
   concreteSyntaxByReferenceId: {},
+  containerMappings: [],
+  propertySections: [],
   edgeMappings: [],
   pinMappings: [],
+  layers: [],
+  filters: [],
+  conditionalStyles: [],
   toolDefinitions: [],
   isDefault: false,
 });
@@ -443,10 +458,16 @@ const ViewpointManager: React.FC = () => {
     setIsSiriusBusy(true);
     setError('');
     try {
-      const result = await siriusInteropService.exportProjectZip(metamodelId);
+      const models = modelService.getModelsByMetamodelId(metamodelId);
+      if (models.length === 0) {
+        throw new Error('Create a model with at least one view before exporting a Sirius project ZIP.');
+      }
+      const model = models[0];
+      const result = await siriusInteropService.exportProjectZip(metamodelId, model.id);
       siriusInteropService.downloadBlob(result.filename, result.blob);
       setSiriusReport(result.report);
-      setSiriusStatus(`Exported ${result.filename}.`);
+      const fromModel = models.length > 1 ? ` for model "${model.name}"` : '';
+      setSiriusStatus(`Exported ${result.filename}${fromModel}.`);
       setIsSiriusReportOpen(true);
     } catch (error: any) {
       setError(error.message || 'Failed to export Sirius project ZIP');
@@ -599,6 +620,7 @@ const ViewpointManager: React.FC = () => {
       ...description,
       visibleMetaClassIds: [...(description.visibleMetaClassIds || [])],
       creatableMetaClassIds: [...(description.creatableMetaClassIds || [])],
+      ...(description.tableColumns !== undefined && { tableColumns: [...description.tableColumns] }),
       concreteSyntaxByMetaClassId: { ...(description.concreteSyntaxByMetaClassId || {}) },
       concreteSyntaxByReferenceId: { ...(description.concreteSyntaxByReferenceId || {}) },
     });
@@ -1076,6 +1098,14 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
   const references = getAllReferences(metamodel);
   const visibleSet = new Set(draft.visibleMetaClassIds || []);
   const creatableSet = new Set(draft.creatableMetaClassIds || []);
+  const tableColumnOptions = Array.from(new Set(
+    metamodel.classes
+      .filter(cls => visibleSet.size === 0 || visibleSet.has(cls.id))
+      .flatMap(cls => modelInheritanceUtilsService.getAllAttributes(cls, metamodel).map(attribute => attribute.name))
+  ));
+  const selectedTableColumns = draft.tableColumns === undefined
+    ? tableColumnOptions
+    : draft.tableColumns;
   const selectedClass = metamodel.classes.find(cls => cls.id === selectedClassNotationId) || metamodel.classes[0];
   const selectedReferenceEntry = references.find(entry => entry.reference.id === selectedReferenceNotationId) || references[0];
   const classFallbackSyntax = selectedClass
@@ -1167,6 +1197,144 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
     onChange({ ...draft, edgeMappings: edgeMappings.filter(mapping => mapping.id !== id) });
   };
 
+  const containerMappings = draft.containerMappings || [];
+  const getContainmentReferences = (metaClassId: string) => {
+    const metaClass = metamodel.classes.find(candidate => candidate.id === metaClassId);
+    return metaClass
+      ? modelInheritanceUtilsService.getAllReferences(metaClass, metamodel).filter(reference => reference.containment)
+      : [];
+  };
+  const containerClasses = metamodel.classes.filter(metaClass => getContainmentReferences(metaClass.id).length > 0);
+  const mappedContainerKeys = new Set(containerMappings.map(mapping => (
+    `${mapping.containerMetaClassId}:${mapping.containmentReferenceId}`
+  )));
+  const addableContainerPairs = containerClasses.flatMap(metaClass => (
+    getContainmentReferences(metaClass.id)
+      .filter(reference => !mappedContainerKeys.has(`${metaClass.id}:${reference.id}`))
+      .map(reference => ({ metaClass, reference }))
+  ));
+
+  const addContainerMapping = () => {
+    const pair = addableContainerPairs[0];
+    if (!pair) return;
+    onChange({
+      ...draft,
+      visibleMetaClassIds: Array.from(new Set([
+        ...(draft.visibleMetaClassIds || []),
+        pair.metaClass.id,
+        pair.reference.target,
+      ])),
+      containerMappings: [
+        ...containerMappings,
+        {
+          id: uuidv4(),
+          containerMetaClassId: pair.metaClass.id,
+          containmentReferenceId: pair.reference.id,
+          childMetaClassIds: [pair.reference.target],
+          concreteSyntax: draft.concreteSyntaxByMetaClassId?.[pair.metaClass.id]
+            || pair.metaClass.concreteSyntax
+            || { two_d: { shape: 'rectangle', fillColor: '#f8fafc', strokeColor: '#64748b', defaultSize: { width: 420, height: 260 } } },
+        },
+      ],
+    });
+  };
+
+  const updateContainerMapping = (id: string, patch: Partial<RepresentationContainerMapping>) => {
+    onChange({
+      ...draft,
+      containerMappings: containerMappings.map(mapping => (
+        mapping.id === id ? { ...mapping, ...patch } : mapping
+      )),
+    });
+  };
+
+  const removeContainerMapping = (id: string) => {
+    onChange({
+      ...draft,
+      containerMappings: containerMappings.filter(mapping => mapping.id !== id),
+    });
+  };
+
+  const propertySections = draft.propertySections || [];
+  const getPropertySectionClasses = (section: RepresentationPropertySection): MetaClass[] => {
+    const configured = section.metaClassIds || [];
+    return configured.length > 0
+      ? metamodel.classes.filter(metaClass => configured.includes(metaClass.id))
+      : metamodel.classes.filter(metaClass => visibleSet.size === 0 || visibleSet.has(metaClass.id));
+  };
+  const getPropertyAttributeOptions = (section: RepresentationPropertySection): string[] => (
+    Array.from(new Set(getPropertySectionClasses(section).flatMap(metaClass => (
+      modelInheritanceUtilsService.getAllAttributes(metaClass, metamodel).map(attribute => attribute.name)
+    ))))
+  );
+  const getPropertyReferenceOptions = (section: RepresentationPropertySection): string[] => (
+    Array.from(new Set(getPropertySectionClasses(section).flatMap(metaClass => (
+      modelInheritanceUtilsService.getAllReferences(metaClass, metamodel).map(reference => reference.name)
+    ))))
+  );
+  const addPropertySection = () => {
+    const defaultClass = concreteClasses.find(metaClass => visibleSet.size === 0 || visibleSet.has(metaClass.id));
+    const suffix = propertySections.length > 0 ? ` ${propertySections.length + 1}` : '';
+    onChange({
+      ...draft,
+      propertySections: [
+        ...propertySections,
+        {
+          id: uuidv4(),
+          name: `Properties${suffix}`,
+          metaClassIds: defaultClass ? [defaultClass.id] : [],
+          attributeNames: defaultClass
+            ? modelInheritanceUtilsService.getAllAttributes(defaultClass, metamodel).map(attribute => attribute.name)
+            : [],
+          referenceNames: defaultClass
+            ? modelInheritanceUtilsService.getAllReferences(defaultClass, metamodel).map(reference => reference.name)
+            : [],
+        },
+      ],
+    });
+  };
+  const updatePropertySection = (id: string, patch: Partial<RepresentationPropertySection>) => {
+    onChange({
+      ...draft,
+      propertySections: propertySections.map(section => (
+        section.id === id ? { ...section, ...patch } : section
+      )),
+    });
+  };
+  const removePropertySection = (id: string) => {
+    onChange({
+      ...draft,
+      propertySections: propertySections.filter(section => section.id !== id),
+    });
+  };
+
+  const layers = draft.layers || [];
+  const filters = draft.filters || [];
+  const conditionalStyles = draft.conditionalStyles || [];
+  const updateLayer = (id: string, patch: Partial<RepresentationLayer>) => {
+    onChange({
+      ...draft,
+      layers: layers.map(layer => (layer.id === id ? { ...layer, ...patch } : layer)),
+    });
+  };
+  const updateFilter = (id: string, patch: Partial<RepresentationFilter>) => {
+    onChange({
+      ...draft,
+      filters: filters.map(filter => (filter.id === id ? { ...filter, ...patch } : filter)),
+    });
+  };
+  const updateConditionalStyle = (
+    id: string,
+    patch: Partial<RepresentationConditionalStyle>
+  ) => {
+    onChange({
+      ...draft,
+      conditionalStyles: conditionalStyles.map(style => (
+        style.id === id ? { ...style, ...patch } : style
+      )),
+    });
+  };
+
   const toolDefinitions = draft.toolDefinitions || [];
 
   const addTool = (type: string) => {
@@ -1186,6 +1354,62 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
 
   const removeTool = (id: string) => {
     onChange({ ...draft, toolDefinitions: toolDefinitions.filter(tool => tool.id !== id) });
+  };
+
+  const getToolAttributes = (tool: ToolDefinition) => {
+    const metaClass = metamodel.classes.find(candidate => candidate.id === tool.metaClassId);
+    return metaClass
+      ? modelInheritanceUtilsService.getAllAttributes(metaClass, metamodel).filter(attribute => !attribute.many)
+      : [];
+  };
+
+  const setToolOperations = (tool: ToolDefinition, operations: ToolOperation[]) => {
+    updateTool(tool.id, {
+      payload: {
+        ...(tool.payload || {}),
+        operations,
+      },
+    });
+  };
+
+  const addSetAttributeOperation = (tool: ToolDefinition) => {
+    const attributes = getToolAttributes(tool);
+    const operations = tool.payload?.operations || [];
+    const usedNames = new Set(operations.map(operation => operation.attributeName));
+    const attribute = attributes.find(candidate => !usedNames.has(candidate.name));
+    if (!attribute) return;
+    const attributeType = attribute.type;
+
+    const value: ToolOperationValue = attributeType === 'number'
+      ? 0
+      : attributeType === 'boolean'
+        ? false
+        : typeof attributeType === 'object'
+          ? metamodel.enums?.find(candidate => candidate.id === attributeType.enumId)?.literals[0]?.name || ''
+          : attributeType === 'date'
+            ? new Date().toISOString()
+            : '';
+    setToolOperations(tool, [
+      ...operations,
+      { type: 'set-attribute', attributeName: attribute.name, value },
+    ]);
+  };
+
+  const updateSetAttributeOperation = (
+    tool: ToolDefinition,
+    operationIndex: number,
+    patch: Partial<ToolOperation>
+  ) => {
+    const operations = [...(tool.payload?.operations || [])];
+    operations[operationIndex] = { ...operations[operationIndex], ...patch } as ToolOperation;
+    setToolOperations(tool, operations);
+  };
+
+  const removeSetAttributeOperation = (tool: ToolDefinition, operationIndex: number) => {
+    setToolOperations(
+      tool,
+      (tool.payload?.operations || []).filter((_, index) => index !== operationIndex)
+    );
   };
 
   const updateClass2D = (key: string, value: any) => {
@@ -1302,16 +1526,26 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
             onChange={event => onChange({ ...draft, description: event.target.value })}
           />
           <FormControl size="small">
-            <InputLabel>Kind</InputLabel>
+            <InputLabel id="representation-kind-label">Kind</InputLabel>
             <Select
+              labelId="representation-kind-label"
+              id="representation-kind"
               label="Kind"
               value={draft.kind}
               disabled={readOnly}
-              onChange={event => onChange({ ...draft, kind: event.target.value as RepresentationKind })}
+              onChange={event => {
+                const kind = event.target.value as RepresentationKind;
+                onChange({
+                  ...draft,
+                  kind,
+                  containerMappings: kind === 'diagram' ? draft.containerMappings : [],
+                  propertySections: kind === 'diagram' ? draft.propertySections : [],
+                });
+              }}
             >
               <MenuItem value="diagram">visual view</MenuItem>
               <MenuItem value="table">table</MenuItem>
-              <MenuItem value="tree" disabled>tree (planned)</MenuItem>
+              <MenuItem value="tree">tree</MenuItem>
             </Select>
           </FormControl>
           <FormControlLabel
@@ -1320,7 +1554,7 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
             onChange={(_, checked) => onChange({ ...draft, isDefault: checked })}
           />
           <Typography variant="caption" color="text.secondary">
-            Visual and table views are executable; tree is reserved.
+            Visual, table, and tree views are executable.
           </Typography>
 
           <Divider />
@@ -1339,6 +1573,70 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
               />
             ))}
           </Box>
+
+          {draft.kind === 'table' && (
+            <>
+              <Divider />
+              <Typography variant="subtitle2">Table Columns</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Choose the model attributes shown as editable columns. With no explicit configuration, all attributes are shown.
+              </Typography>
+              <FormControl size="small" fullWidth>
+                <InputLabel id="table-columns-label">Attributes</InputLabel>
+                <Select
+                  labelId="table-columns-label"
+                  id="table-columns"
+                  multiple
+                  label="Attributes"
+                  value={selectedTableColumns}
+                  disabled={readOnly}
+                  SelectDisplayProps={{ 'data-testid': 'table-columns-select' } as any}
+                  onChange={event => {
+                    const value = event.target.value;
+                    onChange({
+                      ...draft,
+                      tableColumns: typeof value === 'string' ? value.split(',') : value as string[],
+                    });
+                  }}
+                  renderValue={selected => (selected as string[]).join(', ') || 'No attributes'}
+                >
+                  {tableColumnOptions.map(name => (
+                    <MenuItem key={name} value={name}>
+                      <Checkbox size="small" checked={selectedTableColumns.includes(name)} />
+                      {name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  size="small"
+                  disabled={readOnly}
+                  onClick={() => onChange({ ...draft, tableColumns: [...tableColumnOptions] })}
+                >
+                  Select all
+                </Button>
+                <Button
+                  size="small"
+                  disabled={readOnly}
+                  onClick={() => onChange({ ...draft, tableColumns: [] })}
+                >
+                  Clear all
+                </Button>
+                <Button
+                  size="small"
+                  disabled={readOnly}
+                  onClick={() => {
+                    const nextDraft = { ...draft };
+                    delete nextDraft.tableColumns;
+                    onChange(nextDraft);
+                  }}
+                >
+                  Use automatic
+                </Button>
+              </Stack>
+            </>
+          )}
 
           <Divider />
           <Typography variant="subtitle2">Creatable Metaclasses</Typography>
@@ -1367,10 +1665,15 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
           </Box>
 
           <Divider />
-          <Typography variant="subtitle2">Reserved Mappings</Typography>
+          <Typography variant="subtitle2">Mappings</Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Chip size="small" label={`${draft.containerMappings?.length || 0} container mappings`} />
+            <Chip size="small" label={`${draft.propertySections?.length || 0} property sections`} />
             <Chip size="small" label={`${draft.edgeMappings?.length || 0} edge mappings`} />
             <Chip size="small" label={`${draft.pinMappings?.length || 0} pin mappings`} />
+            <Chip size="small" label={`${draft.layers?.length || 0} additional layers`} />
+            <Chip size="small" label={`${draft.filters?.length || 0} filters`} />
+            <Chip size="small" label={`${draft.conditionalStyles?.length || 0} conditional styles`} />
             <Chip size="small" label={`${draft.toolDefinitions?.length || 0} tools`} />
           </Stack>
         </Stack>
@@ -1551,6 +1854,344 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
             )}
           </Paper>
 
+          {draft.kind === 'diagram' && (
+            <Paper variant="outlined" sx={{ p: 2 }} data-testid="sirius-advanced-features">
+              <Typography variant="subtitle1" gutterBottom>Sirius Advanced Features</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                Imported layers, filters, and conditional styles are retained for Sirius round trips. Runtime expression evaluation remains disabled.
+              </Typography>
+
+              <Typography variant="subtitle2">Additional Layers</Typography>
+              {layers.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">No additional layers.</Typography>
+              ) : (
+                <Stack spacing={1} sx={{ mt: 1 }}>
+                  {layers.map(layer => (
+                    <Paper key={layer.id} variant="outlined" sx={{ p: 1.25 }}>
+                      <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
+                        <FormControlLabel
+                          control={(
+                            <Checkbox
+                              size="small"
+                              checked={layer.enabled ?? layer.activeByDefault ?? false}
+                              disabled={readOnly || layer.optional === false}
+                              onChange={(_, checked) => updateLayer(layer.id, {
+                                enabled: checked,
+                                activeByDefault: checked,
+                              })}
+                            />
+                          )}
+                          label={`${layer.label || layer.name} layer enabled`}
+                        />
+                        <Chip size="small" variant="outlined" label={`${layer.mappings?.length || 0} mappings`} />
+                        {layer.optional === false && <Chip size="small" label="mandatory" />}
+                      </Stack>
+                    </Paper>
+                  ))}
+                </Stack>
+              )}
+
+              <Divider sx={{ my: 1.5 }} />
+              <Typography variant="subtitle2">Filters</Typography>
+              {filters.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">No filters.</Typography>
+              ) : (
+                <Stack spacing={1} sx={{ mt: 1 }}>
+                  {filters.map(filter => (
+                    <Paper key={filter.id} variant="outlined" sx={{ p: 1.25 }}>
+                      <FormControlLabel
+                        control={(
+                          <Checkbox
+                            size="small"
+                            checked={filter.enabled !== false}
+                            disabled={readOnly}
+                            onChange={(_, checked) => updateFilter(filter.id, { enabled: checked })}
+                          />
+                        )}
+                        label={`${filter.name} filter enabled`}
+                      />
+                      {filter.rules.map(rule => (
+                        <Typography key={rule.id} variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                          {rule.kind} / {rule.filterKind || 'hide'}: {rule.semanticConditionExpression || rule.viewConditionExpression || 'no condition'}
+                        </Typography>
+                      ))}
+                    </Paper>
+                  ))}
+                </Stack>
+              )}
+
+              <Divider sx={{ my: 1.5 }} />
+              <Typography variant="subtitle2">Conditional Styles</Typography>
+              {conditionalStyles.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">No conditional styles.</Typography>
+              ) : (
+                <Stack spacing={1} sx={{ mt: 1 }}>
+                  {conditionalStyles.map((style, index) => (
+                    <Paper key={style.id} variant="outlined" sx={{ p: 1.25 }}>
+                      <FormControlLabel
+                        control={(
+                          <Checkbox
+                            size="small"
+                            checked={style.enabled !== false}
+                            disabled={readOnly}
+                            onChange={(_, checked) => updateConditionalStyle(style.id, { enabled: checked })}
+                          />
+                        )}
+                        label={`Conditional style ${index + 1} enabled`}
+                      />
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        {style.mappingKind} mapping {style.mappingId}: {style.predicateExpression || 'no predicate'}
+                      </Typography>
+                    </Paper>
+                  ))}
+                </Stack>
+              )}
+            </Paper>
+          )}
+
+          {draft.kind === 'diagram' && (
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>Container Mappings</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              Render children of a containment reference inside their semantic parent. Container size is fixed by this mapping; automatic sizing is a later feature.
+            </Typography>
+            {!readOnly && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={addContainerMapping}
+                disabled={addableContainerPairs.length === 0}
+                data-testid="add-container-mapping"
+                sx={{ mb: 2 }}
+              >
+                Add container mapping
+              </Button>
+            )}
+            {containerMappings.length === 0 ? (
+              <Typography color="text.secondary">No container mappings. Nodes render at the diagram root.</Typography>
+            ) : (
+              <Stack spacing={2}>
+                {containerMappings.map(mapping => {
+                  const containmentReferences = getContainmentReferences(mapping.containerMetaClassId);
+                  const reference = containmentReferences.find(candidate => (
+                    candidate.id === mapping.containmentReferenceId || candidate.name === mapping.containmentReferenceId
+                  ));
+                  const childClass = metamodel.classes.find(candidate => candidate.id === reference?.target);
+                  const syntax = mapping.concreteSyntax || {};
+                  const twoD = syntax.two_d || {};
+                  const update2D = (patch: Partial<NonNullable<ConcreteSyntax['two_d']>>) => {
+                    updateContainerMapping(mapping.id, {
+                      concreteSyntax: { ...syntax, two_d: { ...twoD, ...patch } },
+                    });
+                  };
+
+                  return (
+                    <Paper key={mapping.id} variant="outlined" sx={{ p: 1.5 }}>
+                      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                        <FormControl size="small" sx={{ minWidth: 170 }}>
+                          <InputLabel id={`container-${mapping.id}-class-label`}>Container metaclass</InputLabel>
+                          <Select
+                            id={`container-${mapping.id}-class`}
+                            labelId={`container-${mapping.id}-class-label`}
+                            label="Container metaclass"
+                            value={mapping.containerMetaClassId}
+                            disabled={readOnly}
+                            onChange={event => {
+                              const containerMetaClassId = event.target.value as string;
+                              const nextReference = getContainmentReferences(containerMetaClassId)[0];
+                              updateContainerMapping(mapping.id, {
+                                containerMetaClassId,
+                                containmentReferenceId: nextReference?.id || '',
+                                childMetaClassIds: nextReference ? [nextReference.target] : [],
+                              });
+                            }}
+                          >
+                            {containerClasses.map(candidate => (
+                              <MenuItem key={candidate.id} value={candidate.id}>{candidate.name}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <FormControl size="small" sx={{ minWidth: 190 }}>
+                          <InputLabel id={`container-${mapping.id}-reference-label`}>Containment reference</InputLabel>
+                          <Select
+                            id={`container-${mapping.id}-reference`}
+                            labelId={`container-${mapping.id}-reference-label`}
+                            label="Containment reference"
+                            value={reference?.id || ''}
+                            disabled={readOnly}
+                            onChange={event => {
+                              const containmentReferenceId = event.target.value as string;
+                              const nextReference = containmentReferences.find(candidate => candidate.id === containmentReferenceId);
+                              updateContainerMapping(mapping.id, {
+                                containmentReferenceId,
+                                childMetaClassIds: nextReference ? [nextReference.target] : [],
+                              });
+                            }}
+                          >
+                            {containmentReferences.map(candidate => (
+                              <MenuItem key={candidate.id} value={candidate.id}>{candidate.name}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <Chip size="small" label={`Children: ${childClass?.name || 'unresolved'}`} />
+                        {!readOnly && (
+                          <Tooltip title="Remove container mapping">
+                            <IconButton size="small" color="error" onClick={() => removeContainerMapping(mapping.id)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Stack>
+                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center" sx={{ mt: 1.5 }}>
+                        <FormControl size="small" sx={{ minWidth: 120 }}>
+                          <InputLabel>Shape</InputLabel>
+                          <Select label="Shape" value={twoD.shape || 'rectangle'} disabled={readOnly} onChange={event => update2D({ shape: event.target.value as any })}>
+                            {shapeOptions.map(shape => <MenuItem key={shape} value={shape}>{shape}</MenuItem>)}
+                          </Select>
+                        </FormControl>
+                        <ColorSwatchField label="Fill" value={twoD.fillColor || '#f8fafc'} disabled={readOnly} onChange={value => update2D({ fillColor: value })} />
+                        <ColorSwatchField label="Stroke" value={twoD.strokeColor || '#64748b'} disabled={readOnly} onChange={value => update2D({ strokeColor: value })} />
+                        <TextField
+                          label="Container width"
+                          type="number"
+                          size="small"
+                          sx={{ width: 100 }}
+                          value={twoD.defaultSize?.width || 420}
+                          disabled={readOnly}
+                          onChange={event => update2D({ defaultSize: { width: Number(event.target.value), height: twoD.defaultSize?.height || 260 } })}
+                        />
+                        <TextField
+                          label="Container height"
+                          type="number"
+                          size="small"
+                          sx={{ width: 100 }}
+                          value={twoD.defaultSize?.height || 260}
+                          disabled={readOnly}
+                          onChange={event => update2D({ defaultSize: { width: twoD.defaultSize?.width || 420, height: Number(event.target.value) } })}
+                        />
+                      </Stack>
+                    </Paper>
+                  );
+                })}
+              </Stack>
+            )}
+          </Paper>
+          )}
+
+          {draft.kind === 'diagram' && (
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>Property Sections</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              Group the semantic attributes and references shown in an element&apos;s property panel. An empty metaclass selection applies the section to every visible metaclass.
+            </Typography>
+            {!readOnly && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={addPropertySection}
+                data-testid="add-property-section"
+                sx={{ mb: 2 }}
+              >
+                Add property section
+              </Button>
+            )}
+            {propertySections.length === 0 ? (
+              <Typography color="text.secondary">No property sections. The editor uses its default property fields.</Typography>
+            ) : (
+              <Stack spacing={2}>
+                {propertySections.map(section => {
+                  const attributeOptions = getPropertyAttributeOptions(section);
+                  const referenceOptions = getPropertyReferenceOptions(section);
+                  return (
+                    <Paper key={section.id} variant="outlined" sx={{ p: 1.5 }} data-testid={`property-section-${section.id}`}>
+                      <Stack spacing={1.5}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <TextField
+                            label="Section name"
+                            size="small"
+                            value={section.name}
+                            disabled={readOnly}
+                            fullWidth
+                            onChange={event => updatePropertySection(section.id, { name: event.target.value })}
+                          />
+                          {!readOnly && (
+                            <Tooltip title="Remove property section">
+                              <IconButton size="small" color="error" onClick={() => removePropertySection(section.id)}>
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Stack>
+                        <FormControl size="small" fullWidth>
+                          <InputLabel id={`property-section-${section.id}-classes-label`}>Applies to metaclasses</InputLabel>
+                          <Select
+                            labelId={`property-section-${section.id}-classes-label`}
+                            label="Applies to metaclasses"
+                            multiple
+                            value={section.metaClassIds || []}
+                            disabled={readOnly}
+                            onChange={event => updatePropertySection(section.id, { metaClassIds: event.target.value as string[] })}
+                            renderValue={selected => (selected as string[]).length > 0
+                              ? `${(selected as string[]).length} metaclass(es)`
+                              : 'All visible metaclasses'}
+                          >
+                            {metamodel.classes.map(metaClass => (
+                              <MenuItem key={metaClass.id} value={metaClass.id}>
+                                <Checkbox size="small" checked={(section.metaClassIds || []).includes(metaClass.id)} />
+                                {metaClass.name}{metaClass.abstract ? ' (abstract)' : ''}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <FormControl size="small" fullWidth>
+                          <InputLabel id={`property-section-${section.id}-attributes-label`}>Attributes</InputLabel>
+                          <Select
+                            labelId={`property-section-${section.id}-attributes-label`}
+                            label="Attributes"
+                            multiple
+                            value={section.attributeNames || []}
+                            disabled={readOnly}
+                            onChange={event => updatePropertySection(section.id, { attributeNames: event.target.value as string[] })}
+                            renderValue={selected => (selected as string[]).join(', ') || 'No attributes'}
+                          >
+                            {attributeOptions.map(name => (
+                              <MenuItem key={name} value={name}>
+                                <Checkbox size="small" checked={(section.attributeNames || []).includes(name)} />
+                                {name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <FormControl size="small" fullWidth>
+                          <InputLabel id={`property-section-${section.id}-references-label`}>References</InputLabel>
+                          <Select
+                            labelId={`property-section-${section.id}-references-label`}
+                            label="References"
+                            multiple
+                            value={section.referenceNames || []}
+                            disabled={readOnly}
+                            onChange={event => updatePropertySection(section.id, { referenceNames: event.target.value as string[] })}
+                            renderValue={selected => (selected as string[]).join(', ') || 'No references'}
+                          >
+                            {referenceOptions.map(name => (
+                              <MenuItem key={name} value={name}>
+                                <Checkbox size="small" checked={(section.referenceNames || []).includes(name)} />
+                                {name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Stack>
+                    </Paper>
+                  );
+                })}
+              </Stack>
+            )}
+          </Paper>
+          )}
+
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Typography variant="subtitle1" gutterBottom>Edge Mappings</Typography>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
@@ -1680,28 +2321,35 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
                       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
                         <TextField label="Name" size="small" value={tool.name} disabled={readOnly} sx={{ minWidth: 160 }} onChange={event => updateTool(tool.id, { name: event.target.value })} />
                         <FormControl size="small" sx={{ minWidth: 150 }}>
-                          <InputLabel>Type</InputLabel>
+                          <InputLabel id={`tool-${tool.id}-type-label`}>Type</InputLabel>
                           <Select
+                            id={`tool-${tool.id}-type`}
+                            labelId={`tool-${tool.id}-type-label`}
                             label="Type"
-                            value={tool.type || 'create-node'}
+                            value={normalizedToolType(tool.type)}
                             disabled={readOnly}
-                            onChange={event => updateTool(tool.id, { type: event.target.value as string, metaClassId: undefined, referenceId: undefined })}
+                            onChange={event => updateTool(tool.id, {
+                              type: event.target.value as string,
+                              metaClassId: undefined,
+                              referenceId: undefined,
+                              payload: undefined,
+                            })}
                           >
                             {toolTypeOptions.map(option => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}
                           </Select>
                         </FormControl>
                         {targetKind === 'node' && (
                           <FormControl size="small" sx={{ minWidth: 150 }}>
-                            <InputLabel>Metaclass</InputLabel>
-                            <Select label="Metaclass" value={tool.metaClassId || ''} disabled={readOnly} onChange={event => updateTool(tool.id, { metaClassId: event.target.value as string })}>
+                            <InputLabel id={`tool-${tool.id}-metaclass-label`}>Metaclass</InputLabel>
+                            <Select id={`tool-${tool.id}-metaclass`} labelId={`tool-${tool.id}-metaclass-label`} label="Metaclass" value={tool.metaClassId || ''} disabled={readOnly} onChange={event => updateTool(tool.id, { metaClassId: event.target.value as string, payload: undefined })}>
                               {concreteClasses.map(cls => <MenuItem key={cls.id} value={cls.id}>{cls.name}</MenuItem>)}
                             </Select>
                           </FormControl>
                         )}
                         {targetKind === 'edge' && (
                           <FormControl size="small" sx={{ minWidth: 170 }}>
-                            <InputLabel>Reference</InputLabel>
-                            <Select label="Reference" value={tool.referenceId || ''} disabled={readOnly} onChange={event => updateTool(tool.id, { referenceId: event.target.value as string })}>
+                            <InputLabel id={`tool-${tool.id}-reference-label`}>Reference</InputLabel>
+                            <Select id={`tool-${tool.id}-reference`} labelId={`tool-${tool.id}-reference-label`} label="Reference" value={tool.referenceId || ''} disabled={readOnly} onChange={event => updateTool(tool.id, { referenceId: event.target.value as string })}>
                               {references.map(entry => <MenuItem key={entry.reference.id} value={entry.reference.id}>{entry.sourceClass.name}.{entry.reference.name}</MenuItem>)}
                             </Select>
                           </FormControl>
@@ -1712,6 +2360,130 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
                           </Tooltip>
                         )}
                       </Stack>
+
+                      {normalizedToolType(tool.type) === 'create-node' && tool.metaClassId && (
+                        <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                            <Box>
+                              <Typography variant="subtitle2">Initial attribute operations</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Safe scalar values applied when this tool creates an element.
+                              </Typography>
+                            </Box>
+                            {!readOnly && (
+                              <Button
+                                size="small"
+                                startIcon={<AddIcon />}
+                                onClick={() => addSetAttributeOperation(tool)}
+                                disabled={(tool.payload?.operations || []).length >= getToolAttributes(tool).length}
+                              >
+                                Add value
+                              </Button>
+                            )}
+                          </Stack>
+
+                          {(tool.payload?.operations || []).length === 0 ? (
+                            <Typography variant="body2" color="text.secondary">No initial values; metaclass defaults are used.</Typography>
+                          ) : (
+                            <Stack spacing={1}>
+                              {(tool.payload?.operations || []).map((operation, operationIndex) => {
+                                const attributes = getToolAttributes(tool);
+                                const attribute = attributes.find(candidate => candidate.name === operation.attributeName);
+                                const attributeType = attribute?.type;
+                                const enumType = attributeType && typeof attributeType === 'object'
+                                  ? metamodel.enums?.find(candidate => candidate.id === attributeType.enumId)
+                                  : undefined;
+                                const updateAttribute = (attributeName: string) => {
+                                  const nextAttribute = attributes.find(candidate => candidate.name === attributeName);
+                                  const nextAttributeType = nextAttribute?.type;
+                                  const nextValue: ToolOperationValue = nextAttributeType === 'number'
+                                    ? 0
+                                    : nextAttributeType === 'boolean'
+                                      ? false
+                                      : nextAttributeType && typeof nextAttributeType === 'object'
+                                        ? metamodel.enums?.find(candidate => candidate.id === nextAttributeType.enumId)?.literals[0]?.name || ''
+                                        : nextAttributeType === 'date'
+                                          ? new Date().toISOString()
+                                          : '';
+                                  updateSetAttributeOperation(tool, operationIndex, { attributeName, value: nextValue });
+                                };
+
+                                return (
+                                  <Stack key={`${tool.id}-operation-${operationIndex}`} direction="row" spacing={1} alignItems="center">
+                                    <FormControl size="small" sx={{ minWidth: 170 }}>
+                                      <InputLabel id={`tool-${tool.id}-operation-${operationIndex}-attribute-label`}>Attribute</InputLabel>
+                                      <Select
+                                        id={`tool-${tool.id}-operation-${operationIndex}-attribute`}
+                                        labelId={`tool-${tool.id}-operation-${operationIndex}-attribute-label`}
+                                        label="Attribute"
+                                        value={operation.attributeName}
+                                        disabled={readOnly}
+                                        onChange={event => updateAttribute(event.target.value as string)}
+                                      >
+                                        {attributes.map(candidate => (
+                                          <MenuItem key={candidate.id} value={candidate.name}>{candidate.name}</MenuItem>
+                                        ))}
+                                      </Select>
+                                    </FormControl>
+
+                                    {attribute?.type === 'boolean' ? (
+                                      <FormControl size="small" sx={{ minWidth: 120 }}>
+                                        <InputLabel id={`tool-${tool.id}-operation-${operationIndex}-value-label`}>Value</InputLabel>
+                                        <Select
+                                          id={`tool-${tool.id}-operation-${operationIndex}-value`}
+                                          labelId={`tool-${tool.id}-operation-${operationIndex}-value-label`}
+                                          label="Value"
+                                          value={String(operation.value)}
+                                          disabled={readOnly}
+                                          onChange={event => updateSetAttributeOperation(tool, operationIndex, { value: event.target.value === 'true' })}
+                                        >
+                                          <MenuItem value="true">true</MenuItem>
+                                          <MenuItem value="false">false</MenuItem>
+                                        </Select>
+                                      </FormControl>
+                                    ) : enumType ? (
+                                      <FormControl size="small" sx={{ minWidth: 140 }}>
+                                        <InputLabel id={`tool-${tool.id}-operation-${operationIndex}-value-label`}>Value</InputLabel>
+                                        <Select
+                                          id={`tool-${tool.id}-operation-${operationIndex}-value`}
+                                          labelId={`tool-${tool.id}-operation-${operationIndex}-value-label`}
+                                          label="Value"
+                                          value={String(operation.value ?? '')}
+                                          disabled={readOnly}
+                                          onChange={event => updateSetAttributeOperation(tool, operationIndex, { value: event.target.value as string })}
+                                        >
+                                          {enumType.literals.map(literal => (
+                                            <MenuItem key={literal.name} value={literal.name}>{literal.name}</MenuItem>
+                                          ))}
+                                        </Select>
+                                      </FormControl>
+                                    ) : (
+                                      <TextField
+                                        label="Value"
+                                        size="small"
+                                        type={attribute?.type === 'number' ? 'number' : attribute?.type === 'date' ? 'datetime-local' : 'text'}
+                                        value={operation.value ?? ''}
+                                        disabled={readOnly}
+                                        onChange={event => updateSetAttributeOperation(tool, operationIndex, {
+                                          value: attribute?.type === 'number' ? Number(event.target.value) : event.target.value,
+                                        })}
+                                      />
+                                    )}
+
+                                    {!readOnly && (
+                                      <Tooltip title="Remove initial value">
+                                        <IconButton size="small" color="error" onClick={() => removeSetAttributeOperation(tool, operationIndex)}>
+                                          <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
+                                  </Stack>
+                                );
+                              })}
+                            </Stack>
+                          )}
+                        </Box>
+                      )}
                     </Paper>
                   );
                 })}

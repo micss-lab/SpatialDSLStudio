@@ -9,7 +9,7 @@ import {
   Viewpoint,
 } from '../../models/types';
 import { metamodelService } from '../metamodel';
-import { modelService } from '../model';
+import { modelInheritanceUtilsService, modelService } from '../model';
 import { viewpointService } from '../viewpoint.service';
 import { concreteSyntaxResolver } from './concrete-syntax.resolver';
 
@@ -32,7 +32,11 @@ const getReferenceDefinition = (
   referenceName: string
 ): MetaReference | undefined => {
   const sourceClass = metamodel?.classes.find(cls => cls.id === source.modelElementId);
-  return sourceClass?.references.find(ref => ref.name === referenceName || ref.id === referenceName);
+  return sourceClass && metamodel
+    ? modelInheritanceUtilsService
+      .getAllReferences(sourceClass, metamodel)
+      .find(ref => ref.name === referenceName || ref.id === referenceName)
+    : undefined;
 };
 
 export class ViewProjectionService {
@@ -60,8 +64,14 @@ export class ViewProjectionService {
       .map(element => this.materializeNode(element, metamodel, representationDescription, viewpoint));
 
     const positionedNodes = this.positionAttachedNodes(nodes, model, metamodel, representationDescription);
+    const nestedNodes = this.applyContainerMappings(
+      positionedNodes,
+      model,
+      metamodel,
+      representationDescription
+    );
 
-    const nodeIds = new Set(positionedNodes.map(node => node.id));
+    const nodeIds = new Set(nestedNodes.map(node => node.id));
     const edges = [
       ...this.materializeConnectionEdges(model, nodeIds, metamodel, representationDescription),
       ...this.materializeReferenceEdges(model, nodeIds, metamodel, representationDescription),
@@ -70,7 +80,7 @@ export class ViewProjectionService {
     return {
       ...diagram,
       includedElementIds,
-      elements: [...positionedNodes, ...edges],
+      elements: [...nestedNodes, ...edges],
       schemaVersion: 2,
     };
   }
@@ -99,9 +109,20 @@ export class ViewProjectionService {
     const presentation = element.presentation || {};
     const position2D = presentation.position2D || element.style?.position || { x: 0, y: 0 };
     const resolvedAppearance = concreteSyntaxResolver.resolve2D(element, metamodel, representationDescription, viewpoint);
-    const size2D = presentation.size2D || resolvedAppearance.defaultSize || DEFAULT_SIZE_2D;
+    const containerMapping = representationDescription?.containerMappings?.find(mapping => (
+      this.isMetaClassCompatible(element.modelElementId, [mapping.containerMetaClassId], metamodel)
+    ));
+    const containerAppearance = containerMapping?.concreteSyntax?.two_d;
+    const effectiveAppearance = containerAppearance
+      ? {
+          ...resolvedAppearance,
+          ...containerAppearance,
+          defaultSize: containerAppearance.defaultSize || resolvedAppearance.defaultSize,
+        }
+      : resolvedAppearance;
+    const size2D = presentation.size2D || effectiveAppearance.defaultSize || DEFAULT_SIZE_2D;
     const size3D = presentation.size3D;
-    const appearance = stringifyAppearance(resolvedAppearance);
+    const appearance = stringifyAppearance(effectiveAppearance);
 
     return {
       id: element.id,
@@ -111,6 +132,7 @@ export class ViewProjectionService {
       y: position2D.y,
       width: size2D.width,
       height: size2D.height,
+      ...(containerMapping && { containerMappingId: containerMapping.id }),
       style: {
         ...element.style,
         linkedModelElementId: element.id,
@@ -131,6 +153,22 @@ export class ViewProjectionService {
   ): DiagramElement[] {
     return (model.connections || [])
       .filter(connection => nodeIds.has(connection.sourceId) && nodeIds.has(connection.targetId))
+      .filter(connection => {
+        const source = model.elements.find(element => element.id === connection.sourceId);
+        const reference = source
+          ? getReferenceDefinition(
+              metamodel,
+              source,
+              connection.referenceId || connection.referenceName || connection.type || ''
+            )
+          : undefined;
+        return !reference || !this.isContainerReference(
+          source!.modelElementId,
+          reference,
+          representationDescription,
+          metamodel
+        );
+      })
       .filter(connection => this.isEdgeVisible(
         connection.referenceId,
         connection.referenceName || connection.type,
@@ -177,6 +215,12 @@ export class ViewProjectionService {
 
         const targetIds = Array.isArray(value) ? value : value ? [value] : [];
         const reference = getReferenceDefinition(metamodel, source, referenceName);
+        if (reference && this.isContainerReference(
+          source.modelElementId,
+          reference,
+          representationDescription,
+          metamodel
+        )) continue;
         const bendPoints = source.references?.[`${referenceName}_bendPoints`] as unknown as Array<{ x: number; y: number }> | undefined;
         const attributes = source.references?.[`${referenceName}_attributes`] as unknown as Record<string, any> | undefined;
 
@@ -204,6 +248,153 @@ export class ViewProjectionService {
     }
 
     return edges;
+  }
+
+  private isContainerReference(
+    sourceMetaClassId: string,
+    reference: MetaReference,
+    representationDescription: RepresentationDescription | undefined,
+    metamodel: Metamodel | undefined
+  ): boolean {
+    return Boolean(representationDescription?.containerMappings?.some(mapping => (
+      this.isMetaClassCompatible(sourceMetaClassId, [mapping.containerMetaClassId], metamodel)
+      && (
+        mapping.containmentReferenceId === reference.id
+        || mapping.containmentReferenceId === reference.name
+      )
+    )));
+  }
+
+  private applyContainerMappings(
+    nodes: DiagramElement[],
+    model: Model,
+    metamodel?: Metamodel,
+    representationDescription?: RepresentationDescription
+  ): DiagramElement[] {
+    const mappings = representationDescription?.containerMappings || [];
+    if (!metamodel || mappings.length === 0) return nodes;
+
+    const nextNodes = nodes.map(node => ({ ...node }));
+    const nodesById = new Map(nextNodes.map(node => [node.id, node]));
+    const modelElementsById = new Map(model.elements.map(element => [element.id, element]));
+    const assignedParents = new Set<string>();
+
+    for (const mapping of mappings) {
+      for (const containerElement of model.elements) {
+        if (!this.isMetaClassCompatible(
+          containerElement.modelElementId,
+          [mapping.containerMetaClassId],
+          metamodel
+        )) continue;
+
+        const containerNode = nodesById.get(containerElement.id);
+        if (!containerNode) continue;
+
+        const containerClass = metamodel.classes.find(candidate => candidate.id === containerElement.modelElementId);
+        if (!containerClass) continue;
+        const reference = modelInheritanceUtilsService
+          .getAllReferences(containerClass, metamodel)
+          .find(candidate => (
+            candidate.containment
+            && (
+              candidate.id === mapping.containmentReferenceId
+              || candidate.name === mapping.containmentReferenceId
+            )
+          ));
+        if (!reference) continue;
+
+        containerNode.containerMappingId = mapping.id;
+        const rawTargets = containerElement.references?.[reference.name]
+          ?? containerElement.references?.[reference.id];
+        const targetIds = Array.isArray(rawTargets) ? rawTargets : rawTargets ? [rawTargets] : [];
+
+        for (const targetId of targetIds) {
+          if (targetId === containerNode.id || assignedParents.has(targetId)) continue;
+          const childNode = nodesById.get(targetId);
+          const childElement = modelElementsById.get(targetId);
+          if (!childNode || !childElement) continue;
+
+          const allowedChildIds = mapping.childMetaClassIds?.length
+            ? mapping.childMetaClassIds
+            : [reference.target];
+          if (!this.isMetaClassCompatible(childElement.modelElementId, allowedChildIds, metamodel)) continue;
+
+          const isPin = representationDescription?.pinMappings?.some(pinMapping => (
+            this.isMetaClassCompatible(childElement.modelElementId, pinMapping.pinMetaClassIds, metamodel)
+          ));
+          if (isPin) continue;
+
+          childNode.parentId = containerNode.id;
+          assignedParents.add(childNode.id);
+        }
+      }
+    }
+
+    this.keepChildrenInsideContainers(nextNodes);
+    return this.sortNodesByContainment(nextNodes);
+  }
+
+  private keepChildrenInsideContainers(nodes: DiagramElement[]): void {
+    const nodesById = new Map(nodes.map(node => [node.id, node]));
+    const childrenByParent = new Map<string, DiagramElement[]>();
+    nodes.forEach(node => {
+      if (!node.parentId || !nodesById.has(node.parentId)) return;
+      const children = childrenByParent.get(node.parentId) || [];
+      children.push(node);
+      childrenByParent.set(node.parentId, children);
+    });
+
+    const visited = new Set<string>();
+    const positionChildren = (parent: DiagramElement) => {
+      if (visited.has(parent.id)) return;
+      visited.add(parent.id);
+
+      const parentX = parent.x ?? 0;
+      const parentY = parent.y ?? 0;
+      const parentWidth = Math.max(parent.width ?? DEFAULT_SIZE_2D.width, 1);
+      const parentHeight = Math.max(parent.height ?? DEFAULT_SIZE_2D.height, 1);
+      const padding = 12;
+      const header = 28;
+
+      for (const child of childrenByParent.get(parent.id) || []) {
+        const childWidth = Math.min(child.width ?? DEFAULT_SIZE_2D.width, Math.max(1, parentWidth - padding * 2));
+        const childHeight = Math.min(child.height ?? DEFAULT_SIZE_2D.height, Math.max(1, parentHeight - header - padding));
+        const minX = parentX + padding;
+        const maxX = Math.max(minX, parentX + parentWidth - childWidth - padding);
+        const minY = parentY + header;
+        const maxY = Math.max(minY, parentY + parentHeight - childHeight - padding);
+
+        child.width = childWidth;
+        child.height = childHeight;
+        child.x = Math.min(maxX, Math.max(minX, child.x ?? minX));
+        child.y = Math.min(maxY, Math.max(minY, child.y ?? minY));
+        positionChildren(child);
+      }
+    };
+
+    nodes.filter(node => !node.parentId || !nodesById.has(node.parentId)).forEach(positionChildren);
+  }
+
+  private sortNodesByContainment(nodes: DiagramElement[]): DiagramElement[] {
+    const nodesById = new Map(nodes.map(node => [node.id, node]));
+    const depthById = new Map<string, number>();
+    const getDepth = (node: DiagramElement, path = new Set<string>()): number => {
+      const cached = depthById.get(node.id);
+      if (cached !== undefined) return cached;
+      if (!node.parentId || path.has(node.id)) return 0;
+      const parent = nodesById.get(node.parentId);
+      if (!parent) return 0;
+      const nextPath = new Set(path);
+      nextPath.add(node.id);
+      const depth = 1 + getDepth(parent, nextPath);
+      depthById.set(node.id, depth);
+      return depth;
+    };
+
+    return nodes
+      .map((node, index) => ({ node, index, depth: getDepth(node) }))
+      .sort((left, right) => left.depth - right.depth || left.index - right.index)
+      .map(entry => entry.node);
   }
 
   private isMetaClassVisible(metaClassId: string, representationDescription?: RepresentationDescription): boolean {

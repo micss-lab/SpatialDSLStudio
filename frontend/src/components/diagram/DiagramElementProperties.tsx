@@ -10,13 +10,22 @@ import {
   MenuItem,
   SelectChangeEvent,
   Button,
+  Checkbox,
   Tooltip,
   ListItemText
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore';
-import { DiagramElement, Metamodel, MetaClass, MetaAttribute, Model } from '../../models/types';
-import { modelService } from '../../services/model';
+import {
+  DiagramElement,
+  Metamodel,
+  MetaClass,
+  MetaAttribute,
+  MetaReference,
+  Model,
+  RepresentationPropertySection,
+} from '../../models/types';
+import { modelInheritanceUtilsService, modelService } from '../../services/model';
 import { diagramService } from '../../services/diagram';
 import type { PinCreationOption } from '../../services/diagram/diagram.service';
 import ElementAppearanceSelector from './ElementAppearanceSelector';
@@ -28,6 +37,8 @@ interface DiagramElementPropertiesProps {
   diagramId?: string;
   is3D?: boolean;
   onCreatePin?: (option: PinCreationOption) => void | Promise<void>;
+  propertySections?: RepresentationPropertySection[];
+  onReferenceChange?: (referenceName: string, value: string | string[] | null) => void | Promise<void>;
 }
 
 const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
@@ -36,7 +47,9 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
   onChange,
   diagramId,
   is3D = false,
-  onCreatePin
+  onCreatePin,
+  propertySections,
+  onReferenceChange,
 }) => {
   const [model, setModel] = useState<Model | null>(null);
   const [modelElements, setModelElements] = useState<any[]>([]);
@@ -196,7 +209,7 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
     if (!metaClass) return;
     
     // Process each attribute that has a default value
-    metaClass.attributes.forEach(attribute => {
+    modelInheritanceUtilsService.getAllAttributes(metaClass, metamodel).forEach(attribute => {
       // Only apply default if it's defined
       if (attribute.defaultValue !== undefined) {
         // Convert value based on type if needed
@@ -372,6 +385,70 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
     }
   };
 
+  const updateReference = (referenceName: string, value: string | string[] | null) => {
+    if (onReferenceChange) {
+      void onReferenceChange(referenceName, value);
+      return;
+    }
+    if (!model || !activeModelElement) return;
+    modelService.setModelElementReference(model.id, activeModelElement.id, referenceName, value);
+    setModel({ ...model, elements: [...model.elements] });
+  };
+
+  const renderReferenceField = (reference: MetaReference) => {
+    const currentValue = activeModelElement?.references?.[reference.name];
+    const isMany = reference.isMultiValued === true
+      || reference.cardinality.upperBound === '*'
+      || (typeof reference.cardinality.upperBound === 'number' && reference.cardinality.upperBound > 1);
+    const candidates = (model?.elements || []).filter(candidate => (
+      modelInheritanceUtilsService.isSubtypeOf(candidate.modelElementId, reference.target, metamodel)
+      && (reference.allowSelfReference === true || candidate.id !== activeModelElement?.id)
+    ));
+
+    return (
+      <FormControl key={reference.id} fullWidth margin="dense" size="small">
+        <InputLabel id={`${reference.id}-reference-label`}>{reference.name}</InputLabel>
+        <Select
+          labelId={`${reference.id}-reference-label`}
+          label={reference.name}
+          multiple={isMany}
+          value={isMany
+            ? (Array.isArray(currentValue) ? currentValue : currentValue ? [currentValue] : [])
+            : (Array.isArray(currentValue) ? currentValue[0] || '' : currentValue || '')}
+          onChange={event => {
+            if (isMany) {
+              const selected = event.target.value;
+              updateReference(reference.name, typeof selected === 'string' ? selected.split(',') : selected as string[]);
+            } else {
+              updateReference(reference.name, event.target.value ? String(event.target.value) : null);
+            }
+          }}
+          renderValue={selected => {
+            const ids = Array.isArray(selected) ? selected : selected ? [selected] : [];
+            return ids.map(id => (
+              candidates.find(candidate => candidate.id === id)?.style?.name
+              || candidates.find(candidate => candidate.id === id)?.name
+              || id
+            )).join(', ') || 'None';
+          }}
+        >
+          {!isMany && <MenuItem value=""><em>None</em></MenuItem>}
+          {candidates.map(candidate => (
+            <MenuItem key={candidate.id} value={candidate.id}>
+              {isMany && (
+                <Checkbox
+                  size="small"
+                  checked={Array.isArray(currentValue) && currentValue.includes(candidate.id)}
+                />
+              )}
+              {candidate.style?.name || candidate.name || candidate.id}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    );
+  };
+
   // Special case for edge elements
   if (element.type === 'edge') {
     // Get the source and target elements from the model
@@ -519,6 +596,16 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
     }
     return element.style.name || 'Unnamed';
   };
+  const allAttributes = modelInheritanceUtilsService.getAllAttributes(metaClass, metamodel);
+  const allReferences = modelInheritanceUtilsService.getAllReferences(metaClass, metamodel);
+  const hasConfiguredPropertySections = Boolean(propertySections?.length);
+  const elementMetaClassId = activeModelElement?.modelElementId || metaClass.id;
+  const applicablePropertySections = (propertySections || []).filter(section => (
+    !section.metaClassIds?.length
+    || section.metaClassIds.some(configuredMetaClassId => (
+      modelInheritanceUtilsService.isSubtypeOf(elementMetaClassId, configuredMetaClassId, metamodel)
+    ))
+  ));
 
   return (
     <Box>
@@ -628,8 +715,40 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
         </Box>
       )}
       
-      {/* Only show view attributes section if not in 3D mode */}
-      {!is3D && (
+      {hasConfiguredPropertySections ? (
+        applicablePropertySections.length > 0 ? (
+          <>
+            {applicablePropertySections.map(section => {
+              const sectionAttributes = (section.attributeNames || [])
+                .map(name => allAttributes.find(attribute => attribute.name === name))
+                .filter((attribute): attribute is MetaAttribute => Boolean(attribute));
+              const sectionReferences = (section.referenceNames || [])
+                .map(name => allReferences.find(reference => reference.name === name))
+                .filter((reference): reference is MetaReference => Boolean(reference));
+              return (
+                <Box key={section.id} data-testid={`element-property-section-${section.id}`}>
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="subtitle2" gutterBottom>{section.name}</Typography>
+                  {sectionAttributes.map(renderAttributeField)}
+                  {sectionReferences.map(renderReferenceField)}
+                  {sectionAttributes.length === 0 && sectionReferences.length === 0 && (
+                    <Typography variant="caption" color="textSecondary">
+                      No configured properties apply to this metaclass.
+                    </Typography>
+                  )}
+                </Box>
+              );
+            })}
+          </>
+        ) : (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="caption" color="textSecondary">
+              No configured property section applies to this metaclass.
+            </Typography>
+          </>
+        )
+      ) : !is3D && (
         <>
           <Divider sx={{ my: 2 }} />
           
@@ -648,9 +767,9 @@ const DiagramElementProperties: React.FC<DiagramElementPropertiesProps> = ({
             </Button>
           </Box>
           
-          {metaClass.attributes.map(attribute => renderAttributeField(attribute))}
+          {allAttributes.map(attribute => renderAttributeField(attribute))}
           
-          {metaClass.attributes.length === 0 && (
+          {allAttributes.length === 0 && (
             <Typography variant="caption" color="textSecondary">
               No attributes defined for this class.
             </Typography>

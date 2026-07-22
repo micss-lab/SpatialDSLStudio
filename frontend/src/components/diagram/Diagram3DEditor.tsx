@@ -5,13 +5,14 @@ import { Box, Typography, Drawer, Button, TextField, Alert, Switch, FormControlL
 import DeleteIcon from '@mui/icons-material/Delete';
 import GridOnIcon from '@mui/icons-material/GridOn';
 import * as THREE from 'three';
-import { Diagram, Metamodel, Model, ModelElement } from '../../models/types';
-import { concreteSyntaxResolver, diagramService } from '../../services/diagram';
+import { Diagram, Metamodel, Model, ModelElement, ValidationIssue } from '../../models/types';
+import { concreteSyntaxResolver, diagramService, diagramToolExecutionService, viewValidationService } from '../../services/diagram';
 import { metamodelService } from '../../services/metamodel';
 import viewpointService from '../../services/viewpoint.service';
 import DiagramPalette, { DiagramPaletteDragItem } from '../palette/DiagramPalette';
 import DiagramElementProperties from './DiagramElementProperties';
-import { modelService } from '../../services/model';
+import ViewValidationPanel from './ViewValidationPanel';
+import { modelInheritanceUtilsService, modelService } from '../../services/model';
 import Node3D, { Element3D } from './Node3D';
 import { useElementSelection } from './shared/hooks';
 import { StatusOverlay3D, GridControls } from './3d/components';
@@ -353,6 +354,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
   const [gridControlAnchor, setGridControlAnchor] = useState<HTMLElement | null>(null);
   const [selectedAxes, setSelectedAxes] = useState({ x: true, y: true }); // Track which axes are selected
   const [elementZIndexes, setElementZIndexes] = useState<Record<string, number>>({});
+  const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   const nextZIndexRef = useRef<number>(1);
   // Simplified ref management - single ref for selected element
   const selectedElementRef = useRef<THREE.Group>(null);
@@ -688,6 +690,31 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
     () => diagram ? viewpointService.resolveRepresentationDescription(diagram) : {},
     [diagram]
   );
+  const validationContextKey = diagram
+    ? `${diagram.id}:${diagram.modelId}:${diagram.representationDescriptionId || ''}`
+    : '';
+  const validateView = useCallback(() => {
+    const currentDiagram = diagramService.getDiagramById(diagramId);
+    setValidationIssues(currentDiagram ? viewValidationService.validateDiagram(currentDiagram).issues : []);
+  }, [diagramId]);
+  useEffect(() => {
+    if (validationContextKey) validateView();
+  }, [validateView, validationContextKey]);
+  const handleValidationIssueSelect = useCallback((issue: ValidationIssue) => {
+    const currentDiagram = diagramService.getDiagramById(diagramId);
+    if (!currentDiagram) return;
+    const element = viewValidationService.findElementForIssue(currentDiagram, issue);
+    if (!element) return;
+    bringToFront(element.id);
+    setSelectedElement({
+      ...element,
+      rotationZ: element.style.rotationZ || 0,
+      position3D: element.style.position3D || { x: element.x || 0, y: element.y || 0 },
+      widthMm: element.style.widthMm,
+      heightMm: element.style.heightMm,
+      depthMm: element.style.depthMm,
+    } as Element3D);
+  }, [bringToFront, diagramId, setSelectedElement]);
 
   // If we have a WebGL error, show fallback UI
   if (webGLError) {
@@ -773,22 +800,32 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
             };
             const resolved2D = concreteSyntaxResolver.resolve2D(previewElement, metamodel);
             resolved3D = concreteSyntaxResolver.resolve3D(previewElement, metamodel);
-            newElement = await diagramService.createModelElementInView(
-              diagramId,
-              draggingPaletteItem.metaClass.id,
-              {
-                position2D: { x: position.x, y: position.y },
-                size2D: resolved2D.defaultSize || { width: 120, height: 80 },
-                position3D: { x: position.x, y: position.y },
-                size3D: {
-                  widthMm: resolved3D.widthMm,
-                  heightMm: resolved3D.heightMm,
-                  depthMm: resolved3D.depthMm,
-                },
-                rotationZ: 0,
+            const presentation = {
+              position2D: { x: position.x, y: position.y },
+              size2D: resolved2D.defaultSize || { width: 120, height: 80 },
+              position3D: { x: position.x, y: position.y },
+              size3D: {
+                widthMm: resolved3D.widthMm,
+                heightMm: resolved3D.heightMm,
+                depthMm: resolved3D.depthMm,
               },
-              { name: `${draggingPaletteItem.metaClass.name} 1` }
-            );
+              rotationZ: 0,
+            };
+            if (draggingPaletteItem.tool) {
+              const result = await diagramToolExecutionService.executeCreateNodeTool(
+                diagramId,
+                draggingPaletteItem.tool,
+                presentation
+              );
+              newElement = result.value || null;
+            } else {
+              newElement = await diagramService.createModelElementInView(
+                diagramId,
+                draggingPaletteItem.metaClass.id,
+                presentation,
+                { name: `${draggingPaletteItem.metaClass.name} 1` }
+              );
+            }
           }
 
           if (newElement) {
@@ -816,6 +853,32 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
   
   const handlePropertyChange = (propertyName: string, value: any) => {
     if (!selectedElement || !diagram) return;
+    const semanticElementId = selectedElement.style?.linkedModelElementId
+      || model?.elements.find(candidate => candidate.id === selectedElement.id)?.id;
+    const semanticElement = semanticElementId
+      ? model?.elements.find(candidate => candidate.id === semanticElementId)
+      : undefined;
+    const semanticMetaClass = semanticElement && metamodel
+      ? metamodel.classes.find(candidate => candidate.id === semanticElement.modelElementId)
+      : undefined;
+    const isSemanticAttribute = Boolean(
+      semanticMetaClass
+      && metamodel
+      && modelInheritanceUtilsService
+        .getAllAttributes(semanticMetaClass, metamodel)
+        .some(attribute => attribute.name === propertyName)
+    );
+
+    if (model && semanticElementId && isSemanticAttribute) {
+      modelService.updateModelElementProperties(model.id, semanticElementId, { [propertyName]: value });
+      setModel({ ...model, elements: [...model.elements] });
+      setSelectedElement({
+        ...selectedElement,
+        style: { ...selectedElement.style, [propertyName]: value },
+      });
+      saveChanges();
+      return;
+    }
     
     // Special handling for rotationZ property - save it as a property in the stored style
     if (propertyName === 'rotationZ') {
@@ -1111,6 +1174,14 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
           onSliderChange={handleSliderChange}
         />
 
+        <Box sx={{ position: 'absolute', top: 10, left: 10, zIndex: 10 }}>
+          <ViewValidationPanel
+            issues={validationIssues}
+            onRefresh={validateView}
+            onSelectIssue={handleValidationIssueSelect}
+          />
+        </Box>
+
         <WebGLErrorBoundary onError={handleWebGLError}>
           <Canvas 
             style={{ width: '100%', height: '100%' }}
@@ -1232,6 +1303,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
                     lowPerformance={lowPerformanceMode}
                     renderOrder={renderOrder}
                     isDragging={isDragging && selectedElement?.id === element.id}
+                    validationSeverity={viewValidationService.getElementSeverity(diagram, element, validationIssues)}
                   />
                 );
               })}
@@ -1275,6 +1347,17 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
               metamodel={metamodel}
               onChange={handlePropertyChange}
               is3D={true}
+              diagramId={diagramId}
+              propertySections={viewContext.representationDescription?.propertySections}
+              onReferenceChange={(referenceName, value) => {
+                const semanticElementId = selectedElement.style?.linkedModelElementId
+                  || model?.elements.find(candidate => candidate.id === selectedElement.id)?.id;
+                if (!model || !semanticElementId) return;
+                if (modelService.setModelElementReference(model.id, semanticElementId, referenceName, value)) {
+                  setModel({ ...model, elements: [...model.elements] });
+                  saveChanges();
+                }
+              }}
             />
             
             {/* Additional 3D-specific properties */}

@@ -13,7 +13,12 @@ import {
   Model,
   ModelElement,
   RepresentationDescription,
+  RepresentationContainerMapping,
+  RepresentationConditionalStyle,
   RepresentationEdgeMapping,
+  RepresentationFilter,
+  RepresentationLayer,
+  RepresentationLayerMapping,
   RepresentationPinMapping,
   SiriusAirdDiagramPreview,
   SiriusAirdImportResult,
@@ -25,6 +30,7 @@ import {
   SiriusImportResult,
   SiriusInteropWarning,
   SiriusOdesignPreview,
+  SiriusProjectExportResult,
   SiriusSourceFormat,
   UserRole,
   Viewpoint,
@@ -59,6 +65,7 @@ interface AirdBounds {
 interface AirdLayout {
   bounds?: AirdBounds;
   points?: Array<{ x: number; y: number }>;
+  parentElementId?: string;
 }
 
 interface ImportOdesignInput {
@@ -95,6 +102,13 @@ interface ExportAirdInput {
   options?: Partial<SiriusExportOptions>;
 }
 
+interface ExportProjectInput {
+  metamodelId: string;
+  modelId?: string;
+  viewpointIds?: string[];
+  diagramIds?: string[];
+}
+
 const MAX_XML_BYTES = 1024 * 1024;
 const MAX_ZIP_BYTES = 5 * 1024 * 1024;
 const MAX_XML_NODES = 5000;
@@ -119,12 +133,8 @@ const DEFAULT_EXPORT_OPTIONS: SiriusExportOptions = {
 };
 
 const UNSUPPORTED_TAG_CODES: Record<string, string> = {
-  additionalLayers: 'SIRIUS_LAYERS_UNSUPPORTED',
   allTools: 'SIRIUS_TOOL_SECTION_UNSUPPORTED',
   audits: 'SIRIUS_VALIDATION_UNSUPPORTED',
-  conditionalStyles: 'SIRIUS_CONDITIONAL_STYLES_UNSUPPORTED',
-  conditionnalStyles: 'SIRIUS_CONDITIONAL_STYLES_UNSUPPORTED',
-  filters: 'SIRIUS_FILTERS_UNSUPPORTED',
   javaExtensions: 'SIRIUS_JAVA_SERVICES_UNSUPPORTED',
   ownedJavaExtensions: 'SIRIUS_JAVA_SERVICES_UNSUPPORTED',
   ownedRules: 'SIRIUS_VALIDATION_UNSUPPORTED',
@@ -277,7 +287,11 @@ class SiriusInteropService {
     }
 
     const model = await this.getReadableModel(input.modelId, userId);
-    const allDiagrams = await diagramService.getByModelId(input.modelId, userId);
+    const [allDiagrams, metamodel, viewpoints] = await Promise.all([
+      diagramService.getByModelId(input.modelId, userId),
+      this.getReadableMetamodel(model.metamodelId || model.conformsTo, userId),
+      viewpointService.getAll(userId, model.metamodelId || model.conformsTo),
+    ]);
     if (input.diagramIds?.length) {
       const availableIds = new Set(allDiagrams.map(diagram => diagram.id));
       const missingIds = input.diagramIds.filter(diagramId => !availableIds.has(diagramId));
@@ -294,7 +308,13 @@ class SiriusInteropService {
     }
 
     const report = this.createReport('aird', 'sirius-project');
-    const content = this.buildAirdXml(model, selected, report);
+    const preparedDiagrams = selected.map(diagram => this.prepareAirdDiagramForExport(
+      diagram,
+      model,
+      metamodel,
+      viewpoints.find(viewpoint => viewpoint.id === diagram.viewpointId)
+    ));
+    const content = this.buildAirdXml(model, preparedDiagrams, report);
     if (options.failOnUnsupportedFeatures && report.droppedFeatures.length > 0) {
       throw new ApiError(400, 'SpatialDSL views contain data unsupported by Sirius .aird export');
     }
@@ -307,8 +327,108 @@ class SiriusInteropService {
     };
   }
 
-  private buildAirdXml(model: Model, diagrams: Diagram[], report: SiriusCompatibilityReport): string {
-    const semanticResource = `${this.toFileSlug(model.name || 'model')}.xmi`;
+  /** Build one importable Eclipse Sirius modeling-project ZIP around a primary model. */
+  async exportProject(input: ExportProjectInput, userId: string): Promise<SiriusProjectExportResult> {
+    const metamodel = await this.getReadableMetamodel(input.metamodelId, userId);
+    const model = input.modelId
+      ? await this.getReadableModel(input.modelId, userId)
+      : (await modelService.getByMetamodelId(input.metamodelId, userId))[0];
+    if (!model) {
+      throw new ApiError(404, 'No model found for Sirius project export');
+    }
+    if ((model.metamodelId || model.conformsTo) !== metamodel.id) {
+      throw new ApiError(400, 'The selected model does not conform to the selected metamodel');
+    }
+
+    const [allViewpoints, allDiagrams] = await Promise.all([
+      viewpointService.getAll(userId, metamodel.id),
+      diagramService.getByModelId(model.id, userId),
+    ]);
+    const selectedViewpoints = this.selectByRequestedIds(
+      allViewpoints,
+      input.viewpointIds,
+      'viewpoint'
+    );
+    const selectedDiagrams = this.selectByRequestedIds(
+      allDiagrams,
+      input.diagramIds,
+      'view'
+    );
+    if (selectedViewpoints.length === 0) {
+      throw new ApiError(404, 'No viewpoints found for Sirius project export');
+    }
+    if (selectedDiagrams.length === 0) {
+      throw new ApiError(404, 'No views found for Sirius project export');
+    }
+
+    const selectedViewpointIds = new Set(selectedViewpoints.map(viewpoint => viewpoint.id));
+    const missingViewpointIds = Array.from(new Set(selectedDiagrams
+      .map(diagram => diagram.viewpointId)
+      .filter((id): id is string => Boolean(id) && !selectedViewpointIds.has(id!))));
+    if (missingViewpointIds.length > 0) {
+      throw new ApiError(400, `Selected views reference viewpoints outside the bundle: ${missingViewpointIds.join(', ')}`);
+    }
+
+    const projectSlug = this.toFileSlug(metamodel.name || model.name || 'spatialdsl');
+    const metamodelFilename = `${this.toFileSlug(metamodel.name || 'metamodel')}.ecore`;
+    const modelFilename = `${this.toFileSlug(model.name || 'model')}.xmi`;
+    const odesignFilename = `${this.toFileSlug(metamodel.name || 'viewpoints')}.odesign`;
+    const ecorePath = `model/${metamodelFilename}`;
+    const xmiPath = `model/${modelFilename}`;
+    const odesignPath = `description/${odesignFilename}`;
+    const airdPath = 'representations.aird';
+    const report = this.createReport('project-zip', 'sirius-project');
+
+    const odesign = this.buildOdesignXml(metamodel, selectedViewpoints, report);
+    const ecore = this.buildEcoreXml(metamodel, report);
+    const xmi = this.buildSemanticXmi(model, metamodel, report);
+    const preparedDiagrams = selectedDiagrams.map(diagram => this.prepareAirdDiagramForExport(
+      diagram,
+      model,
+      metamodel,
+      selectedViewpoints.find(viewpoint => viewpoint.id === diagram.viewpointId)
+    ));
+    const aird = this.buildAirdXml(model, preparedDiagrams, report, xmiPath, odesignPath);
+    this.finalizeReport(report);
+
+    const zip = new JSZip();
+    zip.file('.project', this.buildEclipseProjectXml(projectSlug));
+    zip.file(ecorePath, ecore);
+    zip.file(xmiPath, xmi);
+    zip.file(odesignPath, odesign);
+    zip.file(airdPath, aird);
+    zip.file('compatibility-report.json', JSON.stringify(report, null, 2));
+    const content = await zip.generateAsync({ type: 'base64', compression: 'DEFLATE' });
+    const entries = ['.project', ecorePath, xmiPath, odesignPath, airdPath, 'compatibility-report.json'];
+    return {
+      filename: `${projectSlug}.sirius-project.zip`,
+      content,
+      entries,
+      report,
+    };
+  }
+
+  private selectByRequestedIds<T extends { id: string }>(
+    available: T[],
+    requestedIds: string[] | undefined,
+    label: string
+  ): T[] {
+    if (!requestedIds?.length) return available;
+    const availableIds = new Set(available.map(item => item.id));
+    const missingIds = requestedIds.filter(id => !availableIds.has(id));
+    if (missingIds.length > 0) {
+      throw new ApiError(404, `Requested ${label} IDs not found: ${missingIds.join(', ')}`);
+    }
+    return available.filter(item => requestedIds.includes(item.id));
+  }
+
+  private buildAirdXml(
+    model: Model,
+    diagrams: Diagram[],
+    report: SiriusCompatibilityReport,
+    semanticResource = `${this.toFileSlug(model.name || 'model')}.xmi`,
+    odesignResource?: string
+  ): string {
     const analysisId = `analysis-${this.toFileSlug(model.name || model.id)}`;
     const elementById = new Map(model.elements.map(element => [element.id, element] as const));
     const rootTarget = model.elements[0]?.id;
@@ -338,10 +458,22 @@ class SiriusInteropService {
     let viewIndex = 0;
     for (const [viewpointId, groupDiagrams] of groups) {
       viewIndex += 1;
-      const viewpointAttr = viewpointId ? ` viewpoint="#${this.escapeXml(viewpointId)}"` : '';
+      const viewpointRef = viewpointId
+        ? `${odesignResource ? `${odesignResource}#` : '#'}${viewpointId}`
+        : undefined;
+      const viewpointAttr = viewpointRef ? ` viewpoint="${this.escapeXml(viewpointRef)}"` : '';
       lines.push(`    <ownedViews xmi:id="${this.escapeXml(`sirius-view-${viewIndex}`)}"${viewpointAttr}>`);
       for (const diagram of groupDiagrams) {
-        this.appendAirdRepresentation(lines, gmfBlocks, diagram, elementById, semanticResource, rootTarget, report);
+        this.appendAirdRepresentation(
+          lines,
+          gmfBlocks,
+          diagram,
+          elementById,
+          semanticResource,
+          rootTarget,
+          report,
+          odesignResource
+        );
       }
       lines.push('    </ownedViews>');
     }
@@ -352,6 +484,453 @@ class SiriusInteropService {
     return `${lines.join('\n')}\n`;
   }
 
+  private buildEclipseProjectXml(projectName: string): string {
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+  <name>${this.escapeXml(projectName)}</name>
+  <comment>Generated by SpatialDSL Studio</comment>
+  <projects/>
+  <buildSpec/>
+  <natures>
+    <nature>org.eclipse.sirius.nature.modelingproject</nature>
+  </natures>
+</projectDescription>
+`;
+  }
+
+  private buildEcoreXml(metamodel: Metamodel, report: SiriusCompatibilityReport): string {
+    const lines = [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<ecore:EPackage xmi:version="2.0"',
+      '    xmlns:xmi="http://www.omg.org/XMI"',
+      '    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"',
+      '    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"',
+      `    name="${this.escapeXml(metamodel.name)}"`,
+      `    nsPrefix="${this.escapeXml(metamodel.prefix)}"`,
+      `    nsURI="${this.escapeXml(metamodel.uri)}">`,
+    ];
+
+    metamodel.classes.forEach(metaClass => {
+      const superTypes = (metaClass.superTypes || [])
+        .map(id => metamodel.classes.find(candidate => candidate.id === id))
+        .filter((candidate): candidate is MetaClass => Boolean(candidate))
+        .map(candidate => `#//${candidate.name}`)
+        .join(' ');
+      lines.push(
+        `  <eClassifiers xsi:type="ecore:EClass" name="${this.escapeXml(metaClass.name)}"` +
+        `${metaClass.abstract ? ' abstract="true"' : ''}` +
+        `${superTypes ? ` eSuperTypes="${this.escapeXml(superTypes)}"` : ''}>`
+      );
+      (metaClass.constraints || [])
+        .filter(constraint => constraint.type === 'ocl')
+        .forEach(constraint => {
+          lines.push('    <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore/OCL">');
+          lines.push(`      <details key="${this.escapeXml(constraint.name || 'invariant')}" value="${this.escapeXml(constraint.expression)}"/>`);
+          lines.push('    </eAnnotations>');
+      });
+      (metaClass.attributes || []).forEach(attribute => {
+        const attributeType = attribute.type;
+        let eType = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString';
+        if (typeof attributeType === 'object') {
+          const metaEnum = (metamodel.enums || []).find(candidate => candidate.id === attributeType.enumId);
+          if (metaEnum) eType = `#//${metaEnum.name}`;
+        } else if (attributeType === 'number') {
+          eType = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble';
+        } else if (attributeType === 'boolean') {
+          eType = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean';
+        } else if (attributeType === 'date') {
+          eType = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDate';
+        }
+        const upperBound = attribute.many ? ' upperBound="-1"' : '';
+        const lowerBound = attribute.required ? ' lowerBound="1"' : '';
+        const defaultValue = attribute.defaultValue !== undefined && attribute.defaultValue !== ''
+          ? ` defaultValueLiteral="${this.escapeXml(String(attribute.defaultValue))}"`
+          : '';
+        lines.push(`    <eStructuralFeatures xsi:type="ecore:EAttribute" name="${this.escapeXml(attribute.name)}" eType="${this.escapeXml(eType)}"${upperBound}${lowerBound}${defaultValue}/>`);
+      });
+      (metaClass.references || []).forEach(reference => {
+        const target = metamodel.classes.find(candidate => candidate.id === reference.target);
+        if (!target) {
+          this.addWarning(report, 'unresolvedReferences', {
+            severity: 'error',
+            code: 'SPATIALDSL_ECORE_REFERENCE_TARGET_UNRESOLVED',
+            message: `EReference ${metaClass.name}.${reference.name} targets unknown metaclass ${reference.target}.`,
+            spatialElementId: reference.id,
+          });
+          return;
+        }
+        const upperBound = reference.cardinality?.upperBound === '*'
+          ? ' upperBound="-1"'
+          : typeof reference.cardinality?.upperBound === 'number'
+            ? ` upperBound="${reference.cardinality.upperBound}"`
+            : '';
+        const lowerBound = (reference.cardinality?.lowerBound || 0) > 0
+          ? ` lowerBound="${reference.cardinality.lowerBound}"`
+          : '';
+        const opposite = reference.opposite
+          ? this.ecoreOppositeFragment(metamodel, reference.opposite)
+          : undefined;
+        lines.push(
+          `    <eStructuralFeatures xsi:type="ecore:EReference" name="${this.escapeXml(reference.name)}"` +
+          ` eType="#//${this.escapeXml(target.name)}"${upperBound}${lowerBound}` +
+          ` containment="${reference.containment}"${opposite ? ` eOpposite="${this.escapeXml(opposite)}"` : ''}/>`
+        );
+      });
+      lines.push('  </eClassifiers>');
+    });
+
+    (metamodel.enums || []).forEach(metaEnum => {
+      lines.push(`  <eClassifiers xsi:type="ecore:EEnum" name="${this.escapeXml(metaEnum.name)}">`);
+      metaEnum.literals.forEach((literal, index) => {
+        const value = literal.value !== undefined && literal.value !== index
+          ? ` value="${literal.value}"`
+          : '';
+        const serializedLiteral = literal.literal && literal.literal !== literal.name
+          ? ` literal="${this.escapeXml(literal.literal)}"`
+          : '';
+        lines.push(`    <eLiterals name="${this.escapeXml(literal.name)}"${value}${serializedLiteral}/>`);
+      });
+      lines.push('  </eClassifiers>');
+    });
+    lines.push('</ecore:EPackage>');
+    return `${lines.join('\n')}\n`;
+  }
+
+  private ecoreOppositeFragment(metamodel: Metamodel, oppositeId: string): string | undefined {
+    for (const metaClass of metamodel.classes) {
+      const reference = (metaClass.references || []).find(candidate => candidate.id === oppositeId);
+      if (reference) return `#//${metaClass.name}/${reference.name}`;
+    }
+    return undefined;
+  }
+
+  private buildSemanticXmi(
+    model: Model,
+    metamodel: Metamodel,
+    report: SiriusCompatibilityReport
+  ): string {
+    const elementById = new Map(model.elements.map(element => [element.id, element] as const));
+    const classById = new Map(metamodel.classes.map(metaClass => [metaClass.id, metaClass] as const));
+    const referenceTargets = (element: ModelElement, reference: MetaReference): string[] => {
+      const raw = element.references?.[reference.name] ?? element.references?.[reference.id];
+      const targets = Array.isArray(raw) ? [...raw] : raw ? [raw] : [];
+      (model.connections || [])
+        .filter(connection => (
+          connection.sourceId === element.id
+          && (
+            connection.referenceId === reference.id
+            || connection.referenceName === reference.name
+            || connection.type === reference.name
+          )
+        ))
+        .forEach(connection => {
+          if (!targets.includes(connection.targetId)) targets.push(connection.targetId);
+        });
+      return targets;
+    };
+    const containmentParents = new Set<string>();
+    model.elements.forEach(element => {
+      const metaClass = classById.get(element.modelElementId);
+      if (!metaClass) return;
+      this.getAllMetaReferences(metaClass, metamodel)
+        .filter(reference => reference.containment)
+        .flatMap(reference => referenceTargets(element, reference))
+        .forEach(targetId => containmentParents.add(targetId));
+    });
+    let roots = model.elements.filter(element => !containmentParents.has(element.id));
+    if (roots.length === 0 && model.elements.length > 0) {
+      roots = [model.elements[0]];
+      this.addWarning(report, 'warnings', {
+        severity: 'warning',
+        code: 'SPATIALDSL_XMI_CONTAINMENT_CYCLE',
+        message: 'No semantic root was found; the first model element was used as the XMI root.',
+        spatialElementId: model.elements[0].id,
+      });
+    }
+    if (roots.length === 0) {
+      this.addWarning(report, 'unresolvedReferences', {
+        severity: 'error',
+        code: 'SPATIALDSL_XMI_ROOT_NOT_FOUND',
+        message: 'The selected model has no semantic elements to export.',
+        spatialElementId: model.id,
+      });
+    }
+
+    const visited = new Set<string>();
+    const serializeElement = (
+      element: ModelElement,
+      tag: string,
+      indent: string,
+      declaredClassId?: string,
+      root = false
+    ): string[] => {
+      if (visited.has(element.id)) return [];
+      visited.add(element.id);
+      const metaClass = classById.get(element.modelElementId);
+      if (!metaClass) {
+        this.addWarning(report, 'unresolvedReferences', {
+          severity: 'error',
+          code: 'SPATIALDSL_XMI_METACLASS_UNRESOLVED',
+          message: `Model element ${element.id} references unknown metaclass ${element.modelElementId}.`,
+          spatialElementId: element.id,
+        });
+        return [];
+      }
+
+      const attributes = [`xmi:id="${this.escapeXml(element.id)}"`];
+      this.getAllMetaAttributes(metaClass, metamodel).forEach(attribute => {
+        const value = element.style?.[attribute.name]
+          ?? (attribute.name === 'name' ? element.name : undefined);
+        if (value !== undefined && value !== null && value !== '') {
+          attributes.push(`${attribute.name}="${this.escapeXml(String(value))}"`);
+        }
+      });
+      this.getAllMetaReferences(metaClass, metamodel)
+        .filter(reference => !reference.containment)
+        .forEach(reference => {
+          const targets = referenceTargets(element, reference);
+          const resolved = targets.filter(targetId => elementById.has(targetId));
+          const missing = targets.filter(targetId => !elementById.has(targetId));
+          if (resolved.length > 0) attributes.push(`${reference.name}="${this.escapeXml(resolved.join(' '))}"`);
+          missing.forEach(targetId => this.addWarning(report, 'unresolvedReferences', {
+            severity: 'warning',
+            code: 'SPATIALDSL_XMI_REFERENCE_TARGET_UNRESOLVED',
+            message: `${element.id}.${reference.name} targets missing element ${targetId}.`,
+            spatialElementId: element.id,
+          }));
+        });
+      if (root) {
+        attributes.unshift(
+          'xmi:version="2.0"',
+          'xmlns:xmi="http://www.omg.org/XMI"',
+          'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"',
+          `xmlns:${metamodel.prefix}="${this.escapeXml(metamodel.uri)}"`
+        );
+      }
+      if (declaredClassId && declaredClassId !== element.modelElementId) {
+        attributes.push(`xsi:type="${this.escapeXml(`${metamodel.prefix}:${metaClass.name}`)}"`);
+      }
+
+      const children: string[] = [];
+      this.getAllMetaReferences(metaClass, metamodel)
+        .filter(reference => reference.containment)
+        .forEach(reference => {
+          referenceTargets(element, reference).forEach(targetId => {
+            const child = elementById.get(targetId);
+            if (!child) {
+              this.addWarning(report, 'unresolvedReferences', {
+                severity: 'warning',
+                code: 'SPATIALDSL_XMI_CONTAINMENT_TARGET_UNRESOLVED',
+                message: `${element.id}.${reference.name} targets missing element ${targetId}.`,
+                spatialElementId: element.id,
+              });
+              return;
+            }
+            children.push(...serializeElement(child, reference.name, indent + '  ', reference.target));
+          });
+        });
+      if (children.length === 0) {
+        return [`${indent}<${tag} ${attributes.join(' ')}/>`];
+      }
+      return [
+        `${indent}<${tag} ${attributes.join(' ')}>`,
+        ...children,
+        `${indent}</${tag}>`,
+      ];
+    };
+
+    const lines = ['<?xml version="1.0" encoding="UTF-8"?>'];
+    if (roots.length === 1) {
+      const rootClass = classById.get(roots[0].modelElementId);
+      if (rootClass) {
+        lines.push(...serializeElement(
+          roots[0],
+          `${metamodel.prefix}:${rootClass.name}`,
+          '',
+          undefined,
+          true
+        ));
+      }
+    } else {
+      lines.push(
+        '<xmi:XMI xmi:version="2.0"',
+        '    xmlns:xmi="http://www.omg.org/XMI"',
+        '    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"',
+        `    xmlns:${metamodel.prefix}="${this.escapeXml(metamodel.uri)}">`
+      );
+      roots.forEach(root => {
+        const metaClass = classById.get(root.modelElementId);
+        if (metaClass) lines.push(...serializeElement(root, `${metamodel.prefix}:${metaClass.name}`, '  '));
+      });
+      lines.push('</xmi:XMI>');
+    }
+    if (model.elements.some(element => element.presentation && Object.keys(element.presentation).length > 0)) {
+      this.addWarning(report, 'warnings', {
+        severity: 'info',
+        code: 'SPATIALDSL_XMI_PRESENTATION_IN_AIRD',
+        message: 'Semantic XMI excludes presentation metadata; bundled .aird GMF notation carries view layout.',
+        spatialElementId: model.id,
+      });
+    }
+    return `${lines.join('\n')}\n`;
+  }
+
+  private getAllMetaAttributes(metaClass: MetaClass, metamodel: Metamodel): MetaClass['attributes'] {
+    const attributes = [...(metaClass.attributes || [])];
+    const visited = new Set<string>([metaClass.id]);
+    const visit = (candidate: MetaClass) => {
+      (candidate.superTypes || []).forEach(superTypeId => {
+        if (visited.has(superTypeId)) return;
+        visited.add(superTypeId);
+        const superType = metamodel.classes.find(item => item.id === superTypeId);
+        if (superType) {
+          attributes.unshift(...(superType.attributes || []));
+          visit(superType);
+        }
+      });
+    };
+    visit(metaClass);
+    const names = new Set<string>();
+    return attributes.filter(attribute => {
+      if (names.has(attribute.name)) return false;
+      names.add(attribute.name);
+      return true;
+    });
+  }
+
+  /**
+   * Convert the canonical projection storage shape into the legacy flat element
+   * list consumed by the `.aird` serializer, then derive visual containment from
+   * the representation mapping. Native views normally persist membership and
+   * model presentation rather than materialized DiagramElements.
+   */
+  private prepareAirdDiagramForExport(
+    diagram: Diagram,
+    model: Model,
+    metamodel: Metamodel,
+    viewpoint?: Viewpoint
+  ): Diagram {
+    const semanticById = new Map(model.elements.map(element => [element.id, element] as const));
+    const resolveSemanticId = (element: DiagramElement): string | undefined => {
+      const linkedId = element.style?.linkedModelElementId || element.style?.modelElementRefId;
+      return [element.modelElementId, linkedId, element.id]
+        .find(candidate => typeof candidate === 'string' && semanticById.has(candidate));
+    };
+
+    const elements = (diagram.elements || []).map(element => {
+      if (element.type !== 'node') return { ...element };
+      const semanticId = resolveSemanticId(element);
+      return {
+        ...element,
+        ...(semanticId && { modelElementId: semanticId }),
+        style: { ...(element.style || {}) },
+      };
+    });
+    const usedElementIds = new Set(elements.map(element => element.id));
+    const representedSemanticIds = new Set(elements
+      .filter(element => element.type === 'node')
+      .map(resolveSemanticId)
+      .filter((id): id is string => Boolean(id)));
+
+    for (const semanticId of diagram.includedElementIds || []) {
+      const semantic = semanticById.get(semanticId);
+      if (!semantic || representedSemanticIds.has(semanticId)) continue;
+      const position = semantic.presentation?.position2D || semantic.style?.position || { x: 0, y: 0 };
+      const size = semantic.presentation?.size2D || { width: 120, height: 80 };
+      elements.push({
+        id: this.uniqueId(`${diagram.id}-${semantic.id}`, usedElementIds),
+        type: 'node',
+        modelElementId: semantic.id,
+        x: position.x,
+        y: position.y,
+        width: size.width,
+        height: size.height,
+        style: {
+          linkedModelElementId: semantic.id,
+          name: semantic.name || semantic.style?.name,
+        },
+      });
+      representedSemanticIds.add(semanticId);
+    }
+
+    const description = viewpoint?.representationDescriptions.find(candidate => (
+      candidate.id === diagram.representationDescriptionId
+    ));
+    const mappings = description?.containerMappings || [];
+    if (mappings.length === 0) return { ...diagram, elements };
+
+    const nodes = elements.filter((element): element is DiagramElement => element.type === 'node');
+    const nodeBySemanticId = new Map(nodes
+      .map(node => [resolveSemanticId(node), node] as const)
+      .filter((entry): entry is [string, DiagramElement] => Boolean(entry[0])));
+    const assignedParents = new Set(nodes.filter(node => node.parentId).map(node => node.id));
+
+    for (const mapping of mappings) {
+      for (const containerSemantic of model.elements) {
+        if (!this.isMetaClassCompatible(
+          containerSemantic.modelElementId,
+          [mapping.containerMetaClassId],
+          metamodel
+        )) continue;
+
+        const containerNode = nodeBySemanticId.get(containerSemantic.id);
+        if (!containerNode) continue;
+        const containerClass = metamodel.classes.find(candidate => (
+          candidate.id === containerSemantic.modelElementId
+        ));
+        if (!containerClass) continue;
+        const reference = this.getAllMetaReferences(containerClass, metamodel).find(candidate => (
+          candidate.containment
+          && (
+            candidate.id === mapping.containmentReferenceId
+            || candidate.name === mapping.containmentReferenceId
+          )
+        ));
+        if (!reference) continue;
+
+        containerNode.containerMappingId = mapping.id;
+        const rawTargets = containerSemantic.references?.[reference.name]
+          ?? containerSemantic.references?.[reference.id];
+        const targetIds = Array.isArray(rawTargets) ? rawTargets : rawTargets ? [rawTargets] : [];
+
+        for (const targetId of targetIds) {
+          const childSemantic = semanticById.get(targetId);
+          const childNode = nodeBySemanticId.get(targetId);
+          if (!childSemantic || !childNode || childNode.id === containerNode.id || assignedParents.has(childNode.id)) {
+            continue;
+          }
+          const allowedChildIds = mapping.childMetaClassIds?.length
+            ? mapping.childMetaClassIds
+            : [reference.target];
+          if (!this.isMetaClassCompatible(childSemantic.modelElementId, allowedChildIds, metamodel)) continue;
+          const isPin = description?.pinMappings?.some(pinMapping => (
+            this.isMetaClassCompatible(childSemantic.modelElementId, pinMapping.pinMetaClassIds, metamodel)
+          ));
+          if (isPin) continue;
+
+          childNode.parentId = containerNode.id;
+          assignedParents.add(childNode.id);
+        }
+      }
+    }
+
+    return { ...diagram, elements };
+  }
+
+  private isMetaClassCompatible(actualId: string, expectedIds: string[], metamodel: Metamodel): boolean {
+    if (expectedIds.includes(actualId)) return true;
+    const visited = new Set<string>();
+    const visit = (metaClassId: string): boolean => {
+      if (visited.has(metaClassId)) return false;
+      visited.add(metaClassId);
+      const metaClass = metamodel.classes.find(candidate => candidate.id === metaClassId);
+      return Boolean(metaClass?.superTypes?.some(superTypeId => (
+        expectedIds.includes(superTypeId) || visit(superTypeId)
+      )));
+    };
+    return visit(actualId);
+  }
+
   private appendAirdRepresentation(
     lines: string[],
     gmfBlocks: string[],
@@ -359,11 +938,12 @@ class SiriusInteropService {
     elementById: Map<string, ModelElement>,
     semanticResource: string,
     rootTarget: string | undefined,
-    report: SiriusCompatibilityReport
+    report: SiriusCompatibilityReport,
+    odesignResource?: string
   ): void {
     const reprId = diagram.id;
     const descriptionAttr = diagram.representationDescriptionId
-      ? ` description="#${this.escapeXml(diagram.representationDescriptionId)}"`
+      ? ` description="${this.escapeXml(`${odesignResource ? `${odesignResource}#` : '#'}${diagram.representationDescriptionId}`)}"`
       : '';
     const targetAttr = rootTarget ? ` target="${this.escapeXml(`${semanticResource}#${rootTarget}`)}"` : '';
 
@@ -373,6 +953,7 @@ class SiriusInteropService {
     );
 
     const exportedNodeIds = new Set<string>();
+    const exportedNodes: DiagramElement[] = [];
     const gmfNodeLines: string[] = [];
     const gmfEdgeLines: string[] = [];
 
@@ -380,11 +961,23 @@ class SiriusInteropService {
       const model = elementById.get(element.modelElementId);
       return model?.name || (model?.style?.name as string) || element.modelElementId;
     };
-    const mappingAttr = (element: DiagramElement, suffix: 'node' | 'edge'): string => (
-      diagram.representationDescriptionId
-        ? ` mapping="#${this.escapeXml(`${diagram.representationDescriptionId}-${element.modelElementId}-${suffix}`)}"`
-        : ''
-    );
+    const diagramElementById = new Map(diagram.elements.map(element => [element.id, element] as const));
+    const mappingAttr = (element: DiagramElement, suffix: 'node' | 'edge'): string => {
+      if (!diagram.representationDescriptionId) return '';
+      if (suffix === 'node') {
+        if (element.containerMappingId) {
+          return ` mapping="#${this.escapeXml(element.containerMappingId)}"`;
+        }
+        const semantic = elementById.get(element.modelElementId);
+        const metaClassId = semantic?.modelElementId || element.modelElementId;
+        const parent = element.parentId ? diagramElementById.get(element.parentId) : undefined;
+        if (parent?.containerMappingId) {
+          return ` mapping="#${this.escapeXml(`${parent.containerMappingId}-${metaClassId}-node`)}"`;
+        }
+        return ` mapping="#${this.escapeXml(`${diagram.representationDescriptionId}-${metaClassId}-node`)}"`;
+      }
+      return ` mapping="#${this.escapeXml(`${diagram.representationDescriptionId}-${element.modelElementId}-edge`)}"`;
+    };
 
     // Nodes first so edges can reference them.
     for (const element of diagram.elements.filter(candidate => candidate.type === 'node')) {
@@ -398,24 +991,54 @@ class SiriusInteropService {
         continue;
       }
       exportedNodeIds.add(element.id);
+      exportedNodes.push(element);
       lines.push(
         `        <ownedDiagramElements xmi:id="${this.escapeXml(element.id)}"` +
         ` name="${this.escapeXml(semanticName(element))}"` +
         ` target="${this.escapeXml(`${semanticResource}#${element.modelElementId}`)}"${mappingAttr(element, 'node')}/>`
       );
 
+    }
+
+    const exportedNodeById = new Map(exportedNodes.map(element => [element.id, element]));
+    const childrenByParent = new Map<string, DiagramElement[]>();
+    exportedNodes.forEach(element => {
+      if (!element.parentId || !exportedNodeById.has(element.parentId) || element.parentId === element.id) return;
+      const children = childrenByParent.get(element.parentId) || [];
+      children.push(element);
+      childrenByParent.set(element.parentId, children);
+    });
+    const renderedNodes = new Set<string>();
+    const appendGmfNode = (element: DiagramElement, indent: string, path: Set<string>) => {
+      if (renderedNodes.has(element.id) || path.has(element.id)) return;
+      renderedNodes.add(element.id);
+      const nextPath = new Set(path);
+      nextPath.add(element.id);
+      const parent = element.parentId ? exportedNodeById.get(element.parentId) : undefined;
+      const localX = (element.x ?? 0) - (parent?.x ?? 0);
+      const localY = (element.y ?? 0) - (parent?.y ?? 0);
       const hasBounds = element.x !== undefined || element.y !== undefined;
+
       gmfNodeLines.push(
-        `    <children xsi:type="notation:Node" xmi:id="${this.escapeXml(`gmf-${element.id}`)}" element="#${this.escapeXml(element.id)}">`
+        `${indent}<children xsi:type="notation:Node" xmi:id="${this.escapeXml(`gmf-${element.id}`)}" element="#${this.escapeXml(element.id)}">`
       );
       if (hasBounds) {
         gmfNodeLines.push(
-          `      <layoutConstraint xsi:type="notation:Bounds" x="${element.x ?? 0}" y="${element.y ?? 0}"` +
+          `${indent}  <layoutConstraint xsi:type="notation:Bounds" x="${localX}" y="${localY}"` +
           ` width="${element.width ?? 0}" height="${element.height ?? 0}"/>`
         );
       }
-      gmfNodeLines.push('    </children>');
-    }
+      (childrenByParent.get(element.id) || []).forEach(child => (
+        appendGmfNode(child, `${indent}  `, nextPath)
+      ));
+      gmfNodeLines.push(`${indent}</children>`);
+    };
+    exportedNodes
+      .filter(element => !element.parentId || !exportedNodeById.has(element.parentId))
+      .forEach(element => appendGmfNode(element, '    ', new Set<string>()));
+    exportedNodes
+      .filter(element => !renderedNodes.has(element.id))
+      .forEach(element => appendGmfNode(element, '    ', new Set<string>()));
 
     // Edges reference already-exported nodes.
     for (const element of diagram.elements.filter(candidate => candidate.type === 'edge')) {
@@ -719,6 +1342,19 @@ class SiriusInteropService {
       });
 
     ddeNodes
+      .filter(dde => !this.isDiagramElementEdge(dde, viewpoint))
+      .forEach(dde => {
+        const ddeId = this.getSourceId(dde);
+        if (!ddeId) return;
+        const elementId = ddeIdToElementId.get(ddeId);
+        const parentDdeId = layoutByElementId.get(ddeId)?.parentElementId;
+        const parentId = parentDdeId ? ddeIdToElementId.get(parentDdeId) : undefined;
+        if (!elementId || !parentId || elementId === parentId) return;
+        const element = elements.find(candidate => candidate.id === elementId);
+        if (element) element.parentId = parentId;
+      });
+
+    ddeNodes
       .filter(dde => this.isDiagramElementEdge(dde, viewpoint))
       .forEach((dde, edgeIndex) => {
         const ddeId = this.getSourceId(dde) || `edge-${edgeIndex + 1}`;
@@ -855,12 +1491,49 @@ class SiriusInteropService {
       if (isGmfNode) {
         const bounds = this.parseAirdBounds(node);
         if (bounds) entry.bounds = bounds;
+        let parent = node.parent;
+        while (parent) {
+          const parentType = this.getAttrByLocal(parent, 'type') || parent.name;
+          const isParentGmfNode = /notation:Node|Node$/.test(parentType)
+            && parent.localName !== 'ownedDiagramElements';
+          if (isParentGmfNode) {
+            const parentElementId = this.fragmentOf(this.getAttr(parent, 'element'));
+            if (parentElementId && parentElementId !== elementRef) {
+              entry.parentElementId = parentElementId;
+            }
+            break;
+          }
+          parent = parent.parent;
+        }
       } else {
         const points = this.parseAirdWaypoints(node);
         if (points.length > 0) entry.points = points;
       }
       layout.set(elementRef, entry);
     }
+
+    const resolved = new Set<string>();
+    const resolving = new Set<string>();
+    const resolveBounds = (elementId: string): AirdBounds | undefined => {
+      const entry = layout.get(elementId);
+      if (!entry?.bounds || resolved.has(elementId)) return entry?.bounds;
+      if (resolving.has(elementId)) return entry.bounds;
+      resolving.add(elementId);
+      if (entry.parentElementId) {
+        const parentBounds = resolveBounds(entry.parentElementId);
+        if (parentBounds) {
+          entry.bounds = {
+            ...entry.bounds,
+            x: parentBounds.x + entry.bounds.x,
+            y: parentBounds.y + entry.bounds.y,
+          };
+        }
+      }
+      resolving.delete(elementId);
+      resolved.add(elementId);
+      return entry.bounds;
+    };
+    Array.from(layout.keys()).forEach(resolveBounds);
     return layout;
   }
 
@@ -985,8 +1658,12 @@ class SiriusInteropService {
         ...(Object.keys(mapping.concreteSyntaxByReferenceId).length > 0 && {
           concreteSyntaxByReferenceId: mapping.concreteSyntaxByReferenceId,
         }),
+        ...(mapping.containerMappings.length > 0 && { containerMappings: mapping.containerMappings }),
         ...(mapping.edgeMappings.length > 0 && { edgeMappings: mapping.edgeMappings }),
         ...(mapping.pinMappings.length > 0 && { pinMappings: mapping.pinMappings }),
+        ...(mapping.layers.length > 0 && { layers: mapping.layers }),
+        ...(mapping.filters.length > 0 && { filters: mapping.filters }),
+        ...(mapping.conditionalStyles.length > 0 && { conditionalStyles: mapping.conditionalStyles }),
         ...(mapping.toolDefinitions.length > 0 && { toolDefinitions: mapping.toolDefinitions }),
         isDefault: representations.length === 0,
       });
@@ -1000,8 +1677,12 @@ class SiriusInteropService {
     const creatableMetaClassIds = new Set<string>();
     const concreteSyntaxByMetaClassId: Record<string, ConcreteSyntax> = {};
     const concreteSyntaxByReferenceId: Record<string, ConcreteSyntaxEdge> = {};
+    const containerMappings: RepresentationContainerMapping[] = [];
     const edgeMappings: RepresentationEdgeMapping[] = [];
     const pinMappings: RepresentationPinMapping[] = [];
+    const layers: RepresentationLayer[] = [];
+    const filters: RepresentationFilter[] = [];
+    const conditionalStyles: RepresentationConditionalStyle[] = [];
     const toolDefinitions: NonNullable<RepresentationDescription['toolDefinitions']> = [];
 
     const domainClass = this.resolveMetaClass(this.getAttr(node, 'domainClass'), context, node);
@@ -1010,8 +1691,11 @@ class SiriusInteropService {
     }
 
     const supportedLayers = this.supportedLayerNodes(node, context.report);
+    const siriusContainerMappings = this.descendantsIn(supportedLayers, 'containerMappings')
+      .concat(this.descendantsIn(supportedLayers, 'subContainerMappings'));
     const nodeMappings = this.descendantsIn(supportedLayers, 'nodeMappings')
-      .concat(this.descendantsIn(supportedLayers, 'containerMappings'));
+      .concat(this.descendantsIn(supportedLayers, 'subNodeMappings'))
+      .concat(siriusContainerMappings);
     nodeMappings.forEach(mappingNode => {
       const metaClass = this.resolveMetaClass(this.getAttr(mappingNode, 'domainClass'), context, mappingNode);
       if (!metaClass) return;
@@ -1025,6 +1709,58 @@ class SiriusInteropService {
       if (concreteSyntax) {
         concreteSyntaxByMetaClassId[metaClass.id] = concreteSyntax;
       }
+
+      conditionalStyles.push(...this.parseConditionalStyles(
+        mappingNode,
+        metaClass.id,
+        undefined
+      ));
+    });
+
+    siriusContainerMappings.forEach((mappingNode, index) => {
+      const containerMetaClass = this.resolveMetaClass(this.getAttr(mappingNode, 'domainClass'), context, mappingNode);
+      if (!containerMetaClass) return;
+
+      const childMappingNodes = this.children(mappingNode).filter(child => (
+        child.localName === 'subNodeMappings'
+        || child.localName === 'nodeMappings'
+        || child.localName === 'subContainerMappings'
+        || child.localName === 'containerMappings'
+      ));
+      const containmentReference = this.resolveContainerReference(
+        mappingNode,
+        childMappingNodes,
+        containerMetaClass,
+        context
+      );
+      if (!containmentReference) {
+        this.addWarning(context.report, 'unresolvedReferences', {
+          severity: 'warning',
+          code: 'SIRIUS_CONTAINER_REFERENCE_UNRESOLVED',
+          message: `Could not resolve container mapping "${this.getAttr(mappingNode, 'name') || containerMetaClass.name}" to a containment reference on ${containerMetaClass.name}.`,
+          sourcePath: this.nodePath(mappingNode),
+          sourceElementId: this.getSourceId(mappingNode),
+        });
+        return;
+      }
+
+      const childMetaClassIds = Array.from(new Set(childMappingNodes
+        .map(child => this.resolveMetaClass(this.getAttr(child, 'domainClass'), context, child)?.id)
+        .filter((id): id is string => Boolean(id))));
+      const concreteSyntax = this.parseNodeStyle(mappingNode);
+      containerMappings.push({
+        id: this.toStableId(
+          this.getSourceId(mappingNode)
+          || this.getAttr(mappingNode, 'name')
+          || `container-${index + 1}`
+        ),
+        containerMetaClassId: containerMetaClass.id,
+        containmentReferenceId: containmentReference.id,
+        childMetaClassIds: childMetaClassIds.length > 0
+          ? childMetaClassIds
+          : [containmentReference.target],
+        ...(concreteSyntax && { concreteSyntax }),
+      });
     });
 
     this.descendantsIn(supportedLayers, 'borderedNodeMappings').forEach((mappingNode, index) => {
@@ -1052,6 +1788,13 @@ class SiriusInteropService {
       if (concreteSyntax) {
         concreteSyntaxByMetaClassId[pinMetaClass.id] = concreteSyntax;
       }
+
+
+      conditionalStyles.push(...this.parseConditionalStyles(
+        mappingNode,
+        pinMetaClass.id,
+        undefined
+      ));
     });
 
     this.descendantsIn(supportedLayers, 'edgeMappings').forEach((mappingNode, index) => {
@@ -1071,6 +1814,12 @@ class SiriusInteropService {
       if (reference && edgeStyle) {
         concreteSyntaxByReferenceId[reference.id] = edgeStyle;
       }
+
+      conditionalStyles.push(...this.parseConditionalStyles(
+        mappingNode,
+        undefined,
+        reference?.id
+      ));
 
       if (!reference) {
         this.addWarning(context.report, 'unresolvedReferences', {
@@ -1098,15 +1847,198 @@ class SiriusInteropService {
       });
     });
 
+    this.childrenByLocal(node, 'additionalLayers').forEach((layerNode, index) => {
+      layers.push(this.parseAdditionalLayer(layerNode, index, context));
+    });
+
+    this.childrenByLocal(node, 'filters').forEach((filterNode, index) => {
+      filters.push(this.parseRepresentationFilter(filterNode, index));
+    });
+
     return {
       visibleMetaClassIds,
       creatableMetaClassIds,
       concreteSyntaxByMetaClassId,
       concreteSyntaxByReferenceId,
+      containerMappings,
       edgeMappings,
       pinMappings,
+      layers,
+      filters,
+      conditionalStyles,
       toolDefinitions,
     };
+  }
+
+  private parseConditionalStyles(
+    mappingNode: XmlNode,
+    metaClassId?: string,
+    referenceId?: string
+  ): RepresentationConditionalStyle[] {
+    const mappingId = this.toStableId(
+      this.getSourceId(mappingNode)
+      || this.getAttr(mappingNode, 'name')
+      || mappingNode.localName
+    );
+    const mappingKind = this.mappingKind(mappingNode.localName);
+    return this.children(mappingNode)
+      .filter(child => child.localName === 'conditionnalStyles' || child.localName === 'conditionalStyles')
+      .map((styleNode, index) => {
+        const sourceId = this.getSourceId(styleNode) || `${mappingId}-conditional-${index + 1}`;
+        const predicateExpression = this.getAttr(styleNode, 'predicateExpression') || '';
+        if (mappingKind === 'edge') {
+          return {
+            id: this.toStableId(sourceId),
+            mappingId,
+            mappingKind,
+            ...(referenceId && { referenceId }),
+            predicateExpression,
+            enabled: true,
+            ...(this.parseEdgeStyle(styleNode) && { edgeConcreteSyntax: this.parseEdgeStyle(styleNode) }),
+          };
+        }
+        return {
+          id: this.toStableId(sourceId),
+          mappingId,
+          mappingKind,
+          ...(metaClassId && { metaClassId }),
+          predicateExpression,
+          enabled: true,
+          ...(this.parseNodeStyle(styleNode) && { concreteSyntax: this.parseNodeStyle(styleNode) }),
+        };
+      });
+  }
+
+  private parseAdditionalLayer(
+    layerNode: XmlNode,
+    index: number,
+    context: ParseContext
+  ): RepresentationLayer {
+    const layerId = this.toStableId(
+      this.getSourceId(layerNode)
+      || this.getAttr(layerNode, 'name')
+      || `layer-${index + 1}`
+    );
+    const mappingNames = new Set([
+      'nodeMappings',
+      'subNodeMappings',
+      'containerMappings',
+      'subContainerMappings',
+      'borderedNodeMappings',
+      'edgeMappings',
+    ]);
+    const mappings = this.walk(layerNode)
+      .filter(candidate => candidate !== layerNode && mappingNames.has(candidate.localName))
+      .map((mappingNode, mappingIndex): RepresentationLayerMapping => {
+        const id = this.toStableId(
+          this.getSourceId(mappingNode)
+          || this.getAttr(mappingNode, 'name')
+          || `${layerId}-mapping-${mappingIndex + 1}`
+        );
+        const parent = mappingNode.parent && mappingNames.has(mappingNode.parent.localName)
+          ? mappingNode.parent
+          : undefined;
+        const kind = this.mappingKind(mappingNode.localName);
+        const metaClass = kind === 'edge'
+          ? undefined
+          : this.resolveMetaClass(this.getAttr(mappingNode, 'domainClass'), context, mappingNode);
+        const reference = kind === 'edge'
+          ? this.resolveReferenceMapping(mappingNode, context)
+          : undefined;
+        return {
+          id,
+          name: this.getAttr(mappingNode, 'name') || `Mapping ${mappingIndex + 1}`,
+          kind,
+          ...(parent && {
+            parentMappingId: this.toStableId(
+              this.getSourceId(parent) || this.getAttr(parent, 'name') || parent.localName
+            ),
+          }),
+          ...(metaClass && { metaClassId: metaClass.id }),
+          ...(reference && { referenceId: reference.id }),
+          ...(this.getAttr(mappingNode, 'semanticCandidatesExpression') && {
+            semanticCandidatesExpression: this.getAttr(mappingNode, 'semanticCandidatesExpression'),
+          }),
+          ...(this.getAttr(mappingNode, 'targetFinderExpression') && {
+            targetFinderExpression: this.getAttr(mappingNode, 'targetFinderExpression'),
+          }),
+          ...(kind === 'edge'
+            ? (this.parseEdgeStyle(mappingNode) && { edgeConcreteSyntax: this.parseEdgeStyle(mappingNode) })
+            : (this.parseNodeStyle(mappingNode) && { concreteSyntax: this.parseNodeStyle(mappingNode) })),
+        };
+      });
+
+    const activeByDefault = this.getAttr(layerNode, 'activeByDefault') === 'true';
+    const optional = this.getAttr(layerNode, 'optional') !== 'false';
+    return {
+      id: layerId,
+      name: this.getAttr(layerNode, 'name') || `Layer ${index + 1}`,
+      ...(this.getAttr(layerNode, 'label') && { label: this.getAttr(layerNode, 'label') }),
+      optional,
+      activeByDefault,
+      enabled: !optional || activeByDefault,
+      mappings,
+    };
+  }
+
+  private parseRepresentationFilter(filterNode: XmlNode, index: number): RepresentationFilter {
+    const filterId = this.toStableId(
+      this.getSourceId(filterNode)
+      || this.getAttr(filterNode, 'name')
+      || `filter-${index + 1}`
+    );
+    const nestedRules = this.childrenByLocal(filterNode, 'filters');
+    const ruleNodes = nestedRules.length > 0 ? nestedRules : [filterNode];
+    return {
+      id: filterId,
+      name: this.getAttr(filterNode, 'name') || `Filter ${index + 1}`,
+      enabled: true,
+      rules: ruleNodes.map((ruleNode, ruleIndex) => {
+        const type = (this.getAttrByLocal(ruleNode, 'type') || '').toLowerCase();
+        const mappingReferences = (this.getAttr(ruleNode, 'mappings') || '')
+          .split(/\s+/)
+          .filter(Boolean);
+        return {
+          id: this.toStableId(
+            this.getSourceId(ruleNode) || `${filterId}-rule-${ruleIndex + 1}`
+          ),
+          kind: type.includes('variable') ? 'variable' : 'mapping',
+          ...(this.getAttr(ruleNode, 'filterKind') && {
+            filterKind: this.getAttr(ruleNode, 'filterKind')!.toLowerCase() === 'collapse'
+              ? 'collapse' as const
+              : 'hide' as const,
+          }),
+          ...(mappingReferences.length > 0 && {
+            mappingReferences,
+            mappingIds: mappingReferences.map(reference => this.mappingIdFromReference(reference)),
+          }),
+          ...(this.getAttr(ruleNode, 'semanticConditionExpression') && {
+            semanticConditionExpression: this.getAttr(ruleNode, 'semanticConditionExpression'),
+          }),
+          ...(this.getAttr(ruleNode, 'viewConditionExpression') && {
+            viewConditionExpression: this.getAttr(ruleNode, 'viewConditionExpression'),
+          }),
+        };
+      }),
+    };
+  }
+
+  private mappingKind(localName: string): RepresentationLayerMapping['kind'] {
+    if (localName === 'edgeMappings') return 'edge';
+    if (localName === 'containerMappings' || localName === 'subContainerMappings') return 'container';
+    if (localName === 'borderedNodeMappings') return 'bordered-node';
+    return 'node';
+  }
+
+  private mappingIdFromReference(reference: string): string {
+    const names = Array.from(reference.matchAll(/\[name='([^']+)'\]/g));
+    const encodedName = names[names.length - 1]?.[1];
+    if (!encodedName) return this.toStableId(reference);
+    try {
+      return this.toStableId(decodeURIComponent(encodedName));
+    } catch {
+      return this.toStableId(encodedName);
+    }
   }
 
   private parseNodeStyle(mappingNode: XmlNode): ConcreteSyntax | undefined {
@@ -1220,6 +2152,60 @@ class SiriusInteropService {
     return undefined;
   }
 
+  private resolveContainerReference(
+    mappingNode: XmlNode,
+    childMappingNodes: XmlNode[],
+    containerMetaClass: MetaClass,
+    context: ParseContext
+  ): MetaReference | undefined {
+    if (!context.metamodel) return undefined;
+
+    const expressions = [
+      ...childMappingNodes.flatMap(child => [
+        this.getAttr(child, 'semanticCandidatesExpression'),
+        this.getAttr(child, 'semanticElements'),
+      ]),
+      this.getAttr(mappingNode, 'childrenExpression'),
+      this.getAttr(mappingNode, 'semanticCandidatesExpression'),
+      this.getAttr(mappingNode, 'containmentReference'),
+    ];
+    const featureNames = expressions
+      .map(expression => this.extractFeatureName(expression))
+      .filter((name): name is string => Boolean(name));
+
+    const references = this.getAllMetaReferences(containerMetaClass, context.metamodel)
+      .filter(reference => reference.containment);
+    return references.find(reference => featureNames.some(name => (
+      reference.id === name
+      || reference.name === name
+      || this.normalizeQualifiedName(reference.name) === this.normalizeQualifiedName(name)
+    ))) || (references.length === 1 ? references[0] : undefined);
+  }
+
+  private getAllMetaReferences(metaClass: MetaClass, metamodel: Metamodel): MetaReference[] {
+    const references: MetaReference[] = [...(metaClass.references || [])];
+    const visited = new Set<string>([metaClass.id]);
+    const visit = (candidate: MetaClass) => {
+      for (const superTypeId of candidate.superTypes || []) {
+        if (visited.has(superTypeId)) continue;
+        visited.add(superTypeId);
+        const superType = metamodel.classes.find(item => item.id === superTypeId);
+        if (superType) {
+          references.push(...(superType.references || []));
+          visit(superType);
+        }
+      }
+    };
+    visit(metaClass);
+
+    const seenNames = new Set<string>();
+    return references.filter(reference => {
+      if (seenNames.has(reference.name)) return false;
+      seenNames.add(reference.name);
+      return true;
+    });
+  }
+
   private buildOdesignXml(metamodel: Metamodel, viewpoints: Viewpoint[], report: SiriusCompatibilityReport): string {
     const lines: string[] = [
       '<?xml version="1.0" encoding="UTF-8"?>',
@@ -1228,6 +2214,7 @@ class SiriusInteropService {
       '    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"',
       '    xmlns:description="http://www.eclipse.org/sirius/description/1.1.0"',
       '    xmlns:diagram="http://www.eclipse.org/sirius/diagram/description/1.1.0"',
+      '    xmlns:filter="http://www.eclipse.org/sirius/diagram/description/filter/1.1.0"',
       `    name="${this.escapeXml(metamodel.name)}">`,
     ];
 
@@ -1247,14 +2234,78 @@ class SiriusInteropService {
 
         const domainClass = this.resolveExportDomainClass(metamodel, description);
         lines.push(`    <ownedRepresentations xmi:id="${this.escapeXml(description.id)}" xsi:type="diagram:DiagramDescription" name="${this.escapeXml(description.name)}"${domainClass ? ` domainClass="${this.escapeXml(domainClass)}"` : ''}>`);
+        this.appendRepresentationFilters(lines, description);
         lines.push('      <defaultLayer name="Default">');
 
         const pinMappings = description.pinMappings || [];
         const pinMetaClassIds = new Set(pinMappings.flatMap(pinMapping => pinMapping.pinMetaClassIds));
         const emittedPinKeys = new Set<string>();
+        const appendPinMappings = (ownerMetaClassId: string, indent: string) => {
+          pinMappings
+            .filter(pinMapping => pinMapping.ownerMetaClassIds.includes(ownerMetaClassId))
+            .forEach(pinMapping => {
+              pinMapping.pinMetaClassIds.forEach(pinMetaClassId => {
+                const pinMetaClass = metamodel.classes.find(candidate => candidate.id === pinMetaClassId);
+                if (!pinMetaClass) {
+                  this.addWarning(report, 'unresolvedReferences', {
+                    severity: 'warning',
+                    code: 'SPATIALDSL_PIN_METACLASS_UNRESOLVED',
+                    message: `Pin mapping "${pinMapping.id}" references unknown metaclass "${pinMetaClassId}".`,
+                    spatialElementId: pinMetaClassId,
+                  });
+                  return;
+                }
+                const pinSyntax = description.concreteSyntaxByMetaClassId?.[pinMetaClass.id] || pinMetaClass.concreteSyntax;
+                lines.push(`${indent}<borderedNodeMappings xmi:id="${this.escapeXml(`${description.id}-${pinMapping.id}-${pinMetaClass.id}`)}" name="${this.escapeXml(pinMetaClass.name)}" domainClass="${this.escapeXml(this.toSiriusDomainClass(metamodel, pinMetaClass))}">`);
+                lines.push(`${indent}  ${this.buildNodeStyleXml(pinSyntax)}`);
+                this.appendConditionalNodeStyles(
+                  lines,
+                  description,
+                  indent + '  ',
+                  'bordered-node',
+                  pinMetaClass.id
+                );
+                lines.push(`${indent}</borderedNodeMappings>`);
+                emittedPinKeys.add(`${pinMapping.id}:${pinMetaClass.id}`);
+              });
+            });
+        };
+
+        const resolvedContainerMappings = (description.containerMappings || []).flatMap(mapping => {
+          const containerMetaClass = metamodel.classes.find(candidate => candidate.id === mapping.containerMetaClassId);
+          const containmentReference = containerMetaClass
+            ? this.getAllMetaReferences(containerMetaClass, metamodel).find(reference => (
+                reference.containment
+                && (
+                  reference.id === mapping.containmentReferenceId
+                  || reference.name === mapping.containmentReferenceId
+                )
+              ))
+            : undefined;
+          if (!containerMetaClass || !containmentReference) {
+            this.addWarning(report, 'unresolvedReferences', {
+              severity: 'warning',
+              code: 'SPATIALDSL_CONTAINER_MAPPING_UNRESOLVED',
+              message: `Container mapping "${mapping.id}" does not resolve to a container metaclass and containment reference.`,
+              spatialElementId: mapping.id,
+            });
+            return [];
+          }
+          return [{ mapping, containerMetaClass, containmentReference }];
+        });
+        const containerMetaClassIds = new Set(resolvedContainerMappings.map(entry => entry.containerMetaClass.id));
+        const containedMetaClassIds = new Set(resolvedContainerMappings.flatMap(entry => (
+          entry.mapping.childMetaClassIds?.length
+            ? entry.mapping.childMetaClassIds
+            : [entry.containmentReference.target]
+        )));
 
         description.visibleMetaClassIds.forEach(metaClassId => {
-          if (pinMetaClassIds.has(metaClassId)) {
+          if (
+            pinMetaClassIds.has(metaClassId)
+            || containerMetaClassIds.has(metaClassId)
+            || containedMetaClassIds.has(metaClassId)
+          ) {
             return;
           }
 
@@ -1272,30 +2323,51 @@ class SiriusInteropService {
           const syntax = description.concreteSyntaxByMetaClassId?.[metaClass.id] || metaClass.concreteSyntax;
           lines.push(`        <nodeMappings xmi:id="${this.escapeXml(`${description.id}-${metaClass.id}-node`)}" name="${this.escapeXml(metaClass.name)}" domainClass="${this.escapeXml(this.toSiriusDomainClass(metamodel, metaClass))}">`);
           lines.push(`          ${this.buildNodeStyleXml(syntax)}`);
-
-          pinMappings
-            .filter(pinMapping => pinMapping.ownerMetaClassIds.includes(metaClass.id))
-            .forEach(pinMapping => {
-              pinMapping.pinMetaClassIds.forEach(pinMetaClassId => {
-                const pinMetaClass = metamodel.classes.find(candidate => candidate.id === pinMetaClassId);
-                if (!pinMetaClass) {
-                  this.addWarning(report, 'unresolvedReferences', {
-                    severity: 'warning',
-                    code: 'SPATIALDSL_PIN_METACLASS_UNRESOLVED',
-                    message: `Pin mapping "${pinMapping.id}" references unknown metaclass "${pinMetaClassId}".`,
-                    spatialElementId: pinMetaClassId,
-                  });
-                  return;
-                }
-                const pinSyntax = description.concreteSyntaxByMetaClassId?.[pinMetaClass.id] || pinMetaClass.concreteSyntax;
-                lines.push(`          <borderedNodeMappings xmi:id="${this.escapeXml(`${description.id}-${pinMapping.id}-${pinMetaClass.id}`)}" name="${this.escapeXml(pinMetaClass.name)}" domainClass="${this.escapeXml(this.toSiriusDomainClass(metamodel, pinMetaClass))}">`);
-                lines.push(`            ${this.buildNodeStyleXml(pinSyntax)}`);
-                lines.push('          </borderedNodeMappings>');
-                emittedPinKeys.add(`${pinMapping.id}:${pinMetaClass.id}`);
-              });
-            });
+          this.appendConditionalNodeStyles(lines, description, '          ', 'node', metaClass.id);
+          appendPinMappings(metaClass.id, '          ');
 
           lines.push('        </nodeMappings>');
+        });
+
+        resolvedContainerMappings.forEach(({ mapping, containerMetaClass, containmentReference }) => {
+          const syntax = mapping.concreteSyntax
+            || description.concreteSyntaxByMetaClassId?.[containerMetaClass.id]
+            || containerMetaClass.concreteSyntax;
+          lines.push(`        <containerMappings xmi:id="${this.escapeXml(mapping.id)}" name="${this.escapeXml(containerMetaClass.name)}" domainClass="${this.escapeXml(this.toSiriusDomainClass(metamodel, containerMetaClass))}">`);
+          lines.push(`          ${this.buildNodeStyleXml(syntax)}`);
+          this.appendConditionalNodeStyles(
+            lines,
+            description,
+            '          ',
+            'container',
+            containerMetaClass.id,
+            mapping.id
+          );
+          appendPinMappings(containerMetaClass.id, '          ');
+
+          const childMetaClassIds = mapping.childMetaClassIds?.length
+            ? mapping.childMetaClassIds
+            : [containmentReference.target];
+          childMetaClassIds.forEach(childMetaClassId => {
+            const childMetaClass = metamodel.classes.find(candidate => candidate.id === childMetaClassId);
+            if (!childMetaClass) {
+              this.addWarning(report, 'unresolvedReferences', {
+                severity: 'warning',
+                code: 'SPATIALDSL_CONTAINER_CHILD_UNRESOLVED',
+                message: `Container mapping "${mapping.id}" references unknown child metaclass "${childMetaClassId}".`,
+                spatialElementId: childMetaClassId,
+              });
+              return;
+            }
+            const childSyntax = description.concreteSyntaxByMetaClassId?.[childMetaClass.id]
+              || childMetaClass.concreteSyntax;
+            lines.push(`          <subNodeMappings xmi:id="${this.escapeXml(`${mapping.id}-${childMetaClass.id}-node`)}" name="${this.escapeXml(childMetaClass.name)}" domainClass="${this.escapeXml(this.toSiriusDomainClass(metamodel, childMetaClass))}" semanticCandidatesExpression="feature:${this.escapeXml(containmentReference.name)}">`);
+            lines.push(`            ${this.buildNodeStyleXml(childSyntax)}`);
+            this.appendConditionalNodeStyles(lines, description, '            ', 'node', childMetaClass.id);
+            appendPinMappings(childMetaClass.id, '            ');
+            lines.push('          </subNodeMappings>');
+          });
+          lines.push('        </containerMappings>');
         });
 
         pinMappings.forEach(pinMapping => {
@@ -1329,6 +2401,7 @@ class SiriusInteropService {
             || edgeMappings.find(mapping => mapping.referenceId === reference.id)?.concreteSyntax;
           lines.push(`        <edgeMappings xmi:id="${this.escapeXml(`${description.id}-${reference.id}-edge`)}" name="${this.escapeXml(reference.name)}" targetFinderExpression="feature:${this.escapeXml(reference.name)}">`);
           lines.push(`          ${this.buildEdgeStyleXml(syntax)}`);
+          this.appendConditionalEdgeStyles(lines, description, '          ', reference.id);
           lines.push('        </edgeMappings>');
         });
 
@@ -1341,6 +2414,7 @@ class SiriusInteropService {
         }
 
         lines.push('      </defaultLayer>');
+        this.appendAdditionalLayers(lines, metamodel, description, report);
         lines.push('    </ownedRepresentations>');
       });
 
@@ -1349,6 +2423,166 @@ class SiriusInteropService {
 
     lines.push('</description:Group>');
     return lines.join('\n');
+  }
+
+  private appendRepresentationFilters(
+    lines: string[],
+    description: RepresentationDescription
+  ): void {
+    (description.filters || [])
+      .filter(filter => filter.enabled !== false)
+      .forEach(filter => {
+        lines.push(`      <filters xmi:id="${this.escapeXml(filter.id)}" xsi:type="filter:CompositeFilterDescription" name="${this.escapeXml(filter.name)}">`);
+        filter.rules.forEach(rule => {
+          const type = rule.kind === 'variable' ? 'VariableFilter' : 'MappingFilter';
+          const filterKind = rule.filterKind
+            ? ` filterKind="${rule.filterKind.toUpperCase()}"`
+            : '';
+          const mappingReferences = (rule.mappingReferences || rule.mappingIds || []).join(' ');
+          const mappings = mappingReferences
+            ? ` mappings="${this.escapeXml(mappingReferences)}"`
+            : '';
+          const semanticCondition = rule.semanticConditionExpression
+            ? ` semanticConditionExpression="${this.escapeXml(rule.semanticConditionExpression)}"`
+            : '';
+          const viewCondition = rule.viewConditionExpression
+            ? ` viewConditionExpression="${this.escapeXml(rule.viewConditionExpression)}"`
+            : '';
+          lines.push(`        <filters xmi:id="${this.escapeXml(rule.id)}" xsi:type="filter:${type}"${filterKind}${mappings}${semanticCondition}${viewCondition}/>`);
+        });
+        lines.push('      </filters>');
+      });
+  }
+
+  private appendConditionalNodeStyles(
+    lines: string[],
+    description: RepresentationDescription,
+    indent: string,
+    mappingKind: RepresentationConditionalStyle['mappingKind'],
+    metaClassId: string,
+    mappingId?: string
+  ): void {
+    (description.conditionalStyles || [])
+      .filter(style => (
+        style.enabled !== false
+        && (
+          (mappingId !== undefined && style.mappingId === mappingId)
+          || (
+            style.metaClassId === metaClassId
+            && (
+              style.mappingKind === mappingKind
+              || (mappingKind === 'container' && style.mappingKind === 'node')
+            )
+          )
+        )
+      ))
+      .forEach(style => {
+        lines.push(`${indent}<conditionnalStyles xmi:id="${this.escapeXml(style.id)}" predicateExpression="${this.escapeXml(style.predicateExpression)}">`);
+        lines.push(`${indent}  ${this.buildNodeStyleXml(style.concreteSyntax)}`);
+        lines.push(`${indent}</conditionnalStyles>`);
+      });
+  }
+
+  private appendConditionalEdgeStyles(
+    lines: string[],
+    description: RepresentationDescription,
+    indent: string,
+    referenceId: string,
+    mappingId?: string
+  ): void {
+    (description.conditionalStyles || [])
+      .filter(style => (
+        style.enabled !== false
+        && style.mappingKind === 'edge'
+        && (style.referenceId === referenceId || (mappingId !== undefined && style.mappingId === mappingId))
+      ))
+      .forEach(style => {
+        lines.push(`${indent}<conditionnalStyles xmi:id="${this.escapeXml(style.id)}" predicateExpression="${this.escapeXml(style.predicateExpression)}">`);
+        lines.push(`${indent}  ${this.buildEdgeStyleXml(style.edgeConcreteSyntax)}`);
+        lines.push(`${indent}</conditionnalStyles>`);
+      });
+  }
+
+  private appendAdditionalLayers(
+    lines: string[],
+    metamodel: Metamodel,
+    description: RepresentationDescription,
+    report: SiriusCompatibilityReport
+  ): void {
+    (description.layers || []).forEach(layer => {
+      const label = layer.label ? ` label="${this.escapeXml(layer.label)}"` : '';
+      const optional = layer.optional === false ? ' optional="false"' : '';
+      const activeByDefault = (layer.enabled ?? layer.activeByDefault)
+        ? ' activeByDefault="true"'
+        : '';
+      lines.push(`      <additionalLayers xmi:id="${this.escapeXml(layer.id)}" name="${this.escapeXml(layer.name)}"${label}${optional}${activeByDefault}>`);
+
+      const mappings = layer.mappings || [];
+      const ids = new Set(mappings.map(mapping => mapping.id));
+      const roots = mappings.filter(mapping => !mapping.parentMappingId || !ids.has(mapping.parentMappingId));
+      const appendMapping = (mapping: RepresentationLayerMapping, indent: string) => {
+        const metaClass = mapping.metaClassId
+          ? metamodel.classes.find(candidate => candidate.id === mapping.metaClassId)
+          : undefined;
+        const reference = mapping.referenceId ? this.findReference(metamodel, mapping.referenceId) : undefined;
+        if (mapping.metaClassId && !metaClass) {
+          this.addWarning(report, 'unresolvedReferences', {
+            severity: 'warning',
+            code: 'SPATIALDSL_LAYER_METACLASS_UNRESOLVED',
+            message: `Layer mapping "${mapping.name}" references unknown metaclass "${mapping.metaClassId}".`,
+            spatialElementId: mapping.id,
+          });
+        }
+        if (mapping.referenceId && !reference) {
+          this.addWarning(report, 'unresolvedReferences', {
+            severity: 'warning',
+            code: 'SPATIALDSL_LAYER_REFERENCE_UNRESOLVED',
+            message: `Layer mapping "${mapping.name}" references unknown reference "${mapping.referenceId}".`,
+            spatialElementId: mapping.id,
+          });
+        }
+
+        const tag = mapping.kind === 'edge'
+          ? 'edgeMappings'
+          : mapping.kind === 'container'
+            ? 'containerMappings'
+            : mapping.kind === 'bordered-node'
+              ? 'borderedNodeMappings'
+              : 'nodeMappings';
+        const domainClass = metaClass
+          ? ` domainClass="${this.escapeXml(this.toSiriusDomainClass(metamodel, metaClass))}"`
+          : '';
+        const semanticCandidates = mapping.semanticCandidatesExpression
+          ? ` semanticCandidatesExpression="${this.escapeXml(mapping.semanticCandidatesExpression)}"`
+          : '';
+        const targetFinder = mapping.targetFinderExpression || (reference ? `feature:${reference.name}` : undefined);
+        const targetFinderAttr = targetFinder
+          ? ` targetFinderExpression="${this.escapeXml(targetFinder)}"`
+          : '';
+        lines.push(`${indent}<${tag} xmi:id="${this.escapeXml(mapping.id)}" name="${this.escapeXml(mapping.name)}"${domainClass}${semanticCandidates}${targetFinderAttr}>`);
+        lines.push(`${indent}  ${mapping.kind === 'edge'
+          ? this.buildEdgeStyleXml(mapping.edgeConcreteSyntax)
+          : this.buildNodeStyleXml(mapping.concreteSyntax)}`);
+        if (mapping.kind === 'edge' && reference) {
+          this.appendConditionalEdgeStyles(lines, description, indent + '  ', reference.id, mapping.id);
+        } else if (metaClass) {
+          this.appendConditionalNodeStyles(
+            lines,
+            description,
+            indent + '  ',
+            mapping.kind,
+            metaClass.id,
+            mapping.id
+          );
+        }
+        mappings
+          .filter(child => child.parentMappingId === mapping.id)
+          .forEach(child => appendMapping(child, indent + '  '));
+        lines.push(`${indent}</${tag}>`);
+      };
+      roots.forEach(mapping => appendMapping(mapping, '        '));
+      lines.push('      </additionalLayers>');
+    });
   }
 
   private parseXml(content: string): XmlNode {

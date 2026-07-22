@@ -23,7 +23,9 @@ changing the app bundle.
   `examples/omniverse-assets/asset-manifest.schema.json`
 - Warehouse prop assets (authored, CC0, one per physical class):
   `examples/omniverse-assets/warehouse-kit/`
-- Vendored CC0 vehicle assets (the mobile robot):
+- Normalized MIT-licensed NVIDIA F1TENTH AMR, collision, and articulation layers:
+  `examples/omniverse-assets/nvidia-f1tenth-amr/`
+- Legacy CC0 vehicle composition demonstrator:
   `examples/omniverse-assets/cc0-mini-vehicle-kit/`
 - Example source model:
   `frontend/src/examples/data/smart-warehouse-model.json`
@@ -32,7 +34,7 @@ changing the app bundle.
 
 ## What The Templates Generate
 
-The importable project contains two templates:
+The importable project contains six templates:
 
 - `Generate Omniverse USD Scene` (Python) produces `generate_warehouse_usd.py`,
   the static scene builder described below.
@@ -41,6 +43,10 @@ The importable project contains two templates:
   simulation. See `examples/omniverse-assets/warehouse_sim/README.md` for the
   simulation (an external OPC UA brain plus an Isaac Sim bridge, mirroring the
   Visual Components MAS architecture).
+- Four plain-text OpenUSD templates produce `warehouse_layout.usda`,
+  `warehouse_assets.usda`, `warehouse_physics.usda`, and
+  `warehouse_simulation.usda`. The last file composes the first three in
+  layout/assets/physics strength order.
 
 Both target metamodel ID `10000000-0000-4000-8000-000000000100`. The rest of this
 guide covers the scene script.
@@ -60,14 +66,15 @@ The generated Python script creates a `.usda` USD stage with:
 - a referenced USD asset for each physical class the manifest maps, when the
   asset root is available: reviewed `warehouse-kit` props for conveyors,
   charging stations, output locations, pathway areas, storage racks, and docks,
-  and a CC0 vehicle for each `MobileRobot`
+  and the normalized NVIDIA F1TENTH AMR for each `MobileRobot`
 - a placeholder cube only for unmapped classes or unavailable asset files
 - source metadata attributes such as `spatialDsl:sourceName`,
   `spatialDsl:className`, and source coordinates in millimeters
 
-This remains a first-stage scene-generation template. It demonstrates real USD
-references, but does not implement robot movement, path planning, OPC UA
-integration, physics tuning, or production AMR behavior.
+The legacy Python builder remains useful for its explicit missing-asset cube
+fallback. The layered root adds a real physics scene, proxy colliders, robot
+mass/body schemas, and separated asset opinions. Robot movement, planning, and
+OPC UA remain in the external brain/Isaac bridge.
 
 ## Asset References And Fallback Geometry
 
@@ -89,13 +96,24 @@ map, so you can retarget assets without editing the template.
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "defaults": {
     "MobileRobot": {
-      "asset": "cc0-mini-vehicle-kit/demo_forklift.usda",
-      "uniformScale": 0.01,
-      "rotateXDeg": 90,
-      "zOffsetM": 0.0
+      "asset": "nvidia-f1tenth-amr/f1tenth_amr_collision.usda",
+      "articulationAsset": "nvidia-f1tenth-amr/f1tenth_amr_articulation.usda",
+      "uniformScale": 1,
+      "rotateXDeg": 0,
+      "zOffsetM": 0.0,
+      "license": "MIT",
+      "metersPerUnit": 1,
+      "upAxis": "Z",
+      "forwardAxis": "+X",
+      "bodyMode": "kinematic",
+      "massKg": 3.1,
+      "wheelRadiusM": 0.057,
+      "wheelSeparationM": 0.324,
+      "leftWheelJoint": "Drive/LeftWheelJoint",
+      "rightWheelJoint": "Drive/RightWheelJoint"
     },
     "StorageRack": {
       "asset": "warehouse-kit/storage_rack.usda",
@@ -116,7 +134,7 @@ map, so you can retarget assets without editing the template.
     element's modeled length, width, and height, so instances match their
     modeled dimensions. Author `fit` assets normalized to a 1 x 1 x 1 m box
     centered on XY with the base at `z = -0.5`.
-  - `uniform` (the default, used by the CC0 robot) applies `uniformScale` and
+  - `uniform` (the default, used by the normalized AMR) applies `uniformScale` and
     `rotateXDeg` to a pre-sized asset without stretching it.
 - `asset-manifest.schema.json` is the draft-07 JSON Schema for the manifest.
 
@@ -129,15 +147,16 @@ At generation time the manifest values are also embedded in the generated script
 When the script runs, it loads `asset-manifest.json` from the asset root if
 present and otherwise uses the embedded copy, so a locally edited manifest wins
 over the baked-in defaults. By default every physical class is mapped: robots
-reference the CC0 vehicle, and the other classes reference reviewed
+reference the normalized F1TENTH AMR, and the other classes reference reviewed
 `warehouse-kit` props. Any class without a mapping uses deterministic cube
 geometry. If the asset root is missing, mapped elements also fall back to cubes,
 and the script prints a warning naming the element and class.
 
-The included vehicle subset is CC0 and demonstrates USD composition, materials,
-textures, instancing, Y-up to Z-up orientation, and scaling. It is not a
-production autonomous mobile robot. See the asset directory's `SOURCE.md` for
-provenance.
+The F1TENTH directory records its upstream NVIDIA revision and MIT terms, uses
+metre/Z-up/+X-forward normalization, and separates materials, visuals, collision,
+and optional articulation. The CC0 vehicle remains a legacy composition fixture.
+Run `validate_asset_manifest.py` to verify manifest roots and every local USDA
+dependency resolve inside the asset root.
 
 ## Import The Project
 
@@ -162,7 +181,7 @@ with a `projects` array. Imported projects are stored as user projects, not
 example projects. If a project or template ID collides with an existing project,
 the importer regenerates IDs to avoid overwriting existing work.
 
-## Generate The Python Script
+## Generate The Scene Bundle
 
 1. In Code Generation, select:
 
@@ -177,11 +196,18 @@ the importer regenerates IDs to avoid overwriting existing work.
    ```
 
 3. Click `Generate`.
-4. Download the generated file:
+4. Download all generated files. The primary runtime inputs are:
 
    ```text
-   generate_warehouse_usd.py
+   warehouse_layout.json
+   warehouse_layout.usda
+   warehouse_assets.usda
+   warehouse_physics.usda
+   warehouse_simulation.usda
    ```
+
+   `generate_warehouse_usd.py` is also emitted as the backwards-compatible
+   single-stage builder with visible cube fallbacks for missing assets.
 
 If generation returns no files, check that the Smart Warehouse model and
 metamodel are loaded and that the imported project targets the Smart Warehouse
@@ -232,6 +258,26 @@ ModuleNotFoundError: No module named 'pxr'
 
 That error means the script is correct, but the wrong Python interpreter was
 used.
+
+## Validate And Run The Layered Root
+
+Keep the generated four `.usda` files together and place or link the repository's
+`examples/omniverse-assets` directory beside them as `omniverse-assets`. Validate
+the complete composition before opening Isaac Sim:
+
+```bash
+usdchecker warehouse_layout.usda
+usdchecker warehouse_assets.usda
+usdchecker warehouse_physics.usda
+usdchecker warehouse_simulation.usda
+usdcat -l warehouse_simulation.usda
+```
+
+Open `warehouse_simulation.usda` directly for inspection. For the live OPC UA
+simulation, pass it to the bridge with `--scene`; select kinematic control by
+default, `--control-mode dynamic` for rigid-body velocity control, or
+`--articulation` for the manifest-defined differential wheel drives. The bridge
+authors runtime changes into a session layer, so generated layers stay reusable.
 
 ## Run With Isaac Sim Python
 
@@ -288,12 +334,12 @@ see `/World`, `/World/Floor`, and class groups such as `/World/MobileRobot`.
 
 ## Open The Scene
 
-After the script writes `warehouse_scene.usda`, open the file in an Omniverse USD
-viewer or Isaac Sim:
+Open either the legacy `warehouse_scene.usda` or the preferred layered
+`warehouse_simulation.usda` in an Omniverse USD viewer or Isaac Sim:
 
 1. Launch Isaac Sim or an Omniverse Kit-based app.
 2. Use `File > Open`.
-3. Select the generated `warehouse_scene.usda`.
+3. Select the generated `warehouse_simulation.usda` (or legacy single stage).
 4. Inspect `/World/PathwayArea`, `/World/Conveyor`,
    `/World/OutputLocation`, `/World/ChargingStation`,
    `/World/MobileRobot`, `/World/StorageRack`, and `/World/Dock`.
@@ -321,7 +367,7 @@ Fix: run the generated script with Isaac Sim's `python.sh` or `python.bat`.
 
 ### Everything looks like plain boxes
 
-Cause: the asset root was not passed (or is wrong), so no `warehouse-kit` or CC0
+Cause: the asset root was not passed (or is wrong), so no `warehouse-kit` or F1TENTH
 assets resolved and every element fell back to a cube.
 
 Fix: pass `examples/omniverse-assets` as the third script argument. Every physical

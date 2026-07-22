@@ -249,32 +249,63 @@
           {
             "id": "tool-floor-mobile-robot",
             "name": "Mobile Robot",
-            "type": "node",
-            "metaClassId": "10000000-0000-4000-8000-000000000102"
+            "type": "create-node",
+            "metaClassId": "10000000-0000-4000-8000-000000000102",
+            "payload": {
+              "operations": [
+                {
+                  "type": "set-attribute",
+                  "attributeName": "BatteryLevel",
+                  "value": 100
+                },
+                {
+                  "type": "set-attribute",
+                  "attributeName": "HasProduct",
+                  "value": false
+                }
+              ]
+            }
           },
           {
             "id": "tool-floor-conveyor",
             "name": "Conveyor",
-            "type": "node",
+            "type": "create-node",
             "metaClassId": "10000000-0000-4000-8000-000000000103"
           },
           {
             "id": "tool-floor-output-location",
             "name": "Output Location",
-            "type": "node",
+            "type": "create-node",
             "metaClassId": "10000000-0000-4000-8000-000000000104"
           },
           {
             "id": "tool-floor-charging-station",
             "name": "Charging Station",
-            "type": "node",
+            "type": "create-node",
             "metaClassId": "10000000-0000-4000-8000-000000000105"
           },
           {
             "id": "tool-floor-pathway-area",
             "name": "Pathway Area",
-            "type": "node",
+            "type": "create-node",
             "metaClassId": "10000000-0000-4000-8000-000000000106"
+          },
+          {
+            "id": "tool-floor-assign-station",
+            "name": "Assign Charging Station",
+            "type": "create-edge",
+            "referenceId": "5a13acab-c46a-45cd-b2b5-e2ee8d9ba029"
+          },
+          {
+            "id": "tool-floor-delete",
+            "name": "Delete from Warehouse",
+            "type": "delete"
+          },
+          {
+            "id": "tool-floor-reassign-station",
+            "name": "Reassign Charging Station",
+            "type": "reconnect",
+            "referenceId": "5a13acab-c46a-45cd-b2b5-e2ee8d9ba029"
           }
         ],
         "isDefault": true
@@ -374,17 +405,46 @@
             }
           }
         ],
+        "propertySections": [
+          {
+            "id": "property-fleet-robot-status",
+            "name": "Robot Status",
+            "metaClassIds": [
+              "10000000-0000-4000-8000-000000000102"
+            ],
+            "attributeNames": [
+              "BatteryLevel",
+              "HasProduct",
+              "Location",
+              "Target"
+            ],
+            "referenceNames": [
+              "assignedStation"
+            ]
+          },
+          {
+            "id": "property-fleet-station-details",
+            "name": "Station Details",
+            "metaClassIds": [
+              "10000000-0000-4000-8000-000000000105"
+            ],
+            "attributeNames": [
+              "InitialPositions"
+            ],
+            "referenceNames": []
+          }
+        ],
         "toolDefinitions": [
           {
             "id": "tool-fleet-mobile-robot",
             "name": "Mobile Robot",
-            "type": "node",
+            "type": "create-node",
             "metaClassId": "10000000-0000-4000-8000-000000000102"
           },
           {
             "id": "tool-fleet-charging-station",
             "name": "Charging Station",
-            "type": "node",
+            "type": "create-node",
             "metaClassId": "10000000-0000-4000-8000-000000000105"
           }
         ]
@@ -549,19 +609,19 @@
           {
             "id": "tool-flow-conveyor",
             "name": "Conveyor",
-            "type": "node",
+            "type": "create-node",
             "metaClassId": "10000000-0000-4000-8000-000000000103"
           },
           {
             "id": "tool-flow-output-location",
             "name": "Output Location",
-            "type": "node",
+            "type": "create-node",
             "metaClassId": "10000000-0000-4000-8000-000000000104"
           },
           {
             "id": "tool-flow-pathway-area",
             "name": "Pathway Area",
-            "type": "node",
+            "type": "create-node",
             "metaClassId": "10000000-0000-4000-8000-000000000106"
           }
         ]
@@ -698,19 +758,19 @@
           {
             "id": "tool-health-mobile-robot",
             "name": "Mobile Robot",
-            "type": "node",
+            "type": "create-node",
             "metaClassId": "10000000-0000-4000-8000-000000000102"
           },
           {
             "id": "tool-health-conveyor",
             "name": "Conveyor",
-            "type": "node",
+            "type": "create-node",
             "metaClassId": "10000000-0000-4000-8000-000000000103"
           },
           {
             "id": "tool-health-charging-station",
             "name": "Charging Station",
-            "type": "node",
+            "type": "create-node",
             "metaClassId": "10000000-0000-4000-8000-000000000105"
           }
         ],
@@ -854,13 +914,13 @@
           {
             "id": "tool-coverage-output-location",
             "name": "Output Location",
-            "type": "node",
+            "type": "create-node",
             "metaClassId": "10000000-0000-4000-8000-000000000104"
           },
           {
             "id": "tool-coverage-pathway-area",
             "name": "Pathway Area",
-            "type": "node",
+            "type": "create-node",
             "metaClassId": "10000000-0000-4000-8000-000000000106"
           }
         ]

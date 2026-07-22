@@ -7,11 +7,11 @@ on a cloud GPU:
 1. Import the metamodel (the domain language).
 2. Create the model (instances of the language).
 3. Create a view (2D/3D projection of the model).
-4. Generate the Omniverse/OpenUSD scene script and the warehouse layout.
+4. Generate the Omniverse/OpenUSD layered scene, legacy builder, and warehouse layout.
 5. Register on NVIDIA Brev and launch Isaac Sim.
 6. Upload the generated files and asset directory to the instance.
-7. Run the scene script and view the static scene.
-8. Run the live navigation simulation (moving robots with an external MAS brain).
+7. Validate/open the layered scene and inspect its physics composition.
+8. Run the live navigation simulation in kinematic, rigid-body, or articulation mode.
 
 Each stage links to the deeper reference guide for that feature. The goal here is
 one continuous path that goes from the model to robots navigating a live scene.
@@ -24,8 +24,8 @@ In SpatialDSL Studio:
 2. `Models > Import` -> `frontend/src/examples/data/smart-warehouse-model.json`
 3. `Code Generation > Projects > Import Project` ->
    `examples/codegen-projects/smart-warehouse-omniverse-project.json`
-4. Select the project, model `WarehouseModel`, click `Generate`, download
-   `generate_warehouse_usd.py` and `warehouse_layout.json`.
+4. Select the project, model `WarehouseModel`, click `Generate`, and download all
+   outputs, including `warehouse_layout.json` and the four `warehouse_*.usda` layers.
 
 On [NVIDIA Brev](https://developer.nvidia.com/brev): deploy the
 [Isaac Sim Launchable](https://github.com/isaac-sim/isaac-launchable), open the
@@ -34,17 +34,18 @@ terminal, then:
 ```bash
 git clone <your-repo-url> SpatialDSLStudio
 cd SpatialDSLStudio/examples/omniverse-assets/warehouse_sim
-# drop your two downloaded files here (or keep the committed samples)
+# put the generated layout and USD layers in a bundle directory
 /isaac-sim/python.sh -m pip install asyncua
 
-# static scene check (generate_warehouse_usd.py placed in this directory)
-/isaac-sim/python.sh generate_warehouse_usd.py ~/warehouse_scene.usda ..
-# -> File > Open ~/warehouse_scene.usda in the streamed viewer
+# composed scene check
+usdchecker ~/warehouse-bundle/warehouse_simulation.usda
+# -> File > Open warehouse_simulation.usda in the streamed viewer
 
 # live simulation (two terminals)
 python3 warehouse_brain.py --layout warehouse_layout.json                  # terminal 1
 /isaac-sim/python.sh run_warehouse_sim.py --layout warehouse_layout.json \
-  --asset-root .. --endpoint opc.tcp://127.0.0.1:4840/warehouse/mas       # terminal 2
+  --scene ~/warehouse-bundle/warehouse_simulation.usda --asset-root .. \
+  --articulation --endpoint opc.tcp://127.0.0.1:4840/warehouse/mas       # terminal 2
 ```
 
 Robots ferry between conveyors and the output, avoid each other, and divert to
@@ -55,14 +56,15 @@ chargers when low. Details for every step are below.
 The sample generates a `.usda` USD stage of a warehouse with a floor, pathway
 areas, conveyors, output locations, charging stations, mobile robots, storage
 racks, and a loading dock. Every physical class resolves to a referenced USD
-asset (a CC0 vehicle for robots, reviewed `warehouse-kit` props for the rest);
+asset (the normalized MIT NVIDIA F1TENTH AMR for robots, reviewed
+`warehouse-kit` props for the rest);
 elements fall back to cubes only when the asset root is missing. The model also
 carries
 a control layer (a `WarehouseController`, `Task`, and `Product` entities) that
 enriches the model and the generated MAS configuration but is not rendered as
-scene geometry. This is a first-stage scene, not a full physics or navigation
-simulation. See [Omniverse Code Generation](omniverse-code-generation.md) for the
-scope and extension points.
+scene geometry. Physics and collision are generated in a separate layer;
+navigation remains in the external MAS bridge. See
+[Omniverse Code Generation](omniverse-code-generation.md) for the boundaries.
 
 ## Prerequisites
 
@@ -82,7 +84,7 @@ scope and extension points.
 - Asset directory: `examples/omniverse-assets/`
   - Asset manifest: `examples/omniverse-assets/asset-manifest.json`
   - Manifest schema: `examples/omniverse-assets/asset-manifest.schema.json`
-  - Vendored CC0 assets: `examples/omniverse-assets/cc0-mini-vehicle-kit/`
+  - Production AMR: `examples/omniverse-assets/nvidia-f1tenth-amr/`
 
 ## Stage 1: Import the Metamodel
 
@@ -134,7 +136,7 @@ A view is optional for generation (you can generate directly from the model),
 but it is the recommended way to confirm placement, and you can open code
 generation directly from a view card.
 
-## Stage 4: Generate the Omniverse Script
+## Stage 4: Generate the Omniverse Bundle
 
 Reference: [Code Generation](code-generation.md) and
 [Omniverse Code Generation](omniverse-code-generation.md).
@@ -146,9 +148,12 @@ Reference: [Code Generation](code-generation.md) and
 4. Select the `Smart Warehouse Omniverse USD` project and confirm the available
    model is `WarehouseModel`.
 5. Click `Generate`.
-6. In the `Generated Files` tab, download both generated files:
-   - `generate_warehouse_usd.py` (the static scene builder), and
-   - `warehouse_layout.json` (the model data the live simulation reads).
+6. In the `Generated Files` tab, download the six generated files:
+   - `generate_warehouse_usd.py` (legacy single-stage builder with fallbacks),
+   - `warehouse_layout.json` (model data read by both runtime processes),
+   - `warehouse_layout.usda`, `warehouse_assets.usda`, and
+     `warehouse_physics.usda` (separable scene concerns), and
+   - `warehouse_simulation.usda` (the composed root to open/run).
 
 Keep the repository asset directory `examples/omniverse-assets/` handy. The
 generated script references it (through the asset manifest) to place real
@@ -164,6 +169,10 @@ with system Python is safe:
 
 ```bash
 python3 -m py_compile generate_warehouse_usd.py
+usdchecker warehouse_layout.usda
+usdchecker warehouse_assets.usda
+usdchecker warehouse_physics.usda
+usdchecker warehouse_simulation.usda
 ```
 
 No output means the script compiled cleanly. Running it with system Python will
@@ -207,66 +216,58 @@ NVIDIA updates them between releases.
 
 ## Stage 6: Upload the Script and Assets
 
-Get the generated script and the asset directory onto the instance. From the
+Get the generated bundle and the asset directory onto the instance. From the
 Launchable's VSCode terminal or notebook terminal, the simplest route is to clone
 this repository (which brings the asset directory) and then add your downloaded
-script:
+files:
 
 ```bash
 git clone <your-fork-or-repo-url> SpatialDSLStudio
-# then upload generate_warehouse_usd.py into the working directory,
+# then upload the six generated files into ~/warehouse-bundle,
 # for example by drag-and-drop into the VSCode file explorer.
 ```
 
 You need two paths on the instance:
 
-- the generated script, for example `~/generate_warehouse_usd.py`
+- the generated bundle, for example `~/warehouse-bundle/`
 - the asset root `~/SpatialDSLStudio/examples/omniverse-assets`
 
 The asset root is where the script looks for `asset-manifest.json` and the
 referenced USD files. Keep the `omniverse-assets` directory structure intact,
 because its layers use relative references.
 
-## Stage 7: Run the Script and View the Scene
+## Stage 7: Validate and View the Layered Scene
 
-The generated script builds a USD stage. Run it with Isaac Sim's standalone
-Python launcher (`python.sh`), which sets up the `pxr` environment. Reference:
-[Isaac Sim standalone Python](https://docs.isaacsim.omniverse.nvidia.com/latest/python_scripting/manual_standalone_python.html).
+Put or link `examples/omniverse-assets` beside the generated layers under the
+name `omniverse-assets`, then validate the composition:
 
 In the Isaac Sim container the install lives at `/isaac-sim`, so from the
 instance terminal:
 
 ```bash
-/isaac-sim/python.sh ~/generate_warehouse_usd.py \
-  ~/warehouse_scene.usda \
-  ~/SpatialDSLStudio/examples/omniverse-assets
+cd ~/warehouse-bundle
+ln -s ~/SpatialDSLStudio/examples/omniverse-assets omniverse-assets
+usdchecker warehouse_layout.usda
+usdchecker warehouse_assets.usda
+usdchecker warehouse_physics.usda
+usdchecker warehouse_simulation.usda
+usdcat -l warehouse_simulation.usda
 ```
 
-The three arguments are the script, the output `.usda` path, and the asset root.
-The asset root is optional: without it, the script looks for an
-`omniverse-assets` directory beside the script and uses cube fallbacks when a
-mapped asset is unavailable.
-
-Expected terminal output:
-
-```text
-Generated USD scene: /root/warehouse_scene.usda
-Elements: 28
-Referenced assets: 28
-```
-
-The element count excludes the root `WarehouseSystem` object, because the
-template only emits physical warehouse assets.
+Use the legacy Python builder only when you specifically need its missing-asset
+cube fallback; it remains documented in the Omniverse reference guide.
 
 To view the result, open the streamed Isaac Sim session (the Launchable's
 streaming client, or `http://<PUBLIC_IP>:8210` in a Chromium browser for the
-manual container), then use `File > Open` and select `warehouse_scene.usda`.
+manual container), then use `File > Open` and select
+`warehouse_simulation.usda`.
 Frame the viewport on `/World` to bring the millimeter-scale layout into view.
 Inspect `/World/PathwayArea`, `/World/Conveyor`, `/World/OutputLocation`,
 `/World/ChargingStation`, `/World/MobileRobot`, `/World/StorageRack`, and
 `/World/Dock`.
 
-Stage 7 gives a static snapshot. Stage 8 makes the robots move.
+Stage 7 confirms the layered layout/assets/physics composition. Stage 8 makes
+the robot bodies move.
 
 ## Stage 8: Run the Live Navigation Simulation
 
@@ -277,9 +278,9 @@ path planning lives inside the simulator.
 
 - Brain (`warehouse_brain.py`): hosts the OPC UA server, plans A* paths, avoids
   collisions between robots, and coordinates pickup/drop-off tasks.
-- Simulator bridge (`run_warehouse_sim.py`): builds the scene with physics and,
-  each frame, writes each robot's `Location` and reads its `Target` from the
-  brain. No planning logic.
+- Simulator bridge (`run_warehouse_sim.py`): opens the layered scene, adds
+  non-destructive runtime opinions, and writes each robot's `Location` while
+  reading its `Target`. No planning logic.
 - Both read the same `warehouse_layout.json` you generated in Stage 4.
 
 All three files live in `examples/omniverse-assets/warehouse_sim/`. See its
@@ -301,10 +302,14 @@ All three files live in `examples/omniverse-assets/warehouse_sim/`. See its
    ```bash
    /isaac-sim/python.sh run_warehouse_sim.py \
        --layout warehouse_layout.json \
+       --scene <bundle>/warehouse_simulation.usda \
        --asset-root <repo>/examples/omniverse-assets \
+       --articulation \
        --endpoint opc.tcp://127.0.0.1:4840/warehouse/mas
    ```
-   Add `--headless --max-seconds 60` for a headless run.
+   Add `--headless --max-seconds 60` for a headless run. Omit
+   `--articulation` for the default kinematic mover, or use
+   `--control-mode dynamic` for direct rigid-body velocity control.
 
 In the streamed viewport the forklifts drive between the conveyors and the output
 location, route around the racks and dock, and yield to each other where paths
@@ -319,7 +324,7 @@ You can validate the planner and the brain without a GPU or OPC UA:
 
 ```bash
 cd <repo>/examples/omniverse-assets/warehouse_sim
-python3 -m unittest test_nav test_brain
+python3 -m unittest test_nav test_brain test_runtime_modes
 ```
 
 When you finish, stop or delete the Brev instance so it stops incurring GPU

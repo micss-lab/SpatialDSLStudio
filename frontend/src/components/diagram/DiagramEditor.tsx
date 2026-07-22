@@ -5,15 +5,23 @@ import {
   Typography, 
   Drawer, 
   Button,
+  Alert,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { concreteSyntaxResolver, diagramService } from '../../services/diagram';
+import {
+  concreteSyntaxResolver,
+  diagramService,
+  diagramToolExecutionService,
+  getExecutableToolType,
+  viewValidationService,
+} from '../../services/diagram';
 import { modelService } from '../../services/model';
 import { viewpointService } from '../../services/viewpoint.service';
-import { DiagramElement, ModelElement } from '../../models/types';
+import { DiagramElement, ModelElement, ToolDefinition, ValidationIssue } from '../../models/types';
 import DiagramPalette, { DiagramPaletteDragItem } from '../palette/DiagramPalette';
 import DiagramElementProperties from './DiagramElementProperties';
 import RuleVisualizationPanel from './RuleVisualizationPanel';
+import ViewValidationPanel from './ViewValidationPanel';
 import { useDiagramData, useElementSelection } from './shared/hooks';
 import { 
   getAppearanceSettings, 
@@ -55,6 +63,13 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
   const [showReferenceDialog, setShowReferenceDialog] = useState(false);
   const [pendingEdgeData, setPendingEdgeData] = useState<{sourceId: string, targetId: string} | null>(null);
   const [highlightedElements, setHighlightedElements] = useState<string[]>([]);
+  const [activeTool, setActiveTool] = useState<ToolDefinition | null>(null);
+  const [reconnectEdge, setReconnectEdge] = useState<DiagramElement | null>(null);
+  const [toolFeedback, setToolFeedback] = useState<{
+    severity: 'info' | 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
 
   // Zoom and pan states
   const [scale, setScale] = useState(1);
@@ -71,6 +86,63 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
   const activeRepresentationDescription = useMemo(() => (
     diagram ? viewpointService.resolveRepresentationDescription(diagram).representationDescription : undefined
   ), [diagram]);
+  const activeToolType = activeTool ? getExecutableToolType(activeTool) : undefined;
+  const validationContextKey = diagram
+    ? `${diagram.id}:${diagram.modelId}:${diagram.representationDescriptionId || ''}`
+    : '';
+
+  const validateView = useCallback(() => {
+    const currentDiagram = diagramService.getDiagramById(diagramId);
+    setValidationIssues(currentDiagram ? viewValidationService.validateDiagram(currentDiagram).issues : []);
+  }, [diagramId]);
+
+  useEffect(() => {
+    if (validationContextKey) validateView();
+  }, [validateView, validationContextKey]);
+
+  const handleValidationIssueSelect = useCallback((issue: ValidationIssue) => {
+    const currentDiagram = diagramService.getDiagramById(diagramId);
+    if (!currentDiagram) return;
+    const element = viewValidationService.findElementForIssue(currentDiagram, issue);
+    if (!element) return;
+
+    setSelectedElement(element);
+    if (element.type === 'node') {
+      const center = getElementCenter(element);
+      setStagePosition({
+        x: stageSize.width / 2 - center.x * scale,
+        y: stageSize.height / 2 - center.y * scale,
+      });
+    }
+    requestAnimationFrame(() => stageRef.current?.batchDraw());
+  }, [diagramId, scale, setSelectedElement, stageSize.height, stageSize.width]);
+
+  const cancelActiveTool = useCallback(() => {
+    setActiveTool(null);
+    setReconnectEdge(null);
+    setIsDrawingEdge(false);
+    setEdgeStartElement(null);
+    setTempEdgePoints(null);
+    setToolFeedback(null);
+  }, []);
+
+  const handleToolActivate = useCallback((tool: ToolDefinition) => {
+    const type = getExecutableToolType(tool);
+    setActiveTool(tool);
+    setReconnectEdge(null);
+    setEdgeStartElement(null);
+    setTempEdgePoints(null);
+    setIsDrawingEdge(type === 'create-edge');
+
+    const instruction = type === 'create-edge'
+      ? `Select a source node, then a target node for “${tool.name}”.`
+      : type === 'delete'
+        ? `Select the node or edge to remove with “${tool.name}”.`
+        : type === 'reconnect'
+          ? `Select an edge, then select its new target for “${tool.name}”.`
+          : `“${tool.name}” is active.`;
+    setToolFeedback({ severity: 'info', message: instruction });
+  }, []);
 
   // Stage size handler
   useEffect(() => {
@@ -185,6 +257,14 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
       const targetElement = findElementAtPosition(x, y);
       
       if (targetElement && targetElement.type === 'node') {
+        if (activeTool && activeToolType === 'create-edge') {
+          handleCreateEdge(edgeStartElement.id, targetElement.id, activeTool.referenceId || '');
+          setIsDrawingEdge(false);
+          setEdgeStartElement(null);
+          setTempEdgePoints(null);
+          return;
+        }
+
         // Case 1: Clicked on another node - create regular edge or self-reference
         const sourceMetaClass = metamodel.classes.find(c => c.id === edgeStartElement.modelElementId);
         const targetMetaClass = metamodel.classes.find(c => c.id === targetElement.modelElementId);
@@ -274,6 +354,20 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
 
   const handleCreateEdge = (sourceId: string, targetId: string, referenceTypeId: string) => {
     if (!metamodel) return;
+
+    if (activeTool && activeToolType === 'create-edge') {
+      const result = diagramToolExecutionService.executeCreateEdgeTool(
+        diagramId,
+        activeTool,
+        sourceId,
+        targetId
+      );
+      setToolFeedback({ severity: result.ok ? 'success' : 'error', message: result.message });
+      setActiveTool(null);
+      setReconnectEdge(null);
+      if (result.ok) saveChanges();
+      return;
+    }
     
     // Find the reference in the metamodel
     let referenceMetaClass = null;
@@ -331,6 +425,60 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
   };
 
   const handleElementClick = (element: DiagramElement, e?: any) => {
+    if (activeTool && activeToolType === 'delete') {
+      if (e) e.cancelBubble = true;
+      if (element.type === 'node') {
+        const confirmed = window.confirm(
+          `Run “${activeTool.name}” and delete this element from the model and every view?`
+        );
+        if (!confirmed) return;
+      }
+
+      const result = diagramToolExecutionService.executeDeleteTool(diagramId, activeTool, element);
+      setToolFeedback({ severity: result.ok ? 'success' : 'error', message: result.message });
+      setActiveTool(null);
+      setReconnectEdge(null);
+      if (result.ok) {
+        setSelectedElement(null);
+        saveChanges();
+      }
+      return;
+    }
+
+    if (activeTool && activeToolType === 'reconnect') {
+      if (e) e.cancelBubble = true;
+      if (!reconnectEdge) {
+        if (element.type !== 'edge') {
+          setToolFeedback({ severity: 'info', message: 'Select the edge to reconnect first.' });
+          return;
+        }
+        setReconnectEdge(element);
+        setSelectedElement(element);
+        setToolFeedback({ severity: 'info', message: 'Now select the new target node.' });
+        return;
+      }
+
+      if (element.type !== 'node') {
+        setToolFeedback({ severity: 'info', message: 'Select a node as the new edge target.' });
+        return;
+      }
+
+      const result = diagramToolExecutionService.executeReconnectTool(
+        diagramId,
+        activeTool,
+        reconnectEdge,
+        element.id
+      );
+      setToolFeedback({ severity: result.ok ? 'success' : 'error', message: result.message });
+      setActiveTool(null);
+      setReconnectEdge(null);
+      if (result.ok) {
+        setSelectedElement(null);
+        saveChanges();
+      }
+      return;
+    }
+
     if (isDrawingEdge) {
       // Prevent event bubbling to stage when drawing edges
       if (e) {
@@ -341,6 +489,14 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
         // Start drawing an edge from this element
         setEdgeStartElement(element);
       } else if (element.id !== edgeStartElement.id) {
+        if (activeTool && activeToolType === 'create-edge') {
+          handleCreateEdge(edgeStartElement.id, element.id, activeTool.referenceId || '');
+          setIsDrawingEdge(false);
+          setEdgeStartElement(null);
+          setTempEdgePoints(null);
+          return;
+        }
+
         // We now have source and target
         const sourceElement = edgeStartElement;
         const targetElement = element;
@@ -389,10 +545,55 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
     setDraggingElement(element);
   };
 
+  const getContainedPosition = useCallback((element: DiagramElement, x: number, y: number) => {
+    if (!diagram || !element.parentId) return { x, y };
+    const parent = diagram.elements.find(candidate => (
+      candidate.id === element.parentId && candidate.type === 'node'
+    ));
+    if (!parent) return { x, y };
+
+    const padding = 12;
+    const header = 28;
+    const width = element.width || 100;
+    const height = element.height || 50;
+    const parentX = parent.x || 0;
+    const parentY = parent.y || 0;
+    const minX = parentX + padding;
+    const maxX = Math.max(minX, parentX + (parent.width || 120) - width - padding);
+    const minY = parentY + header;
+    const maxY = Math.max(minY, parentY + (parent.height || 80) - height - padding);
+    return {
+      x: Math.min(maxX, Math.max(minX, x)),
+      y: Math.min(maxY, Math.max(minY, y)),
+    };
+  }, [diagram]);
+
+  const getContainedDescendants = useCallback((containerId: string): DiagramElement[] => {
+    if (!diagram) return [];
+    const descendants: DiagramElement[] = [];
+    const pending = [containerId];
+    const visited = new Set<string>();
+
+    while (pending.length > 0) {
+      const parentId = pending.shift()!;
+      if (visited.has(parentId)) continue;
+      visited.add(parentId);
+      diagram.elements
+        .filter(candidate => candidate.type === 'node' && candidate.parentId === parentId)
+        .forEach(child => {
+          descendants.push(child);
+          pending.push(child.id);
+        });
+    }
+
+    return descendants;
+  }, [diagram]);
+
   const handleDragEnd = async (e: any, element: DiagramElement) => {
     if (diagram && element.id) {
       // Get the current position from the dragged shape
-      const { x, y } = e.target.position();
+      const rawPosition = e.target.position();
+      const { x, y } = getContainedPosition(element, rawPosition.x, rawPosition.y);
       const linkedModelElementId = getLinkedModelElementId(element);
       const pinAttachment = getPinBoundaryAttachment(element, x, y);
       
@@ -419,6 +620,25 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
           x: x,
           y: y
         });
+      }
+
+      if (element.containerMappingId) {
+        const deltaX = x - (element.x || 0);
+        const deltaY = y - (element.y || 0);
+        if (deltaX !== 0 || deltaY !== 0) {
+          await Promise.all(getContainedDescendants(element.id).map(descendant => (
+            diagramService.updateModelElementPresentationInView(
+              diagramId,
+              getLinkedModelElementId(descendant),
+              {
+                position2D: {
+                  x: (descendant.x || 0) + deltaX,
+                  y: (descendant.y || 0) + deltaY,
+                },
+              }
+            )
+          )));
+        }
       }
       
       saveChanges();
@@ -492,12 +712,22 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
             position2D: { x, y },
             size2D,
           };
-          newElement = await diagramService.createModelElementInView(
-            diagramId,
-            draggingPaletteItem.metaClass.id,
-            presentation,
-            { name: `${draggingPaletteItem.metaClass.name} 1` }
-          );
+          if (draggingPaletteItem.tool) {
+            const result = await diagramToolExecutionService.executeCreateNodeTool(
+              diagramId,
+              draggingPaletteItem.tool,
+              presentation
+            );
+            setToolFeedback({ severity: result.ok ? 'success' : 'error', message: result.message });
+            newElement = result.value || null;
+          } else {
+            newElement = await diagramService.createModelElementInView(
+              diagramId,
+              draggingPaletteItem.metaClass.id,
+              presentation,
+              { name: `${draggingPaletteItem.metaClass.name} 1` }
+            );
+          }
         }
         
         console.log('New element created:', newElement);
@@ -725,7 +955,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
     if (!diagram) return null;
     
     // Check if point is inside any node
-    return diagram.elements.find(element => {
+    return [...diagram.elements].reverse().find(element => {
       if (element.type === 'node' && element.x !== undefined && element.y !== undefined && 
           element.width !== undefined && element.height !== undefined) {
         return x >= element.x && 
@@ -884,7 +1114,9 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
     const pinAttachment = getPinBoundaryAttachment(element, x, y);
     if (pinAttachment) {
       e.target.position(pinAttachment.position);
+      return;
     }
+    e.target.position(getContainedPosition(element, x, y));
   };
 
   // Render custom shapes based on appearance type
@@ -1110,6 +1342,15 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
   const renderNode = (element: DiagramElement) => {
     const isSelected = selectedElement?.id === element.id;
     const isHighlighted = highlightedElements.includes(element.id);
+    const isContainer = Boolean(element.containerMappingId);
+    const validationSeverity = diagram
+      ? viewValidationService.getElementSeverity(diagram, element, validationIssues)
+      : undefined;
+    const validationColor = validationSeverity === 'error'
+      ? '#d32f2f'
+      : validationSeverity === 'warning'
+        ? '#ed6c02'
+        : '#0288d1';
     
     // Get position and size
     const x = element.x || 0;
@@ -1134,6 +1375,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
     return (
       <Group 
         key={element.id}
+        name={isContainer ? `container-${element.id}` : element.parentId ? `contained-${element.id}` : undefined}
         x={x}
         y={y}
         width={width}
@@ -1146,6 +1388,20 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
         onTap={(e) => handleElementClick(element, e)}
       >
         {renderCustomShape(element, width, height, isSelected, isHighlighted)}
+
+        {isContainer && (
+          <Rect
+            x={6}
+            y={26}
+            width={Math.max(0, width - 12)}
+            height={Math.max(0, height - 32)}
+            stroke={appearance.strokeColor || '#64748b'}
+            strokeWidth={1}
+            dash={[4, 4]}
+            opacity={0.55}
+            listening={false}
+          />
+        )}
         
         {/* Add selection indicator */}
         {isSelected && (
@@ -1167,9 +1423,32 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
           fontSize={appearance.fontSize || 12}
           fontFamily={appearance.fontFamily || 'Arial'}
           fill={appearance.fontColor || 'black'}
-          y={height + 5}
+          y={isContainer ? 3 : height + 5}
           padding={2}
         />
+
+        {validationSeverity && (
+          <Group name={`validation-marker-${element.id}`} listening={false}>
+            <Circle
+              x={Math.max(10, width - 9)}
+              y={9}
+              radius={9}
+              fill={validationColor}
+              stroke="white"
+              strokeWidth={1.5}
+            />
+            <Text
+              x={Math.max(5, width - 14)}
+              y={2}
+              width={10}
+              align="center"
+              text="!"
+              fontSize={13}
+              fontStyle="bold"
+              fill="white"
+            />
+          </Group>
+        )}
       </Group>
     );
   };
@@ -1217,6 +1496,18 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
     const appearance = concreteSyntaxResolver.resolveEdge(element, metamodel, activeRepresentationDescription);
     const lineWidth = isSelected ? 3 : (appearance.lineWidth || 2);
     const lineColor = isHighlighted ? '#FFA500' : (appearance.lineColor || 'black');
+    const validationSeverity = diagram
+      ? viewValidationService.getElementSeverity(diagram, element, validationIssues)
+      : undefined;
+    const validationColor = validationSeverity === 'error'
+      ? '#d32f2f'
+      : validationSeverity === 'warning'
+        ? '#ed6c02'
+        : '#0288d1';
+    const validationMarker = {
+      x: (points[0].x + points[points.length - 1].x) / 2,
+      y: (points[0].y + points[points.length - 1].y) / 2,
+    };
     
     return (
       <Group
@@ -1246,6 +1537,29 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
           stroke={lineColor}
           strokeWidth={lineWidth}
         />
+
+        {validationSeverity && (
+          <Group name={`validation-marker-${element.id}`} listening={false}>
+            <Circle
+              x={validationMarker.x}
+              y={validationMarker.y}
+              radius={9}
+              fill={validationColor}
+              stroke="white"
+              strokeWidth={1.5}
+            />
+            <Text
+              x={validationMarker.x - 5}
+              y={validationMarker.y - 7}
+              width={10}
+              align="center"
+              text="!"
+              fontSize={13}
+              fontStyle="bold"
+              fill="white"
+            />
+          </Group>
+        )}
         
         {/* Edge label if there's a name to display */}
         {element.style?.name && (
@@ -1329,12 +1643,15 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
             diagramService.addAllModelElementsToView(diagramId);
             saveChanges();
           }}
+          onToolActivate={handleToolActivate}
+          activeToolId={activeTool?.id}
         />
       )}
       
       {/* Drawing Area */}
       <Box 
         ref={containerRef}
+        data-testid="diagram-canvas-drop-zone"
         sx={{ 
           flexGrow: 1, 
           position: 'relative',
@@ -1355,6 +1672,9 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
           isDrawingEdge={isDrawingEdge}
           edgeStartElement={edgeStartElement}
           onToggleDrawingEdge={() => {
+            setActiveTool(null);
+            setReconnectEdge(null);
+            setToolFeedback(null);
             setIsDrawingEdge(!isDrawingEdge);
             if (!isDrawingEdge) {
               setEdgeStartElement(null);
@@ -1375,6 +1695,26 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
           onResetZoom={handleResetZoom}
           onCenterView={centerViewOnElements}
         />
+
+        {toolFeedback && (
+          <Alert
+            severity={toolFeedback.severity}
+            action={activeTool ? (
+              <Button color="inherit" size="small" onClick={cancelActiveTool}>Cancel</Button>
+            ) : undefined}
+            sx={{ mx: 1, mt: 1, zIndex: 5 }}
+          >
+            {toolFeedback.message}
+          </Alert>
+        )}
+
+        <Box sx={{ position: 'absolute', top: 60, left: 12, zIndex: 10 }}>
+          <ViewValidationPanel
+            issues={validationIssues}
+            onRefresh={validateView}
+            onSelectIssue={handleValidationIssueSelect}
+          />
+        </Box>
 
         {/* Add Rule Visualization Panel - moved to bottom right */}
         {diagram && (
@@ -1402,9 +1742,8 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
           y={stagePosition.y}
         >
           <Layer>
-            {diagram.elements.map(element => 
-              element.type === 'node' ? renderNode(element) : renderEdge(element)
-            )}
+            {diagram.elements.filter(element => element.type === 'edge').map(renderEdge)}
+            {diagram.elements.filter(element => element.type === 'node').map(renderNode)}
             {renderTempEdge()}
           </Layer>
         </Stage>
@@ -1459,6 +1798,14 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
               onChange={handlePropertyChange}
               diagramId={diagramId}
               onCreatePin={handleCreatePin}
+              propertySections={activeRepresentationDescription?.propertySections}
+              onReferenceChange={(referenceName, value) => {
+                if (!model) return;
+                const semanticElementId = getLinkedModelElementId(selectedElement);
+                if (modelService.setModelElementReference(model.id, semanticElementId, referenceName, value)) {
+                  saveChanges();
+                }
+              }}
             />
             
             <Button

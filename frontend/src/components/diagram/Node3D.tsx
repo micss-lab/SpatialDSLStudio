@@ -29,6 +29,7 @@ interface Node3DProps {
   lowPerformance: boolean;
   renderOrder?: number; // Add render order prop for z-sorting
   isDragging?: boolean;
+  validationSeverity?: 'error' | 'warning' | 'info';
 }
 
 /**
@@ -46,7 +47,8 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
   metaClass,
   lowPerformance,
   renderOrder = 0,
-  isDragging = false
+  isDragging = false,
+  validationSeverity,
 }, ref) => {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
@@ -280,6 +282,11 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
       nameSize: Math.max(Math.min(baseSize, 80), 20), // Clamp between 20 and 80
     };
   }, [heightMm, widthMm]);
+  const validationColor = validationSeverity === 'error'
+    ? '#d32f2f'
+    : validationSeverity === 'warning'
+      ? '#ed6c02'
+      : '#0288d1';
   
   return (
     <group
@@ -354,6 +361,38 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
             <edgesGeometry args={[geometry]} />
             <lineBasicMaterial color="#00ff00" linewidth={2} />
           </lineSegments>
+        </group>
+      )}
+
+      {validationSeverity && (
+        <group name={`validation-marker-${element.id}`}>
+          <mesh position={positionAdjustment}>
+            <primitive object={geometry} attach="geometry" />
+            <meshBasicMaterial
+              color={validationColor}
+              wireframe={true}
+              transparent={true}
+              opacity={0.9}
+              depthTest={false}
+            />
+          </mesh>
+          <Billboard
+            position={[
+              heightMm * mmToPixel(1) * 0.5,
+              depthMm * mmToPixel(1) + 15,
+              0,
+            ]}
+            follow={true}
+          >
+            <Text
+              fontSize={Math.max(textSize.nameSize, 28)}
+              color={validationColor}
+              outlineWidth={2}
+              outlineColor="#ffffff"
+            >
+              !
+            </Text>
+          </Billboard>
         </group>
       )}
       

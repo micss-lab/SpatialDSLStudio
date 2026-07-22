@@ -1,0 +1,11 @@
+#usda 1.0
+(
+    defaultPrim = "F1TenthAMR"
+    documentation = "Normalized lightweight F1TENTH Ackermann AMR visual asset. See SOURCE.md."
+    metersPerUnit = 1
+    upAxis = "Z"
+    subLayers = [
+        @./layers/visual.usda@,
+        @./layers/materials.usda@
+    ]
+)

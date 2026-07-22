@@ -282,7 +282,19 @@
           "attributes": []
         }
       ],
-      "constraints": [],
+      "constraints": [
+        {
+          "id": "constraint-mobile-robot-battery-reserve",
+          "name": "Battery reserve",
+          "contextClassName": "MobileRobot",
+          "contextClassId": "10000000-0000-4000-8000-000000000102",
+          "expression": "self.BatteryLevel >= 20",
+          "description": "Mobile robots must retain at least 20 percent battery reserve.",
+          "isValid": true,
+          "severity": "warning",
+          "type": "javascript"
+        }
+      ],
       "position": {
         "x": 194.365955605032,
         "y": 396.34492843957565

@@ -41,6 +41,15 @@ release: https://eclipse.dev/sirius/doc/.
 
 Goal: take a model built in SpatialDSL and open its diagram in Sirius Desktop.
 
+The preferred path is Viewpoint manager -> `Export Zip`. SpatialDSL chooses the
+primary model and produces an Eclipse modeling project containing `.project`,
+`model/<metamodel>.ecore`, `model/<model>.xmi`,
+`description/<metamodel>.odesign`, `representations.aird`, and the compatibility
+report. Extract the ZIP, then use `File > Import > Existing Projects into
+Workspace` in Eclipse and select the extracted directory.
+
+The individual-file workflow remains useful for diagnosis:
+
 1. **Export the metamodel.** Metamodels page -> select the metamodel ->
    export `.ecore`.
 2. **Export the model.** Models page -> select the model -> export `.xmi`.
@@ -49,13 +58,12 @@ Goal: take a model built in SpatialDSL and open its diagram in Sirius Desktop.
 4. **Export the views.** Viewpoint manager -> `Export .aird View`. This writes a
    `.aird` session whose representations reference the `.odesign` description and
    the `.xmi` elements, with GMF node bounds and edge waypoints preserved.
-5. **Assemble the Sirius project.** In Eclipse:
+5. **Assemble the Sirius project.** In Eclipse (only when using individual exports):
    - Create a Viewpoint Specification Project and drop in the `.odesign` (or open
      it directly).
    - Create a Modeling Project and copy in the `.ecore`, `.xmi`, and `.aird`.
-   - Fix up the relative resource paths if needed: the exported `.aird` uses
-     `<model>.xmi` as its `semanticResources` path, so keep the `.xmi` beside it
-     (or edit the path).
+   - Fix up relative resource paths if needed. The one-click project ZIP avoids
+     this step by emitting matching `model/...` and `description/...` references.
 6. **Open the representation.** Enable the viewpoint on the modeling project
    (`Viewpoints Selection`), then open the diagram from the `.aird`. Confirm the
    nodes, edges, and layout match what SpatialDSL showed.
@@ -95,13 +103,16 @@ two nodes, one edge).
 | SpatialDSL -> Sirius -> open | Diagram opens in Sirius Desktop with matching layout. |
 | Sirius -> SpatialDSL -> view | View opens in SpatialDSL with matching layout. |
 | SpatialDSL -> export `.aird` -> re-import | Same nodes, edges, and layout (in-app round-trip; covered by automated tests). |
+| SpatialDSL -> export project ZIP | ZIP contains all four resources; every `.aird` semantic/viewpoint/description reference resolves within the bundle. |
 
 ## Known gaps (expected to not round-trip yet)
 
 These are reported, never silently dropped. Track them in
 `sirius-desktop-parity-roadmap.md`:
 
-- `.odesign` conditional styles, layers, filters, reused mappings, Java services.
+- `.odesign` reused mappings, style customizations, Java services, and complex
+  expression execution. Conditional styles, common filters, and additional
+  layers are preserved by the supported import/export subset.
 - Container nesting, tool operations, and model operation language.
 - Table and tree representations.
 - Multi-resource sessions and lazy `.srm` representation files.

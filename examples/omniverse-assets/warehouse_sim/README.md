@@ -4,8 +4,10 @@ A decoupled, MAS-style warehouse navigation demo, mirroring the Visual Component
 architecture where the WarehouseMAS runs as a separate process and talks to the
 simulator over OPC UA.
 
-- **Simulator** (`run_warehouse_sim.py`, runs inside Isaac Sim): builds the USD
-  scene with physics and moves the robots. Contains **no planning logic**. Each
+- **Simulator** (`run_warehouse_sim.py`, runs inside Isaac Sim): opens the
+  generated layered USD scene (or builds an equivalent scene), applies runtime
+  physics opinions in a non-destructive session layer, and drives the robots.
+  Contains **no planning logic**. Each
   frame it writes each robot's `Location` and reads its `Target` over OPC UA.
 - **Brain** (`warehouse_brain.py`, standalone process): the multi-agent
   controller. Hosts the OPC UA server, reads `Location`, plans with `nav.py`
@@ -31,7 +33,35 @@ Namespace `urn:warehouse:mas`. Robots are `Robot1..RobotN` (the WarehouseMAS
 
 This is the same state-out / command-in split the Visual Components connectivity
 config uses (SimulationToServer / ServerToSimulation variable groups), and the
-same `Robot{n}/Location`, `/Target`, `/HasProduct`, `/BatteryLevel` node names.
+same `Robot{n}/Location`, `/Target`, `/State`, `/HasProduct`, and
+`/BatteryLevel` node names.
+
+## Layered scene and robot control modes
+
+The Omniverse code generation project now emits four directly composable files:
+
+- `warehouse_layout.usda`: model transforms and render-neutral floor;
+- `warehouse_assets.usda`: portable relative asset references;
+- `warehouse_physics.usda`: `PhysicsScene`, material, static proxy colliders,
+  and robot mass/body defaults;
+- `warehouse_simulation.usda`: root layer composing the other three.
+
+Keep an `omniverse-assets` directory beside those layers so their relative
+references resolve. The default robot is the normalized MIT-licensed NVIDIA
+F1TENTH asset. Its manifest mapping also names an articulation root, mass, wheel
+radius/separation, and left/right joint paths.
+
+The bridge exposes three runtime modes:
+
+| Arguments | Behavior |
+| --- | --- |
+| default / `--control-mode kinematic` | PhysX kinematic body; target commands update the transform |
+| `--control-mode dynamic` | dynamic rigid body; target commands set linear/angular velocity |
+| `--articulation` | dynamic differential-drive articulation; target commands set wheel drives |
+
+Runtime changes are authored into the stage session layer. Add
+`--save-runtime-layer warehouse_runtime.usda` to export those overrides without
+modifying any generated source layer.
 
 The brain drains `BatteryLevel` as a robot moves and, when it drops below the
 robot's `lowBattery` threshold (from the model), routes the robot to the nearest
@@ -53,10 +83,12 @@ Python can install it with `./python.sh -m pip install asyncua`.
    ```bash
    /isaac-sim/python.sh run_warehouse_sim.py \
        --layout warehouse_layout.json \
+       --scene /path/to/warehouse_simulation.usda \
        --asset-root <repo>/examples/omniverse-assets \
        --endpoint opc.tcp://127.0.0.1:4840/warehouse/mas
    ```
-   Add `--headless --max-seconds 60` for a headless run.
+   Add `--headless --max-seconds 60` for a headless run. Add either
+   `--control-mode dynamic` or `--articulation` to exercise PhysX control.
 
 The robots plan paths around the racks and dock and yield to each other at
 crossings; the brain reassigns pickup/drop-off goals as they arrive.
@@ -66,13 +98,15 @@ crossings; the brain reassigns pickup/drop-off goals as they arrive.
 Pure-Python, no Isaac Sim or OPC UA needed:
 
 ```bash
-python3 -m unittest test_nav test_brain
+python3 -m unittest test_nav test_brain test_runtime_modes
 ```
 
 - `test_nav.py`: A* routes around obstacles / returns None when walled off;
   robots (head-on and a 4-way crossing) avoid each other and still reach goals.
 - `test_brain.py`: the brain's state-out / command-in control loop makes robots
   ferry tasks and keep clearance, exercising the exact contract OPC UA carries.
+- `test_runtime_modes.py`: rigid/articulation control math and manifest-provided
+  joint geometry.
 
 ## Swapping the transport
 

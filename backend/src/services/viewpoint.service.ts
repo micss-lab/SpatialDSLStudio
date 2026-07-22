@@ -8,7 +8,12 @@ import {
   MetaClass,
   MetaReference,
   Metamodel,
+  RepresentationConditionalStyle,
   RepresentationDescription,
+  RepresentationFilter,
+  RepresentationLayer,
+  RepresentationLayerMapping,
+  ToolDefinition,
   UpdateViewpointRequest,
   UserRole,
   Viewpoint
@@ -19,6 +24,10 @@ import { canPerformOperation } from '../middleware/permissions';
 const REPRESENTATION_KINDS = new Set(['diagram', 'table', 'tree']);
 const ATTACHMENT_SIDES = new Set(['top', 'right', 'bottom', 'left']);
 const PIN_DIRECTIONS = new Set(['input', 'output', 'inout']);
+const TOOL_TYPES = new Set(['create-node', 'create-edge', 'delete', 'direct-edit', 'reconnect']);
+const LAYER_MAPPING_KINDS = new Set(['node', 'container', 'bordered-node', 'edge']);
+const FILTER_RULE_KINDS = new Set(['mapping', 'variable']);
+const FILTER_KINDS = new Set(['hide', 'collapse']);
 
 class ViewpointService {
   private mapToMetamodel(row: any): Metamodel {
@@ -226,6 +235,396 @@ class ViewpointService {
     });
   }
 
+  private normalizeContainerMappings(value: unknown): RepresentationDescription['containerMappings'] {
+    if (value === undefined) return undefined;
+    if (!Array.isArray(value)) {
+      throw new ApiError(400, 'containerMappings must be an array');
+    }
+
+    const seenIds = new Set<string>();
+    return value.map((mapping, index) => {
+      if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) {
+        throw new ApiError(400, `containerMappings[${index}] must be an object`);
+      }
+
+      const candidate = mapping as Record<string, any>;
+      const id = typeof candidate.id === 'string' && candidate.id.trim()
+        ? candidate.id.trim()
+        : uuidv4();
+      if (seenIds.has(id)) {
+        throw new ApiError(400, 'Container mapping IDs must be unique within a representation');
+      }
+      seenIds.add(id);
+
+      if (typeof candidate.containerMetaClassId !== 'string' || !candidate.containerMetaClassId.trim()) {
+        throw new ApiError(400, `containerMappings[${index}].containerMetaClassId is required`);
+      }
+      if (typeof candidate.containmentReferenceId !== 'string' || !candidate.containmentReferenceId.trim()) {
+        throw new ApiError(400, `containerMappings[${index}].containmentReferenceId is required`);
+      }
+      if (
+        candidate.concreteSyntax !== undefined
+        && (!candidate.concreteSyntax || typeof candidate.concreteSyntax !== 'object' || Array.isArray(candidate.concreteSyntax))
+      ) {
+        throw new ApiError(400, `containerMappings[${index}].concreteSyntax must be an object`);
+      }
+
+      return {
+        id,
+        containerMetaClassId: candidate.containerMetaClassId.trim(),
+        containmentReferenceId: candidate.containmentReferenceId.trim(),
+        ...(candidate.childMetaClassIds !== undefined && {
+          childMetaClassIds: this.uniqueStringIds(
+            candidate.childMetaClassIds,
+            `containerMappings[${index}].childMetaClassIds`
+          ),
+        }),
+        ...(candidate.concreteSyntax !== undefined && { concreteSyntax: candidate.concreteSyntax }),
+      };
+    });
+  }
+
+  private normalizePropertySections(value: unknown): RepresentationDescription['propertySections'] {
+    if (value === undefined) return undefined;
+    if (!Array.isArray(value)) {
+      throw new ApiError(400, 'propertySections must be an array');
+    }
+
+    const seenIds = new Set<string>();
+    return value.map((section, index) => {
+      if (!section || typeof section !== 'object' || Array.isArray(section)) {
+        throw new ApiError(400, `propertySections[${index}] must be an object`);
+      }
+
+      const candidate = section as Record<string, any>;
+      const id = typeof candidate.id === 'string' && candidate.id.trim()
+        ? candidate.id.trim()
+        : uuidv4();
+      if (seenIds.has(id)) {
+        throw new ApiError(400, 'Property section IDs must be unique within a representation');
+      }
+      seenIds.add(id);
+
+      return {
+        id,
+        name: this.normalizeName(candidate.name, `propertySections[${index}].name`),
+        ...(candidate.metaClassIds !== undefined && {
+          metaClassIds: this.uniqueStringIds(candidate.metaClassIds, `propertySections[${index}].metaClassIds`),
+        }),
+        ...(candidate.attributeNames !== undefined && {
+          attributeNames: this.uniqueStringIds(candidate.attributeNames, `propertySections[${index}].attributeNames`),
+        }),
+        ...(candidate.referenceNames !== undefined && {
+          referenceNames: this.uniqueStringIds(candidate.referenceNames, `propertySections[${index}].referenceNames`),
+        }),
+      };
+    });
+  }
+
+  private normalizeConditionalStyles(value: unknown): RepresentationConditionalStyle[] | undefined {
+    if (value === undefined) return undefined;
+    if (!Array.isArray(value)) {
+      throw new ApiError(400, 'conditionalStyles must be an array');
+    }
+
+    const seenIds = new Set<string>();
+    return value.map((style, index) => {
+      if (!style || typeof style !== 'object' || Array.isArray(style)) {
+        throw new ApiError(400, `conditionalStyles[${index}] must be an object`);
+      }
+      const candidate = style as Record<string, any>;
+      const id = typeof candidate.id === 'string' && candidate.id.trim() ? candidate.id.trim() : uuidv4();
+      if (seenIds.has(id)) {
+        throw new ApiError(400, 'Conditional style IDs must be unique within a representation');
+      }
+      seenIds.add(id);
+      if (typeof candidate.mappingId !== 'string' || !candidate.mappingId.trim()) {
+        throw new ApiError(400, `conditionalStyles[${index}].mappingId is required`);
+      }
+      if (!LAYER_MAPPING_KINDS.has(candidate.mappingKind)) {
+        throw new ApiError(400, `conditionalStyles[${index}].mappingKind is invalid`);
+      }
+      if (typeof candidate.predicateExpression !== 'string') {
+        throw new ApiError(400, `conditionalStyles[${index}].predicateExpression must be a string`);
+      }
+      if (candidate.enabled !== undefined && typeof candidate.enabled !== 'boolean') {
+        throw new ApiError(400, `conditionalStyles[${index}].enabled must be boolean`);
+      }
+      for (const key of ['concreteSyntax', 'edgeConcreteSyntax']) {
+        if (candidate[key] !== undefined && (!candidate[key] || typeof candidate[key] !== 'object' || Array.isArray(candidate[key]))) {
+          throw new ApiError(400, `conditionalStyles[${index}].${key} must be an object`);
+        }
+      }
+      return {
+        id,
+        mappingId: candidate.mappingId.trim(),
+        mappingKind: candidate.mappingKind,
+        ...(typeof candidate.metaClassId === 'string' && candidate.metaClassId.trim() && { metaClassId: candidate.metaClassId.trim() }),
+        ...(typeof candidate.referenceId === 'string' && candidate.referenceId.trim() && { referenceId: candidate.referenceId.trim() }),
+        predicateExpression: candidate.predicateExpression,
+        ...(candidate.enabled !== undefined && { enabled: candidate.enabled }),
+        ...(candidate.concreteSyntax !== undefined && { concreteSyntax: candidate.concreteSyntax }),
+        ...(candidate.edgeConcreteSyntax !== undefined && { edgeConcreteSyntax: candidate.edgeConcreteSyntax }),
+      } as RepresentationConditionalStyle;
+    });
+  }
+
+  private normalizeLayers(value: unknown): RepresentationLayer[] | undefined {
+    if (value === undefined) return undefined;
+    if (!Array.isArray(value)) {
+      throw new ApiError(400, 'layers must be an array');
+    }
+
+    const seenIds = new Set<string>();
+    return value.map((layer, layerIndex) => {
+      if (!layer || typeof layer !== 'object' || Array.isArray(layer)) {
+        throw new ApiError(400, `layers[${layerIndex}] must be an object`);
+      }
+      const candidate = layer as Record<string, any>;
+      const id = typeof candidate.id === 'string' && candidate.id.trim() ? candidate.id.trim() : uuidv4();
+      if (seenIds.has(id)) {
+        throw new ApiError(400, 'Layer IDs must be unique within a representation');
+      }
+      seenIds.add(id);
+      const name = this.normalizeName(candidate.name, `layers[${layerIndex}].name`);
+      for (const key of ['optional', 'activeByDefault', 'enabled']) {
+        if (candidate[key] !== undefined && typeof candidate[key] !== 'boolean') {
+          throw new ApiError(400, `layers[${layerIndex}].${key} must be boolean`);
+        }
+      }
+      if (candidate.mappings !== undefined && !Array.isArray(candidate.mappings)) {
+        throw new ApiError(400, `layers[${layerIndex}].mappings must be an array`);
+      }
+      const mappingIds = new Set<string>();
+      const mappings = (candidate.mappings || []).map((mapping: unknown, mappingIndex: number) => {
+        if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) {
+          throw new ApiError(400, `layers[${layerIndex}].mappings[${mappingIndex}] must be an object`);
+        }
+        const mappingCandidate = mapping as Record<string, any>;
+        const mappingId = typeof mappingCandidate.id === 'string' && mappingCandidate.id.trim()
+          ? mappingCandidate.id.trim()
+          : uuidv4();
+        if (mappingIds.has(mappingId)) {
+          throw new ApiError(400, `layers[${layerIndex}] mapping IDs must be unique`);
+        }
+        mappingIds.add(mappingId);
+        if (!LAYER_MAPPING_KINDS.has(mappingCandidate.kind)) {
+          throw new ApiError(400, `layers[${layerIndex}].mappings[${mappingIndex}].kind is invalid`);
+        }
+        for (const key of ['concreteSyntax', 'edgeConcreteSyntax']) {
+          if (mappingCandidate[key] !== undefined && (!mappingCandidate[key] || typeof mappingCandidate[key] !== 'object' || Array.isArray(mappingCandidate[key]))) {
+            throw new ApiError(400, `layers[${layerIndex}].mappings[${mappingIndex}].${key} must be an object`);
+          }
+        }
+        const optionalString = (key: string) => (
+          typeof mappingCandidate[key] === 'string' && mappingCandidate[key].trim()
+            ? mappingCandidate[key].trim()
+            : undefined
+        );
+        return {
+          id: mappingId,
+          name: this.normalizeName(mappingCandidate.name, `layers[${layerIndex}].mappings[${mappingIndex}].name`),
+          kind: mappingCandidate.kind,
+          ...(optionalString('parentMappingId') && { parentMappingId: optionalString('parentMappingId') }),
+          ...(optionalString('metaClassId') && { metaClassId: optionalString('metaClassId') }),
+          ...(optionalString('referenceId') && { referenceId: optionalString('referenceId') }),
+          ...(optionalString('semanticCandidatesExpression') && { semanticCandidatesExpression: optionalString('semanticCandidatesExpression') }),
+          ...(optionalString('targetFinderExpression') && { targetFinderExpression: optionalString('targetFinderExpression') }),
+          ...(mappingCandidate.concreteSyntax !== undefined && { concreteSyntax: mappingCandidate.concreteSyntax }),
+          ...(mappingCandidate.edgeConcreteSyntax !== undefined && { edgeConcreteSyntax: mappingCandidate.edgeConcreteSyntax }),
+        } as RepresentationLayerMapping;
+      });
+      return {
+        id,
+        name,
+        ...(typeof candidate.label === 'string' && candidate.label.trim() && { label: candidate.label.trim() }),
+        ...(candidate.optional !== undefined && { optional: candidate.optional }),
+        ...(candidate.activeByDefault !== undefined && { activeByDefault: candidate.activeByDefault }),
+        ...(candidate.enabled !== undefined && { enabled: candidate.enabled }),
+        ...(candidate.mappings !== undefined && { mappings }),
+      } as RepresentationLayer;
+    });
+  }
+
+  private normalizeFilters(value: unknown): RepresentationFilter[] | undefined {
+    if (value === undefined) return undefined;
+    if (!Array.isArray(value)) {
+      throw new ApiError(400, 'filters must be an array');
+    }
+
+    const seenIds = new Set<string>();
+    return value.map((filter, filterIndex) => {
+      if (!filter || typeof filter !== 'object' || Array.isArray(filter)) {
+        throw new ApiError(400, `filters[${filterIndex}] must be an object`);
+      }
+      const candidate = filter as Record<string, any>;
+      const id = typeof candidate.id === 'string' && candidate.id.trim() ? candidate.id.trim() : uuidv4();
+      if (seenIds.has(id)) {
+        throw new ApiError(400, 'Filter IDs must be unique within a representation');
+      }
+      seenIds.add(id);
+      if (candidate.enabled !== undefined && typeof candidate.enabled !== 'boolean') {
+        throw new ApiError(400, `filters[${filterIndex}].enabled must be boolean`);
+      }
+      if (!Array.isArray(candidate.rules)) {
+        throw new ApiError(400, `filters[${filterIndex}].rules must be an array`);
+      }
+      const ruleIds = new Set<string>();
+      const rules = candidate.rules.map((rule: unknown, ruleIndex: number) => {
+        if (!rule || typeof rule !== 'object' || Array.isArray(rule)) {
+          throw new ApiError(400, `filters[${filterIndex}].rules[${ruleIndex}] must be an object`);
+        }
+        const ruleCandidate = rule as Record<string, any>;
+        const ruleId = typeof ruleCandidate.id === 'string' && ruleCandidate.id.trim()
+          ? ruleCandidate.id.trim()
+          : uuidv4();
+        if (ruleIds.has(ruleId)) {
+          throw new ApiError(400, `filters[${filterIndex}] rule IDs must be unique`);
+        }
+        ruleIds.add(ruleId);
+        if (!FILTER_RULE_KINDS.has(ruleCandidate.kind)) {
+          throw new ApiError(400, `filters[${filterIndex}].rules[${ruleIndex}].kind is invalid`);
+        }
+        if (ruleCandidate.filterKind !== undefined && !FILTER_KINDS.has(ruleCandidate.filterKind)) {
+          throw new ApiError(400, `filters[${filterIndex}].rules[${ruleIndex}].filterKind is invalid`);
+        }
+        const optionalString = (key: string) => (
+          typeof ruleCandidate[key] === 'string' && ruleCandidate[key].trim()
+            ? ruleCandidate[key].trim()
+            : undefined
+        );
+        return {
+          id: ruleId,
+          kind: ruleCandidate.kind,
+          ...(ruleCandidate.filterKind !== undefined && { filterKind: ruleCandidate.filterKind }),
+          ...(ruleCandidate.mappingIds !== undefined && {
+            mappingIds: this.uniqueStringIds(ruleCandidate.mappingIds, `filters[${filterIndex}].rules[${ruleIndex}].mappingIds`),
+          }),
+          ...(ruleCandidate.mappingReferences !== undefined && {
+            mappingReferences: this.uniqueStringIds(ruleCandidate.mappingReferences, `filters[${filterIndex}].rules[${ruleIndex}].mappingReferences`),
+          }),
+          ...(optionalString('semanticConditionExpression') && { semanticConditionExpression: optionalString('semanticConditionExpression') }),
+          ...(optionalString('viewConditionExpression') && { viewConditionExpression: optionalString('viewConditionExpression') }),
+        };
+      });
+      return {
+        id,
+        name: this.normalizeName(candidate.name, `filters[${filterIndex}].name`),
+        ...(candidate.enabled !== undefined && { enabled: candidate.enabled }),
+        rules,
+      } as RepresentationFilter;
+    });
+  }
+
+  private normalizeToolDefinitions(value: unknown): ToolDefinition[] | undefined {
+    if (value === undefined) return undefined;
+    if (!Array.isArray(value)) {
+      throw new ApiError(400, 'toolDefinitions must be an array');
+    }
+
+    const seenIds = new Set<string>();
+    return value.map((tool, toolIndex) => {
+      if (!tool || typeof tool !== 'object' || Array.isArray(tool)) {
+        throw new ApiError(400, `toolDefinitions[${toolIndex}] must be an object`);
+      }
+
+      const candidate = tool as Record<string, any>;
+      const id = typeof candidate.id === 'string' && candidate.id.trim() ? candidate.id.trim() : uuidv4();
+      if (seenIds.has(id)) {
+        throw new ApiError(400, 'Tool definition IDs must be unique within a representation');
+      }
+      seenIds.add(id);
+
+      if (typeof candidate.name !== 'string' || !candidate.name.trim()) {
+        throw new ApiError(400, `toolDefinitions[${toolIndex}].name is required`);
+      }
+
+      const legacyType = candidate.type === 'node'
+        ? 'create-node'
+        : candidate.type === 'edge'
+          ? 'create-edge'
+          : candidate.type;
+      const type = typeof legacyType === 'string' && legacyType.trim()
+        ? legacyType.trim()
+        : 'create-node';
+      if (!TOOL_TYPES.has(type) && !type.startsWith('sirius:')) {
+        throw new ApiError(400, `toolDefinitions[${toolIndex}].type is not supported`);
+      }
+
+      let payload: ToolDefinition['payload'];
+      if (candidate.payload !== undefined) {
+        if (!candidate.payload || typeof candidate.payload !== 'object' || Array.isArray(candidate.payload)) {
+          throw new ApiError(400, `toolDefinitions[${toolIndex}].payload must be an object`);
+        }
+
+        const rawOperations = candidate.payload.operations;
+        if (rawOperations !== undefined && !Array.isArray(rawOperations)) {
+          throw new ApiError(400, `toolDefinitions[${toolIndex}].payload.operations must be an array`);
+        }
+        if ((rawOperations || []).length > 50) {
+          throw new ApiError(400, `toolDefinitions[${toolIndex}].payload.operations exceeds the 50-operation limit`);
+        }
+
+        const attributeNames = new Set<string>();
+        const operations = (rawOperations || []).map((operation: unknown, operationIndex: number) => {
+          if (!operation || typeof operation !== 'object' || Array.isArray(operation)) {
+            throw new ApiError(400, `toolDefinitions[${toolIndex}].payload.operations[${operationIndex}] must be an object`);
+          }
+
+          const operationCandidate = operation as Record<string, unknown>;
+          if (operationCandidate.type !== 'set-attribute') {
+            throw new ApiError(400, `toolDefinitions[${toolIndex}].payload.operations[${operationIndex}].type is not supported`);
+          }
+          if (typeof operationCandidate.attributeName !== 'string' || !operationCandidate.attributeName.trim()) {
+            throw new ApiError(400, `toolDefinitions[${toolIndex}].payload.operations[${operationIndex}].attributeName is required`);
+          }
+          const attributeName = operationCandidate.attributeName.trim();
+          if (attributeNames.has(attributeName)) {
+            throw new ApiError(400, `toolDefinitions[${toolIndex}] initializes attribute "${attributeName}" more than once`);
+          }
+          attributeNames.add(attributeName);
+
+          const operationValue = operationCandidate.value;
+          const isSafeScalar = operationValue === null
+            || typeof operationValue === 'string'
+            || typeof operationValue === 'boolean'
+            || (typeof operationValue === 'number' && Number.isFinite(operationValue));
+          if (!isSafeScalar) {
+            throw new ApiError(400, `toolDefinitions[${toolIndex}].payload.operations[${operationIndex}].value must be a scalar or null`);
+          }
+
+          return {
+            type: 'set-attribute' as const,
+            attributeName,
+            value: operationValue as string | number | boolean | null,
+          };
+        });
+
+        if (operations.length > 0 && type !== 'create-node') {
+          throw new ApiError(400, 'set-attribute operations are only supported on create-node tools');
+        }
+
+        payload = {
+          ...candidate.payload,
+          ...(rawOperations !== undefined && { operations }),
+        };
+      }
+
+      return {
+        id,
+        name: candidate.name.trim(),
+        type,
+        ...(typeof candidate.metaClassId === 'string' && candidate.metaClassId.trim() && {
+          metaClassId: candidate.metaClassId.trim(),
+        }),
+        ...(typeof candidate.referenceId === 'string' && candidate.referenceId.trim() && {
+          referenceId: candidate.referenceId.trim(),
+        }),
+        ...(payload !== undefined && { payload }),
+      };
+    });
+  }
+
   private normalizeRepresentationDescriptions(
     viewpointId: string,
     descriptions: unknown
@@ -270,6 +669,24 @@ class ViewpointService {
         defaultByKind.add(candidate.kind);
       }
 
+      const containerMappings = this.normalizeContainerMappings(candidate.containerMappings);
+      if (containerMappings?.length && candidate.kind !== 'diagram') {
+        throw new ApiError(400, 'containerMappings are only supported on diagram representations');
+      }
+      const propertySections = this.normalizePropertySections(candidate.propertySections);
+      if (propertySections?.length && candidate.kind !== 'diagram') {
+        throw new ApiError(400, 'propertySections are only supported on diagram representations');
+      }
+      const layers = this.normalizeLayers(candidate.layers);
+      const filters = this.normalizeFilters(candidate.filters);
+      const conditionalStyles = this.normalizeConditionalStyles(candidate.conditionalStyles);
+      if (
+        candidate.kind !== 'diagram'
+        && ((layers?.length || 0) + (filters?.length || 0) + (conditionalStyles?.length || 0) > 0)
+      ) {
+        throw new ApiError(400, 'layers, filters, and conditionalStyles are only supported on diagram representations');
+      }
+
       return {
         id,
         name,
@@ -278,17 +695,27 @@ class ViewpointService {
         kind: candidate.kind,
         visibleMetaClassIds: this.uniqueStringIds(candidate.visibleMetaClassIds, 'visibleMetaClassIds'),
         creatableMetaClassIds: this.uniqueStringIds(candidate.creatableMetaClassIds, 'creatableMetaClassIds'),
+        ...(candidate.tableColumns !== undefined && {
+          tableColumns: this.uniqueStringIds(candidate.tableColumns, 'tableColumns'),
+        }),
         ...(candidate.concreteSyntaxByMetaClassId !== undefined && {
           concreteSyntaxByMetaClassId: candidate.concreteSyntaxByMetaClassId,
         }),
         ...(candidate.concreteSyntaxByReferenceId !== undefined && {
           concreteSyntaxByReferenceId: candidate.concreteSyntaxByReferenceId,
         }),
+        ...(containerMappings !== undefined && { containerMappings }),
+        ...(propertySections !== undefined && { propertySections }),
         ...(candidate.edgeMappings !== undefined && { edgeMappings: candidate.edgeMappings }),
         ...(candidate.pinMappings !== undefined && {
           pinMappings: this.normalizePinMappings(candidate.pinMappings),
         }),
-        ...(candidate.toolDefinitions !== undefined && { toolDefinitions: candidate.toolDefinitions }),
+        ...(layers !== undefined && { layers }),
+        ...(filters !== undefined && { filters }),
+        ...(conditionalStyles !== undefined && { conditionalStyles }),
+        ...(candidate.toolDefinitions !== undefined && {
+          toolDefinitions: this.normalizeToolDefinitions(candidate.toolDefinitions),
+        }),
         isDefault,
       } as RepresentationDescription;
     });
@@ -561,10 +988,6 @@ class ViewpointService {
     const representationDescription = this.getRepresentationDescription(viewpoint, representationDescriptionId);
     if (!representationDescription) {
       throw new ApiError(400, 'Selected representation description not found');
-    }
-
-    if (representationDescription.kind !== 'diagram') {
-      throw new ApiError(400, 'Only diagram representation descriptions can be opened in the current editor');
     }
 
     return { viewpoint, representationDescription };
