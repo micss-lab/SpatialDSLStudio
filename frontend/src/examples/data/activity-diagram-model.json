@@ -34,9 +34,9 @@
           "x": 20,
           "y": 20
         },
-        "size2D": {
-          "width": 220,
-          "height": 60
+      "size2D": {
+        "width": 1490,
+        "height": 360
         },
         "appearance": {
           "type": "rectangle",
@@ -432,9 +432,9 @@
           "x": 20,
           "y": 400
         },
-        "size2D": {
-          "width": 220,
-          "height": 60
+      "size2D": {
+        "width": 740,
+        "height": 150
         },
         "appearance": {
           "type": "rectangle",

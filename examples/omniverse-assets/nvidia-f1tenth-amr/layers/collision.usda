@@ -1,0 +1,68 @@
+#usda 1.0
+(
+    documentation = "Reviewed primitive collision proxies. Physics body mode and mass are authored by stronger simulation layers."
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+over "F1TenthAMR"
+{
+    def Scope "Collision"
+    {
+        def Cube "ChassisProxy" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            uniform token purpose = "guide"
+            token visibility = "invisible"
+            float size = 1
+            custom string spatialDsl:colliderRole = "chassis"
+            double3 xformOp:scale = (0.49, 0.25, 0.15)
+            double3 xformOp:translate = (0, 0, 0.12)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Cube "SensorProxy" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            uniform token purpose = "guide"
+            token visibility = "invisible"
+            float size = 1
+            custom string spatialDsl:colliderRole = "sensor-envelope"
+            double3 xformOp:scale = (0.30, 0.18, 0.14)
+            double3 xformOp:translate = (0.015, 0, 0.235)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Cylinder "FrontWheelProxy" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            uniform token purpose = "guide"
+            token visibility = "invisible"
+            float height = 0.32
+            float radius = 0.057
+            custom string spatialDsl:colliderRole = "front-wheel-envelope"
+            float3 xformOp:rotateXYZ = (90, 0, 0)
+            double3 xformOp:translate = (0.174, 0, 0.058)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+        }
+
+        def Cylinder "RearWheelProxy" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            uniform token purpose = "guide"
+            token visibility = "invisible"
+            float height = 0.32
+            float radius = 0.057
+            custom string spatialDsl:colliderRole = "rear-wheel-envelope"
+            float3 xformOp:rotateXYZ = (90, 0, 0)
+            double3 xformOp:translate = (-0.174, 0, 0.058)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+        }
+    }
+}

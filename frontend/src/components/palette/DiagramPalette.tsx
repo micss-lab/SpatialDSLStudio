@@ -10,14 +10,26 @@ import {
 import ShapeLineIcon from '@mui/icons-material/ShapeLine';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import LinkIcon from '@mui/icons-material/Link';
+import SyncAltIcon from '@mui/icons-material/SyncAlt';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useNavigate } from 'react-router-dom';
-import { Diagram, MetaClass, Metamodel, Model, ModelElement, RepresentationDescription } from '../../models/types';
+import {
+  Diagram,
+  MetaClass,
+  Metamodel,
+  Model,
+  ModelElement,
+  RepresentationDescription,
+  ToolDefinition,
+} from '../../models/types';
 import { viewpointService } from '../../services/viewpoint.service';
+import { getExecutableToolType } from '../../services/diagram/tool-definition.utils';
 
 export type DiagramPaletteDragItem =
   | { kind: 'existing-model-element'; modelElement: ModelElement }
-  | { kind: 'new-metaclass'; metaClass: MetaClass };
+  | { kind: 'new-metaclass'; metaClass: MetaClass; tool?: ToolDefinition };
 
 interface DiagramPaletteProps {
   metamodel: Metamodel;
@@ -25,6 +37,8 @@ interface DiagramPaletteProps {
   diagram: Diagram;
   onDragStart: (item: DiagramPaletteDragItem) => void;
   onAddAll: () => void;
+  onToolActivate?: (tool: ToolDefinition) => void;
+  activeToolId?: string;
 }
 
 const DiagramPalette: React.FC<DiagramPaletteProps> = ({
@@ -32,7 +46,9 @@ const DiagramPalette: React.FC<DiagramPaletteProps> = ({
   model,
   diagram,
   onDragStart,
-  onAddAll
+  onAddAll,
+  onToolActivate,
+  activeToolId,
 }) => {
   const navigate = useNavigate();
   const includedElementIds = new Set(
@@ -86,6 +102,28 @@ const DiagramPalette: React.FC<DiagramPaletteProps> = ({
   ).length;
   const isTypeFiltered = visibleMetaClassIds.size > 0 || creatableMetaClassIds.size > 0;
   const descriptionName = representationDescription?.name;
+  const toolDefinitions = representationDescription?.toolDefinitions || [];
+  const creationTools = toolDefinitions.filter(tool => {
+    const type = getExecutableToolType(tool);
+    return type === 'create-node' || type === 'create-edge';
+  });
+  const interactionTools = toolDefinitions.filter(tool => {
+    const type = getExecutableToolType(tool);
+    return type === 'delete' || type === 'reconnect';
+  });
+  const hasAuthoredCreationTools = creationTools.length > 0;
+  const getToolMetaClass = (tool: ToolDefinition): MetaClass | undefined => (
+    metamodel.classes.find(metaClass => metaClass.id === tool.metaClassId)
+  );
+  const getToolReferenceLabel = (tool: ToolDefinition): string => {
+    for (const sourceClass of metamodel.classes) {
+      const reference = (sourceClass.references || []).find(candidate => (
+        candidate.id === tool.referenceId || candidate.name === tool.referenceId
+      ));
+      if (reference) return `${sourceClass.name}.${reference.name}`;
+    }
+    return 'Reference not configured';
+  };
   const getMetaClassName = (modelElement: ModelElement) => {
     return metamodel.classes.find(cls => cls.id === modelElement.modelElementId)?.name || modelElement.modelElementId;
   };
@@ -109,19 +147,24 @@ const DiagramPalette: React.FC<DiagramPaletteProps> = ({
     onDragStart({ kind: 'existing-model-element', modelElement });
   };
 
-  const handleMetaClassDragStart = (e: React.DragEvent<HTMLDivElement>, metaClass: MetaClass) => {
+  const handleMetaClassDragStart = (
+    e: React.DragEvent<HTMLDivElement>,
+    metaClass: MetaClass,
+    tool?: ToolDefinition
+  ) => {
     try {
       e.dataTransfer.setData('application/json', JSON.stringify({
         kind: 'new-metaclass',
         metaClassId: metaClass.id,
         name: metaClass.name,
+        ...(tool ? { toolId: tool.id } : {}),
       }));
       e.dataTransfer.effectAllowed = 'copy';
     } catch (error) {
       console.error('Error setting drag data:', error);
     }
 
-    onDragStart({ kind: 'new-metaclass', metaClass });
+    onDragStart({ kind: 'new-metaclass', metaClass, ...(tool ? { tool } : {}) });
   };
 
   return (
@@ -210,11 +253,78 @@ const DiagramPalette: React.FC<DiagramPaletteProps> = ({
         <Divider sx={{ my: 2 }} />
 
         <Typography variant="subtitle1" gutterBottom>
-          Create new instance
+          {hasAuthoredCreationTools ? 'Creation tools' : 'Create new instance'}
         </Typography>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {creatableMetaClasses.map((metaClass) => (
+          {hasAuthoredCreationTools && creationTools.map(tool => {
+            const type = getExecutableToolType(tool);
+            if (type === 'create-edge') {
+              return (
+                <Tooltip
+                  key={tool.id}
+                  title={onToolActivate
+                    ? `Use ${getToolReferenceLabel(tool)}`
+                    : 'Edge tools are available in the 2D editor'}
+                  placement="right"
+                >
+                  <span>
+                    <Button
+                      variant={activeToolId === tool.id ? 'contained' : 'outlined'}
+                      size="small"
+                      startIcon={<LinkIcon />}
+                      onClick={() => onToolActivate?.(tool)}
+                      disabled={!tool.referenceId || !onToolActivate}
+                      aria-pressed={activeToolId === tool.id}
+                      fullWidth
+                      sx={{ justifyContent: 'flex-start' }}
+                    >
+                      {tool.name}
+                    </Button>
+                  </span>
+                </Tooltip>
+              );
+            }
+
+            const metaClass = getToolMetaClass(tool);
+            const enabled = Boolean(metaClass && isCreatable(metaClass));
+            return (
+              <Tooltip
+                key={tool.id}
+                title={enabled && metaClass ? `Create ${metaClass.name}` : 'Concrete creatable metaclass not configured'}
+                placement="right"
+              >
+                <div
+                  draggable={enabled}
+                  onDragStart={metaClass && enabled ? (event) => handleMetaClassDragStart(event, metaClass, tool) : undefined}
+                  aria-disabled={!enabled}
+                  style={{
+                    border: '1px dashed #90caf9',
+                    borderRadius: '4px',
+                    marginBottom: '8px',
+                    cursor: enabled ? 'copy' : 'not-allowed',
+                    opacity: enabled ? 1 : 0.55,
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    backgroundColor: '#f7fbff'
+                  }}
+                >
+                  <Box sx={{ minWidth: 36, display: 'flex', alignItems: 'center' }}>
+                    <AddCircleOutlineIcon color={enabled ? 'primary' : 'disabled'} />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="body2" noWrap>{tool.name}</Typography>
+                    <Typography variant="caption" color="textSecondary" noWrap>
+                      {metaClass?.name || 'Target not configured'}
+                    </Typography>
+                  </Box>
+                </div>
+              </Tooltip>
+            );
+          })}
+
+          {!hasAuthoredCreationTools && creatableMetaClasses.map((metaClass) => (
             <Tooltip
               key={metaClass.id}
               title={`Create ${metaClass.name}`}
@@ -247,10 +357,39 @@ const DiagramPalette: React.FC<DiagramPaletteProps> = ({
           ))}
         </Box>
 
-        {creatableMetaClasses.length === 0 && (
+        {!hasAuthoredCreationTools && creatableMetaClasses.length === 0 && (
           <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 2 }}>
             No concrete metaclasses are available.
           </Typography>
+        )}
+
+        {interactionTools.length > 0 && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle1" gutterBottom>Interaction tools</Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {interactionTools.map(tool => {
+                const type = getExecutableToolType(tool);
+                const isActive = activeToolId === tool.id;
+                return (
+                  <Button
+                    key={tool.id}
+                    variant={isActive ? 'contained' : 'outlined'}
+                    color={type === 'delete' ? 'error' : 'primary'}
+                    size="small"
+                    startIcon={type === 'delete' ? <DeleteOutlineIcon /> : <SyncAltIcon />}
+                    onClick={() => onToolActivate?.(tool)}
+                    disabled={!onToolActivate}
+                    aria-pressed={isActive}
+                    fullWidth
+                    sx={{ justifyContent: 'flex-start' }}
+                  >
+                    {tool.name}
+                  </Button>
+                );
+              })}
+            </Box>
+          </>
         )}
 
         {isTypeFiltered && (

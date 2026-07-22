@@ -1,11 +1,25 @@
 {
-  "version": 1,
+  "version": 2,
   "defaults": {
     "MobileRobot": {
-      "asset": "cc0-mini-vehicle-kit/demo_forklift.usda",
-      "uniformScale": 0.01,
-      "rotateXDeg": 90,
-      "zOffsetM": 0
+      "asset": "nvidia-f1tenth-amr/f1tenth_amr_collision.usda",
+      "articulationAsset": "nvidia-f1tenth-amr/f1tenth_amr_articulation.usda",
+      "uniformScale": 1,
+      "rotateXDeg": 0,
+      "zOffsetM": 0,
+      "assetVersion": "1.0.0-spatialdsl",
+      "sourceUri": "https://github.com/NVIDIA-Omniverse/sample-ackermann-amr",
+      "sourceRevision": "ccf6b3ee65a3df82160b217a4cd1b523b2f7c351",
+      "license": "MIT",
+      "metersPerUnit": 1,
+      "upAxis": "Z",
+      "forwardAxis": "+X",
+      "bodyMode": "kinematic",
+      "massKg": 3.1,
+      "wheelRadiusM": 0.057,
+      "wheelSeparationM": 0.324,
+      "leftWheelJoint": "Drive/LeftWheelJoint",
+      "rightWheelJoint": "Drive/RightWheelJoint"
     },
     "Conveyor": {
       "asset": "warehouse-kit/conveyor.usda",

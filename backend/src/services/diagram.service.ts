@@ -349,6 +349,10 @@ class DiagramService {
       diagram.representationDescriptionId || undefined
     );
 
+    if (resolved.representationDescription.kind !== 'diagram') {
+      throw new ApiError(400, 'This operation is only supported for diagram representations');
+    }
+
     return resolved.representationDescription;
   }
 

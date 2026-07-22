@@ -100,4 +100,33 @@ describe('setModelElementReference with inherited references', () => {
     expect(result).toBe(false);
     expect(model.elements[0].references.notARealReference).toBeUndefined();
   });
+
+  it('reconnects and removes an inherited multi-valued reference', () => {
+    const model = makeModel();
+    model.elements.push({ id: 'el-action-2', modelElementId: ACTION_ID, style: {}, references: {} });
+    model.elements[0].references.flowsTo = ['el-action'];
+    const save = jest.fn();
+
+    const reconnected = modelReferenceService.reconnectModelElementReference(
+      model,
+      'el-start',
+      'flowsTo',
+      'el-action',
+      'el-action-2',
+      save
+    );
+    expect(reconnected).toBe(true);
+    expect(model.elements[0].references.flowsTo).toEqual(['el-action-2']);
+
+    const removed = modelReferenceService.removeModelElementReference(
+      model,
+      'el-start',
+      'flowsTo',
+      'el-action-2',
+      save
+    );
+    expect(removed).toBe(true);
+    expect(model.elements[0].references.flowsTo).toEqual([]);
+    expect(save).toHaveBeenCalledTimes(2);
+  });
 });

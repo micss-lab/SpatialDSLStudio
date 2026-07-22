@@ -45,12 +45,26 @@ Implemented foundation:
 - `.odesign` viewpoint import/export subset
 - `.aird` view import subset (resolves against an imported model/viewpoint, preserves GMF layout)
 - `.aird` view export subset (serializes SpatialDSL views back to a Sirius session with GMF layout; round-trips with import)
+- single-model Sirius project ZIP export (`.project`, `.ecore`, `.xmi`,
+  `.odesign`, and `.aird`) with consistent relative references
+- executable tree representations over containment references
+- configurable, sortable, inline-editable table representations
+- executable create-node, create-edge, delete, and target-reconnect tools
+- safe create-node `set-attribute` operations
+- containment-driven container mapping contracts and editor
+- nested container projection/rendering with constrained child layout
+- `.odesign` container mapping and nested `.aird` GMF round-trips
+- view-scoped OCL/JavaScript validation panels with navigation and 2D/3D markers
+- representation-specific attribute/reference property sections and editors
+- `.odesign` conditional styles, composite filters, and additional layers with
+  typed import/export preservation and editor toggles
 
 In progress / planned:
 
 - richer example coverage and walkthrough documentation
 - broader workflow tests and docs
-- container mapping editor, tool execution/operations, tree representations, and richer table editing
+- advanced tool/direct-edit operations
+- validation quick fixes, severity filtering, and optional live revalidation
 
 ## Parity Areas
 
@@ -93,11 +107,11 @@ Tracker:
 - [x] metaclass notation override contract
 - [x] reference notation override contract
 - [x] node mapping editor
-- [ ] container mapping editor
+- [x] container mapping editor
 - [x] edge mapping editor
-- [ ] conditional styles
-- [ ] layers
-- [ ] filters
+- [x] conditional styles
+- [x] layers
+- [x] filters
 
 ### 3. Tools And Operations
 
@@ -108,7 +122,7 @@ SpatialDSL target:
 - palette/tool definitions inside representation descriptions
 - creation tools for metaclasses and references
 - pin creation tools
-- later model operation/action language
+- a safe incremental model-operation language
 
 Tracker:
 
@@ -120,8 +134,11 @@ Tracker:
 - [x] delete tool definitions
 - [x] direct edit tool definitions
 - [x] reconnect tool definitions
-- [ ] tool execution in the palette/editor (currently authored, executes via default palette)
-- [ ] model operation language
+- [x] create-node and create-edge execution in the palette/editor
+- [x] semantic delete and target-reconnect execution in the 2D editor
+- [x] minimal create-node `set-attribute` operation payload
+- [ ] custom direct-edit execution
+- [ ] full Sirius model-operation trees and expression/service execution
 
 ### 4. Table And Tree Representations
 
@@ -129,16 +146,19 @@ Sirius supports diagram, table, and tree representations.
 
 SpatialDSL target:
 
-- diagram executable first
-- table/tree reserved in contracts
-- later executable web editors
+- executable diagram, table, and tree web editors
+- configurable table attributes with semantic inline editing
+- containment-derived expandable tree navigation
 
 Tracker:
 
 - [x] `RepresentationKind = 'diagram' | 'table' | 'tree'`
-- [x] table representation (executable, read-only)
-- [ ] tree representation editor
-- [x] Create View support for executable table (tree pending)
+- [x] table representation (executable, configurable, sortable, inline-editable)
+- [x] tree representation editor
+- [x] Create View support for executable table and tree representations
+- [x] table column selection
+- [x] inline semantic attribute editing
+- [x] basic table sorting
 
 ### 5. Semantic EMF/Ecore/XMI Fidelity
 
@@ -156,7 +176,8 @@ Tracker:
 - [x] XMI-oriented model services foundation
 - [ ] multi-resource model sessions
 - [x] sidecar representation export (`.aird` session/representation export with GMF layout)
-- [ ] explicit warnings for SpatialDSL-specific presentation data
+- [x] single-model Sirius project bundle (`.ecore` + `.xmi` + `.odesign` + `.aird`)
+- [x] explicit warnings for SpatialDSL-specific presentation data
 - [ ] higher-fidelity Ecore constraints/opposites/containment handling
 
 ### 6. Pins, Ports, And Advanced Anchors
@@ -188,31 +209,26 @@ Sirius integrates validation, properties views, and tooling.
 SpatialDSL target:
 
 - keep current OCL/JS validation
-- later bind validation visibility/actions into representations
+- bind validation visibility/actions into representations
 - representation-specific property panels
 
 Tracker:
 
 - [x] OCL/JS validation foundations
-- [ ] representation-aware validation display
+- [x] representation-aware validation display
 - [ ] quick fixes
-- [ ] representation-specific property sections
-- [ ] viewpoint-defined property panels
+- [x] representation-specific property sections
+- [x] viewpoint-defined property panels
 
 ## Immediate Roadmap
 
-The completed phases 3-5 are a Sirius-style web specifier slice, not full Sirius Desktop parity. The next concrete work is:
-
-1. Phase 6 example data polish and walkthroughs
-2. Phase 7 broader tests around full user workflows
-3. Phase 8 screenshots and documentation
-
-After those are done, revisit this roadmap and choose the next parity area:
-
-- table/tree representations
-- `.odesign` import/export
-- diagram mapping editor
-- tool operation language
+Roadmap Phases 1–6—tree/table representations, native tool execution, container
+mappings, validation/property panels, advanced `.odesign` preservation, and the
+full Sirius project bundle—were implemented and passed automated verification on
+July 21, 2026. The next parity work is validation quick fixes, richer workflow
+controls, direct-edit operations, and broader multi-resource support. Opening an
+exported bundle in a real Eclipse Sirius installation remains a release smoke
+test rather than an implementation task.
 
 ## Current Interoperability Position
 

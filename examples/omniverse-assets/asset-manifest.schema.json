@@ -35,8 +35,15 @@
       "properties": {
         "asset": {
           "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
           "minLength": 1,
-          "description": "Path to the USD asset, relative to the asset root."
+          "description": "Safe POSIX path to the USD asset, relative to and contained by the asset root."
+        },
+        "articulationAsset": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+          "minLength": 1,
+          "description": "Optional articulation-enabled USD root, relative to the asset root."
         },
         "scaleMode": {
           "type": "string",
@@ -58,6 +65,71 @@
           "type": "number",
           "default": 0.0,
           "description": "Additional Z offset, in meters, applied to the referenced asset."
+        },
+        "assetVersion": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Version of the normalized asset package."
+        },
+        "sourceUri": {
+          "type": "string",
+          "format": "uri",
+          "description": "Upstream provenance URL."
+        },
+        "sourceRevision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Immutable upstream tag or revision."
+        },
+        "license": {
+          "type": "string",
+          "minLength": 1,
+          "description": "SPDX license identifier for redistribution."
+        },
+        "metersPerUnit": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Authored asset metres-per-unit metadata."
+        },
+        "upAxis": {
+          "type": "string",
+          "enum": ["Y", "Z"],
+          "description": "Authored asset up axis."
+        },
+        "forwardAxis": {
+          "type": "string",
+          "enum": ["+X", "-X", "+Y", "-Y"],
+          "description": "Authored asset forward axis after normalization."
+        },
+        "bodyMode": {
+          "type": "string",
+          "enum": ["static", "kinematic", "dynamic"],
+          "description": "Default physics body mode when the asset is instantiated."
+        },
+        "massKg": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Reviewed rigid-body mass in kilograms."
+        },
+        "wheelRadiusM": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Differential-drive wheel radius in metres."
+        },
+        "wheelSeparationM": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Distance between differential-drive wheel centers in metres."
+        },
+        "leftWheelJoint": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Prim path below the asset root for the left wheel joint."
+        },
+        "rightWheelJoint": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Prim path below the asset root for the right wheel joint."
         }
       }
     }

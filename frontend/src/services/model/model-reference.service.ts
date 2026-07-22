@@ -6,6 +6,50 @@ import { modelInheritanceUtilsService } from './model-inheritance-utils.service'
  * Service for managing references between model elements
  */
 export class ModelReferenceService {
+  private isMetaClassCompatible(metamodel: any, candidateId: string, expectedId: string): boolean {
+    if (candidateId === expectedId) return true;
+
+    const visited = new Set<string>();
+    const visit = (metaClassId: string): boolean => {
+      if (visited.has(metaClassId)) return false;
+      visited.add(metaClassId);
+
+      const metaClass = metamodel.classes.find((candidate: any) => candidate.id === metaClassId);
+      if (!metaClass) return false;
+      return (metaClass.superTypes || []).some((superTypeId: string) => (
+        superTypeId === expectedId || visit(superTypeId)
+      ));
+    };
+
+    return visit(candidateId);
+  }
+
+  private removeSingleBidirectionalReference(
+    model: Model,
+    sourceElement: ModelElement,
+    targetId: string,
+    oppositeIdentifier: string
+  ): void {
+    const targetElement = model.elements.find(element => element.id === targetId);
+    if (!targetElement) return;
+
+    const metamodel = metamodelService.getMetamodelById(model.conformsTo);
+    const targetMetaClass = metamodel?.classes.find(candidate => candidate.id === targetElement.modelElementId);
+    if (!metamodel || !targetMetaClass) return;
+
+    const oppositeReference = modelInheritanceUtilsService
+      .getAllReferences(targetMetaClass, metamodel)
+      .find(reference => reference.name === oppositeIdentifier || reference.id === oppositeIdentifier);
+    if (!oppositeReference) return;
+
+    const currentValue = targetElement.references[oppositeReference.name];
+    if (Array.isArray(currentValue)) {
+      targetElement.references[oppositeReference.name] = currentValue.filter(id => id !== sourceElement.id);
+    } else if (currentValue === sourceElement.id) {
+      targetElement.references[oppositeReference.name] = null;
+    }
+  }
+
   /**
    * Set or update a reference from one model element to another
    */
@@ -38,63 +82,181 @@ export class ModelReferenceService {
     // (e.g. flowsTo is defined on the abstract FlowNode, not on each concrete node class)
     const reference = modelInheritanceUtilsService
       .getAllReferences(sourceMetaClass, metamodel)
-      .find(r => r.name === referenceName);
+      .find(r => r.name === referenceName || r.id === referenceName);
     if (!reference) return false;
-    
+
+    const resolvedReferenceName = reference.name;
+    const requestedTargetIds = targetElementId === null
+      ? []
+      : Array.isArray(targetElementId)
+        ? targetElementId
+        : [targetElementId];
+
     // For self-references, check if they're allowed
-    if (targetElementId && targetElementId === sourceElementId && reference.allowSelfReference !== true) {
+    if (requestedTargetIds.includes(sourceElementId) && reference.allowSelfReference !== true) {
       console.error('Self-references are not allowed for this reference type');
+      return false;
+    }
+
+    const hasInvalidTarget = requestedTargetIds.some(targetId => {
+      const targetElement = model.elements.find(element => element.id === targetId);
+      return !targetElement
+        || !this.isMetaClassCompatible(metamodel, targetElement.modelElementId, reference.target);
+    });
+    if (hasInvalidTarget) {
+      console.error('Reference target does not conform to the target metaclass');
       return false;
     }
 
     // Check if this is for a multi-valued reference (array)
     const isMultiValued = reference.cardinality.upperBound === '*' || 
                           (typeof reference.cardinality.upperBound === 'number' && reference.cardinality.upperBound > 1);
-    
+
+    const previousValue = sourceElement.references[resolvedReferenceName];
+    const previousTargetIds = Array.isArray(previousValue) ? previousValue : previousValue ? [previousValue] : [];
+    let nextTargetIds: string[] = [];
+
     // Set the reference value
     if (isMultiValued) {
       // Handle multi-valued references
       if (targetElementId === null) {
-        sourceElement.references[referenceName] = [];
+        sourceElement.references[resolvedReferenceName] = [];
       } else if (Array.isArray(targetElementId)) {
-        sourceElement.references[referenceName] = targetElementId;
+        nextTargetIds = Array.from(new Set(targetElementId));
+        sourceElement.references[resolvedReferenceName] = nextTargetIds;
       } else {
         // Convert single value to array or add to existing array
-        const currentValue = sourceElement.references[referenceName];
+        const currentValue = sourceElement.references[resolvedReferenceName];
         if (Array.isArray(currentValue)) {
-          if (!currentValue.includes(targetElementId)) {
-            sourceElement.references[referenceName] = [...currentValue, targetElementId];
-          }
+          nextTargetIds = currentValue.includes(targetElementId)
+            ? [...currentValue]
+            : [...currentValue, targetElementId];
         } else {
-          sourceElement.references[referenceName] = [targetElementId];
+          nextTargetIds = [targetElementId];
         }
+        sourceElement.references[resolvedReferenceName] = nextTargetIds;
       }
     } else {
       // Handle single-valued references
-      sourceElement.references[referenceName] = targetElementId;
+      const nextTarget = Array.isArray(targetElementId) ? targetElementId[0] || null : targetElementId;
+      sourceElement.references[resolvedReferenceName] = nextTarget;
+      nextTargetIds = nextTarget ? [nextTarget] : [];
+    }
+
+    if (reference.opposite) {
+      previousTargetIds
+        .filter(targetId => !nextTargetIds.includes(targetId))
+        .forEach(targetId => this.removeSingleBidirectionalReference(
+          model,
+          sourceElement,
+          targetId,
+          reference.opposite!
+        ));
     }
     
     // Store bend points for visualization if provided
     if (bendPoints && bendPoints.length > 0) {
       // @ts-ignore - References type declaration doesn't know about our custom extensions
-      sourceElement.references[`${referenceName}_bendPoints`] = bendPoints;
+      sourceElement.references[`${resolvedReferenceName}_bendPoints`] = bendPoints;
     }
     
     // Store reference attributes if provided
     if (attributes && Object.keys(attributes).length > 0) {
       // @ts-ignore - References type declaration doesn't know about our custom extensions
-      sourceElement.references[`${referenceName}_attributes`] = attributes;
+      sourceElement.references[`${resolvedReferenceName}_attributes`] = attributes;
     }
     
     // For bidirectional references, update the target element's reference as well
-    if (reference.opposite && targetElementId !== null) {
-      this.updateBidirectionalReference(model, sourceElement, targetElementId, referenceName, reference.opposite);
+    if (reference.opposite && nextTargetIds.length > 0) {
+      this.updateBidirectionalReference(
+        model,
+        sourceElement,
+        nextTargetIds.filter(targetId => !previousTargetIds.includes(targetId)),
+        resolvedReferenceName,
+        reference.opposite
+      );
     }
 
     // Save changes
     saveCallback(model.id);
     
     return true;
+  }
+
+  removeModelElementReference(
+    model: Model,
+    sourceElementId: string,
+    referenceName: string,
+    targetElementId: string,
+    saveCallback: (modelId: string) => void
+  ): boolean {
+    const sourceElement = model.elements.find(element => element.id === sourceElementId);
+    const metamodel = metamodelService.getMetamodelById(model.conformsTo);
+    const sourceMetaClass = metamodel?.classes.find(candidate => candidate.id === sourceElement?.modelElementId);
+    if (!sourceElement || !metamodel || !sourceMetaClass) return false;
+
+    const reference = modelInheritanceUtilsService
+      .getAllReferences(sourceMetaClass, metamodel)
+      .find(candidate => candidate.name === referenceName || candidate.id === referenceName);
+    if (!reference) return false;
+
+    const currentValue = sourceElement.references[reference.name];
+    if (Array.isArray(currentValue)) {
+      if (!currentValue.includes(targetElementId)) return false;
+      return this.setModelElementReference(
+        model,
+        sourceElementId,
+        reference.name,
+        currentValue.filter(id => id !== targetElementId),
+        saveCallback
+      );
+    }
+
+    if (currentValue !== targetElementId) return false;
+    return this.setModelElementReference(model, sourceElementId, reference.name, null, saveCallback);
+  }
+
+  reconnectModelElementReference(
+    model: Model,
+    sourceElementId: string,
+    referenceName: string,
+    oldTargetElementId: string,
+    newTargetElementId: string,
+    saveCallback: (modelId: string) => void
+  ): boolean {
+    const sourceElement = model.elements.find(element => element.id === sourceElementId);
+    const metamodel = metamodelService.getMetamodelById(model.conformsTo);
+    const sourceMetaClass = metamodel?.classes.find(candidate => candidate.id === sourceElement?.modelElementId);
+    if (!sourceElement || !metamodel || !sourceMetaClass) return false;
+
+    const reference = modelInheritanceUtilsService
+      .getAllReferences(sourceMetaClass, metamodel)
+      .find(candidate => candidate.name === referenceName || candidate.id === referenceName);
+    if (!reference) return false;
+
+    const currentValue = sourceElement.references[reference.name];
+    if (Array.isArray(currentValue)) {
+      if (!currentValue.includes(oldTargetElementId)) return false;
+      const nextValue = Array.from(new Set(currentValue.map(id => (
+        id === oldTargetElementId ? newTargetElementId : id
+      ))));
+      return this.setModelElementReference(
+        model,
+        sourceElementId,
+        reference.name,
+        nextValue,
+        saveCallback
+      );
+    }
+
+    if (currentValue !== oldTargetElementId) return false;
+    return this.setModelElementReference(
+      model,
+      sourceElementId,
+      reference.name,
+      newTargetElementId,
+      saveCallback
+    );
   }
 
   /**
@@ -140,7 +302,7 @@ export class ModelReferenceService {
     // Find the opposite reference definition, including inherited references
     const oppositeReference = modelInheritanceUtilsService
       .getAllReferences(targetMetaClass, metamodel)
-      .find(r => r.name === oppositeName);
+      .find(r => r.name === oppositeName || r.id === oppositeName);
     if (!oppositeReference) return;
     
     // Check if opposite reference is multi-valued
@@ -150,17 +312,17 @@ export class ModelReferenceService {
     // Update the opposite reference
     if (isMultiValued) {
       // For multi-valued opposite references
-      const currentValue = targetElement.references[oppositeName];
+      const currentValue = targetElement.references[oppositeReference.name];
       if (Array.isArray(currentValue)) {
         if (!currentValue.includes(sourceElement.id)) {
-          targetElement.references[oppositeName] = [...currentValue, sourceElement.id];
+          targetElement.references[oppositeReference.name] = [...currentValue, sourceElement.id];
         }
       } else {
-        targetElement.references[oppositeName] = [sourceElement.id];
+        targetElement.references[oppositeReference.name] = [sourceElement.id];
       }
     } else {
       // For single-valued opposite references
-      targetElement.references[oppositeName] = sourceElement.id;
+      targetElement.references[oppositeReference.name] = sourceElement.id;
     }
   }
 

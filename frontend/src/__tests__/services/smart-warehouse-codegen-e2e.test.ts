@@ -133,7 +133,7 @@ describe('Smart Warehouse codegen end-to-end (import -> generate -> zip)', () =>
     expect(imported!.templates).toHaveLength(8);
   });
 
-  it('imports the Omniverse project with its 2 templates', () => {
+  it('imports the Omniverse project with its 6 templates', () => {
     const projectData = loadProjectJson('smart-warehouse-omniverse-project.json');
     let imported: CodeGenerationProject | undefined;
     expect(() => {
@@ -141,7 +141,7 @@ describe('Smart Warehouse codegen end-to-end (import -> generate -> zip)', () =>
     }).not.toThrow();
 
     expect(imported).toBeDefined();
-    expect(imported!.templates).toHaveLength(2);
+    expect(imported!.templates).toHaveLength(6);
   });
 
   it('generates all 8 Visual Components files with the expected filenames and no leftover mustache tags', () => {
@@ -175,16 +175,23 @@ describe('Smart Warehouse codegen end-to-end (import -> generate -> zip)', () =>
     );
   });
 
-  it('generates the Omniverse USD scene script and the warehouse layout JSON', () => {
+  it('generates the Omniverse script, layout JSON, and four USD layers', () => {
     const projectData = loadProjectJson('smart-warehouse-omniverse-project.json') as {
       templates: { templateContent: string; outputPattern: string }[];
     };
     const imported = codegenProjectCrudService.importProject(projectData);
     const files = generateAllFiles(imported.templates);
 
-    expect(files).toHaveLength(2);
+    expect(files).toHaveLength(6);
     const filenames = files.map(f => f.filename);
-    expect(filenames).toEqual(expect.arrayContaining(['generate_warehouse_usd.py', 'warehouse_layout.json']));
+    expect(filenames).toEqual(expect.arrayContaining([
+      'generate_warehouse_usd.py',
+      'warehouse_layout.json',
+      'warehouse_layout.usda',
+      'warehouse_assets.usda',
+      'warehouse_physics.usda',
+      'warehouse_simulation.usda',
+    ]));
 
     const scene = files.find(f => f.filename === 'generate_warehouse_usd.py');
     expect(scene!.content).toContain('Usd.Stage.CreateNew');
@@ -197,6 +204,11 @@ describe('Smart Warehouse codegen end-to-end (import -> generate -> zip)', () =>
     expect(parsedLayout.dropoffs).toHaveLength(1);
     expect(parsedLayout.chargers).toHaveLength(2);
     expect(parsedLayout.robots[0].batteryLevel).toBeDefined();
+
+    const rootLayer = files.find(f => f.filename === 'warehouse_simulation.usda');
+    expect(rootLayer!.content).toContain('@./warehouse_layout.usda@');
+    expect(rootLayer!.content).toContain('@./warehouse_assets.usda@');
+    expect(rootLayer!.content).toContain('@./warehouse_physics.usda@');
 
     files.forEach(file => expect(file.content).not.toMatch(UNRESOLVED_MUSTACHE_PATTERN));
   });

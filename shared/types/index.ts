@@ -214,13 +214,29 @@ export interface ConcreteSyntax {
 
 export type RepresentationKind = 'diagram' | 'table' | 'tree';
 
+export type ToolOperationValue = string | number | boolean | null;
+
+export interface SetAttributeToolOperation {
+  type: 'set-attribute';
+  attributeName: string;
+  value: ToolOperationValue;
+}
+
+export type ToolOperation = SetAttributeToolOperation;
+
+export interface ToolDefinitionPayload {
+  operations?: ToolOperation[];
+  sourcePath?: string;
+  [key: string]: unknown;
+}
+
 export interface ToolDefinition {
   id: string;
   name: string;
   type?: string;
   metaClassId?: string;
   referenceId?: string;
-  payload?: Record<string, any>;
+  payload?: ToolDefinitionPayload;
 }
 
 export interface RepresentationEdgeMapping {
@@ -230,6 +246,22 @@ export interface RepresentationEdgeMapping {
   sourceMetaClassIds?: string[];
   targetMetaClassIds?: string[];
   concreteSyntax?: ConcreteSyntaxEdge;
+}
+
+export interface RepresentationContainerMapping {
+  id: string;
+  containerMetaClassId: string;
+  containmentReferenceId: string;
+  childMetaClassIds?: string[];
+  concreteSyntax?: ConcreteSyntax;
+}
+
+export interface RepresentationPropertySection {
+  id: string;
+  name: string;
+  metaClassIds?: string[];
+  attributeNames?: string[];
+  referenceNames?: string[];
 }
 
 export interface RepresentationPinMapping {
@@ -243,6 +275,64 @@ export interface RepresentationPinMapping {
   defaultOffsetRatio?: number;
 }
 
+export type RepresentationLayerMappingKind = 'node' | 'container' | 'bordered-node' | 'edge';
+
+export interface RepresentationLayerMapping {
+  id: string;
+  name: string;
+  kind: RepresentationLayerMappingKind;
+  parentMappingId?: string;
+  metaClassId?: string;
+  referenceId?: string;
+  semanticCandidatesExpression?: string;
+  targetFinderExpression?: string;
+  concreteSyntax?: ConcreteSyntax;
+  edgeConcreteSyntax?: ConcreteSyntaxEdge;
+}
+
+export interface RepresentationLayer {
+  id: string;
+  name: string;
+  label?: string;
+  optional?: boolean;
+  activeByDefault?: boolean;
+  enabled?: boolean;
+  mappings?: RepresentationLayerMapping[];
+}
+
+export type RepresentationConditionalStyleMappingKind = 'node' | 'container' | 'bordered-node' | 'edge';
+
+export interface RepresentationConditionalStyle {
+  id: string;
+  mappingId: string;
+  mappingKind: RepresentationConditionalStyleMappingKind;
+  metaClassId?: string;
+  referenceId?: string;
+  predicateExpression: string;
+  enabled?: boolean;
+  concreteSyntax?: ConcreteSyntax;
+  edgeConcreteSyntax?: ConcreteSyntaxEdge;
+}
+
+export type RepresentationFilterRuleKind = 'mapping' | 'variable';
+
+export interface RepresentationFilterRule {
+  id: string;
+  kind: RepresentationFilterRuleKind;
+  filterKind?: 'hide' | 'collapse';
+  mappingIds?: string[];
+  mappingReferences?: string[];
+  semanticConditionExpression?: string;
+  viewConditionExpression?: string;
+}
+
+export interface RepresentationFilter {
+  id: string;
+  name: string;
+  enabled?: boolean;
+  rules: RepresentationFilterRule[];
+}
+
 export interface RepresentationDescription {
   id: string;
   name: string;
@@ -251,10 +341,16 @@ export interface RepresentationDescription {
   kind: RepresentationKind;
   visibleMetaClassIds: string[];
   creatableMetaClassIds: string[];
+  tableColumns?: string[];
   concreteSyntaxByMetaClassId?: Record<string, ConcreteSyntax>;
   concreteSyntaxByReferenceId?: Record<string, ConcreteSyntaxEdge>;
+  containerMappings?: RepresentationContainerMapping[];
+  propertySections?: RepresentationPropertySection[];
   edgeMappings?: RepresentationEdgeMapping[];
   pinMappings?: RepresentationPinMapping[];
+  layers?: RepresentationLayer[];
+  filters?: RepresentationFilter[];
+  conditionalStyles?: RepresentationConditionalStyle[];
   toolDefinitions?: ToolDefinition[];
   isDefault?: boolean;
 }
@@ -326,6 +422,8 @@ export interface DiagramElement {
   height?: number;
   sourceId?: string;
   targetId?: string;
+  parentId?: string;
+  containerMappingId?: string;
   style: Record<string, any>;
   referenceAttributes?: Record<string, any>;
   points?: Array<{ x: number; y: number }>;
@@ -762,6 +860,14 @@ export interface SiriusAirdImportResult {
 export interface SiriusExportResult {
   filename: string;
   content: string;
+  report: SiriusCompatibilityReport;
+}
+
+export interface SiriusProjectExportResult {
+  filename: string;
+  /** Base64-encoded ZIP payload. */
+  content: string;
+  entries: string[];
   report: SiriusCompatibilityReport;
 }
 

@@ -10,7 +10,7 @@
       {
         "id": "a4400000-0000-4000-8000-000000000101",
         "name": "Activity Diagram",
-        "description": "Executable diagram representation for arranging activity nodes, pins, and control or object flows.",
+      "description": "Executable diagram representation for arranging activity containers, nodes, pins, and control or object flows.",
         "viewpointId": "a4400000-0000-4000-8000-000000000001",
         "kind": "diagram",
         "visibleMetaClassIds": [
@@ -38,7 +38,7 @@
           "a1100000-0000-4000-8000-000000000112"
         ],
         "isDefault": true,
-        "concreteSyntaxByMetaClassId": {
+      "concreteSyntaxByMetaClassId": {
           "a1100000-0000-4000-8000-000000000111": {
             "two_d": {
               "shape": "square",
@@ -62,9 +62,37 @@
                 "height": 16
               }
             }
+        }
+      },
+      "containerMappings": [
+        {
+          "id": "a4400000-0000-4000-8000-000000000401",
+          "containerMetaClassId": "a1100000-0000-4000-8000-000000000101",
+          "containmentReferenceId": "a1100000-0000-4000-8000-000000002101",
+          "childMetaClassIds": [
+            "a1100000-0000-4000-8000-000000000103",
+            "a1100000-0000-4000-8000-000000000104",
+            "a1100000-0000-4000-8000-000000000105",
+            "a1100000-0000-4000-8000-000000000106",
+            "a1100000-0000-4000-8000-000000000107",
+            "a1100000-0000-4000-8000-000000000108",
+            "a1100000-0000-4000-8000-000000000109"
+          ],
+          "concreteSyntax": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#F3E5F5",
+              "strokeColor": "#6A1B9A",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 1490,
+                "height": 360
+              }
+            }
           }
-        },
-        "edgeMappings": [
+        }
+      ],
+      "edgeMappings": [
           {
             "id": "a4400000-0000-4000-8000-000000000201",
             "referenceId": "a1100000-0000-4000-8000-000000002201",
@@ -161,14 +189,19 @@
       {
         "id": "a4400000-0000-4000-8000-000000000102",
         "name": "Activity Node Inventory",
-        "description": "Tabular representation placeholder for reviewing activity node inventory outside the diagram editor.",
+        "description": "Editable tabular representation for reviewing and updating activity node inventory outside the diagram editor.",
         "viewpointId": "a4400000-0000-4000-8000-000000000001",
         "kind": "table",
         "visibleMetaClassIds": [
           "a1100000-0000-4000-8000-000000000102",
           "a1100000-0000-4000-8000-000000000105"
         ],
-        "creatableMetaClassIds": []
+        "creatableMetaClassIds": [],
+        "tableColumns": [
+          "name",
+          "description",
+          "isLocallyReentrant"
+        ]
       }
     ]
   }

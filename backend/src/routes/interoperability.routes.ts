@@ -80,4 +80,18 @@ router.post(
   })
 );
 
+router.post(
+  '/sirius/project/export',
+  validate([
+    body('metamodelId').isString().notEmpty().withMessage('metamodelId is required'),
+    body('modelId').optional().isString().notEmpty().withMessage('modelId must be a non-empty string'),
+    body('viewpointIds').optional().isArray().withMessage('viewpointIds must be an array'),
+    body('diagramIds').optional().isArray().withMessage('diagramIds must be an array'),
+  ]),
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const result = await siriusInteropService.exportProject(req.body, req.user!.userId);
+    res.json({ success: true, data: result });
+  })
+);
+
 export default router;

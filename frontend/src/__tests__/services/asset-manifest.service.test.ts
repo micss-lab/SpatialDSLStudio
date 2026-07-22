@@ -83,6 +83,50 @@ describe('asset-manifest.service', () => {
       expect(result.errors).toEqual([]);
     });
 
+    it('accepts normalized provenance and orientation metadata', () => {
+      const manifest = {
+        version: 2,
+        defaults: {
+          MobileRobot: {
+            asset: 'nvidia-f1tenth-amr/f1tenth_amr_collision.usda',
+            articulationAsset: 'nvidia-f1tenth-amr/f1tenth_amr_articulation.usda',
+            assetVersion: '1.0.0-spatialdsl',
+            sourceUri: 'https://github.com/NVIDIA-Omniverse/sample-ackermann-amr',
+            sourceRevision: 'ccf6b3e',
+            license: 'MIT',
+            metersPerUnit: 1,
+            upAxis: 'Z',
+            forwardAxis: '+X',
+            bodyMode: 'kinematic',
+            massKg: 3.1,
+            wheelRadiusM: 0.057,
+            wheelSeparationM: 0.324,
+            leftWheelJoint: 'Drive/LeftWheelJoint',
+            rightWheelJoint: 'Drive/RightWheelJoint',
+          },
+        },
+        overrides: {},
+      };
+
+      expect(validateAssetManifest(manifest)).toEqual({ valid: true, errors: [] });
+    });
+
+    it.each(['/tmp/robot.usda', '../robot.usda', 'robots/../../robot.usda', 'robots\\robot.usda'])(
+      'rejects asset path outside the portable asset-root contract: %s',
+      asset => {
+        const result = validateAssetManifest({
+          version: 2,
+          defaults: { MobileRobot: { asset } },
+          overrides: {},
+        });
+
+        expect(result.valid).toBe(false);
+        expect(result.errors).toContain(
+          'defaults.MobileRobot.asset must be a safe POSIX path inside the asset root'
+        );
+      }
+    );
+
     it('rejects a mapping with an unknown scaleMode', () => {
       const manifest = {
         version: 1,

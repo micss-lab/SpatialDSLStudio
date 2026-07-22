@@ -394,7 +394,7 @@
         "SafeDistance": "1000.0",
         "Location": "",
         "Target": "",
-        "BatteryLevel": 100,
+        "BatteryLevel": 10,
         "HasProduct": false
       },
       "references": {

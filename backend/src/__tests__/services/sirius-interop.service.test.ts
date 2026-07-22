@@ -11,6 +11,7 @@ const viewpointServiceMock = {
 
 const modelServiceMock = {
   getById: jest.fn(),
+  getByMetamodelId: jest.fn(),
 };
 
 const diagramServiceMock = {
@@ -103,8 +104,11 @@ const minimalOdesign = `<?xml version="1.0" encoding="UTF-8"?>
             <style xsi:type="diagram:EllipseDescription" color="#22c55e"/>
           </borderedNodeMappings>
         </nodeMappings>
-        <containerMappings xmi:id="map.child" name="Child" domainClass="Child">
+        <containerMappings xmi:id="map.container" name="Root Container" domainClass="minimal::Root">
           <style xsi:type="diagram:SquareDescription" color="#dbeafe"/>
+          <subNodeMappings xmi:id="map.child" name="Child" domainClass="Child" semanticCandidatesExpression="feature:children">
+            <style xsi:type="diagram:SquareDescription" color="#e0f2fe"/>
+          </subNodeMappings>
         </containerMappings>
         <edgeMappings xmi:id="edge.children" name="children" targetFinderExpression="feature:children">
           <style xsi:type="diagram:EdgeStyleDescription" strokeColor="#0f172a" targetArrow="InputArrow"/>
@@ -149,6 +153,12 @@ describe('SiriusInteropService', () => {
     expect(description.pinMappings?.[0]).toEqual(expect.objectContaining({
       pinMetaClassIds: ['cls-port'],
       ownerMetaClassIds: ['cls-root'],
+    }));
+    expect(description.containerMappings?.[0]).toEqual(expect.objectContaining({
+      id: 'sirius-map-container',
+      containerMetaClassId: 'cls-root',
+      containmentReferenceId: 'ref-children',
+      childMetaClassIds: ['cls-child'],
     }));
     expect(description.toolDefinitions?.[0]).toEqual(expect.objectContaining({
       id: 'sirius-tool-createroot',
@@ -251,8 +261,8 @@ describe('SiriusInteropService', () => {
     expect(preview.viewpoints[0].representationDescriptions).toHaveLength(1);
   });
 
-  it('reports but skips mappings from unsupported additional layers', async () => {
-    metamodelServiceMock.getById.mockResolvedValue({
+  it('round-trips conditional styles, additional layers, and composite filters', async () => {
+    const advancedMetamodel = {
       ...mockMetamodel,
       classes: [
         ...mockMetamodel.classes,
@@ -266,25 +276,99 @@ describe('SiriusInteropService', () => {
           references: [],
         },
       ],
-    });
-    const withAdditionalLayer = minimalOdesign.replace(
+    };
+    metamodelServiceMock.getById.mockResolvedValue(advancedMetamodel);
+    const withAdvancedFeatures = minimalOdesign
+      .replace(
+        'xmlns:diagram="http://www.eclipse.org/sirius/diagram/description/1.1.0"',
+        `xmlns:diagram="http://www.eclipse.org/sirius/diagram/description/1.1.0"
+    xmlns:filter="http://www.eclipse.org/sirius/diagram/description/filter/1.1.0"`
+      )
+      .replace(
+        '      <defaultLayer name="Default">',
+        `      <filters xmi:id="filter.flagged" xsi:type="filter:CompositeFilterDescription" name="Only Flagged">
+        <filters xmi:id="filter.flagged.rule" xsi:type="filter:MappingFilter" mappings="map.root" filterKind="HIDE" semanticConditionExpression="aql:self.flag"/>
+      </filters>
+      <defaultLayer name="Default">`
+      )
+      .replace(
+        '<style xsi:type="diagram:SquareDescription" color="#ffffff" borderColor="#111111"/>',
+        `<style xsi:type="diagram:SquareDescription" color="#ffffff" borderColor="#111111"/>
+          <conditionnalStyles xmi:id="style.root.flagged" predicateExpression="aql:self.flag">
+            <style xsi:type="diagram:SquareDescription" color="#ef4444" borderColor="#991b1b"/>
+          </conditionnalStyles>`
+      )
+      .replace(
       '</defaultLayer>',
       `</defaultLayer>
-      <additionalLayers xmi:id="layer.review" name="Review">
-        <nodeMappings xmi:id="map.review" name="ReviewNote" domainClass="minimal::ReviewNote"/>
+      <additionalLayers xmi:id="layer.review" name="Review" label="Review notes" activeByDefault="true">
+        <nodeMappings xmi:id="map.review" name="ReviewNote" domainClass="minimal::ReviewNote" semanticCandidatesExpression="aql:self.notes">
+          <style xsi:type="diagram:EllipseDescription" color="#fde68a"/>
+        </nodeMappings>
       </additionalLayers>`
     );
 
     const preview = await siriusInteropService.validate(
-      { content: withAdditionalLayer, metamodelId: 'metamodel-1' },
+      { content: withAdvancedFeatures, metamodelId: 'metamodel-1' },
       'user-1'
     );
 
     const description = preview.viewpoints[0].representationDescriptions[0];
-    expect(preview.report.droppedFeatures).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: 'SIRIUS_LAYERS_UNSUPPORTED' }),
+    expect(preview.report.droppedFeatures).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: expect.stringMatching(/LAYERS|FILTERS|CONDITIONAL_STYLES/) }),
     ]));
-    expect(description.visibleMetaClassIds).not.toContain('cls-review-note');
+    expect(description.layers?.[0]).toEqual(expect.objectContaining({
+      id: 'sirius-layer-review',
+      name: 'Review',
+      label: 'Review notes',
+      activeByDefault: true,
+      enabled: true,
+      mappings: [expect.objectContaining({
+        id: 'sirius-map-review',
+        kind: 'node',
+        metaClassId: 'cls-review-note',
+      })],
+    }));
+    expect(description.filters?.[0]).toEqual(expect.objectContaining({
+      id: 'sirius-filter-flagged',
+      name: 'Only Flagged',
+      rules: [expect.objectContaining({
+        kind: 'mapping',
+        filterKind: 'hide',
+        semanticConditionExpression: 'aql:self.flag',
+      })],
+    }));
+    expect(description.conditionalStyles?.[0]).toEqual(expect.objectContaining({
+      id: 'sirius-style-root-flagged',
+      mappingId: 'sirius-map-root',
+      mappingKind: 'node',
+      metaClassId: 'cls-root',
+      predicateExpression: 'aql:self.flag',
+      concreteSyntax: expect.objectContaining({
+        two_d: expect.objectContaining({ fillColor: '#ef4444' }),
+      }),
+    }));
+
+    viewpointServiceMock.getAll.mockResolvedValue(preview.viewpoints);
+    const exported = await siriusInteropService.exportOdesign(
+      { metamodelId: 'metamodel-1' },
+      'user-1'
+    );
+    expect(exported.content).toContain('xsi:type="filter:CompositeFilterDescription"');
+    expect(exported.content).toContain('<conditionnalStyles');
+    expect(exported.content).toContain('<additionalLayers');
+
+    const roundTrip = await siriusInteropService.validate(
+      { content: exported.content, metamodelId: 'metamodel-1' },
+      'user-1'
+    );
+    const roundTripDescription = roundTrip.viewpoints[0].representationDescriptions[0];
+    expect(roundTripDescription.layers).toHaveLength(1);
+    expect(roundTripDescription.filters).toHaveLength(1);
+    expect(roundTripDescription.conditionalStyles).toHaveLength(1);
+    expect(roundTripDescription.layers?.[0].mappings?.[0]).toEqual(expect.objectContaining({
+      metaClassId: 'cls-review-note',
+    }));
   });
 
   it('resolves simple aql:self reference expressions', async () => {
@@ -333,7 +417,7 @@ describe('SiriusInteropService', () => {
     expect(viewpointServiceMock.create).not.toHaveBeenCalled();
   });
 
-  it('exports stored SpatialDSL viewpoints as a Sirius .odesign document', async () => {
+  it('round-trips a stored container mapping through a Sirius .odesign document', async () => {
     metamodelServiceMock.getById.mockResolvedValue(mockMetamodel);
     viewpointServiceMock.getAll.mockResolvedValue([
       {
@@ -356,6 +440,15 @@ describe('SiriusInteropService', () => {
               'ref-children': { arrowHead: 'none', lineColor: '#0f172a' },
             },
             edgeMappings: [{ id: 'edge-1', referenceId: 'ref-children', referenceName: 'children' }],
+            containerMappings: [
+              {
+                id: 'container-1',
+                containerMetaClassId: 'cls-root',
+                containmentReferenceId: 'ref-children',
+                childMetaClassIds: ['cls-child'],
+                concreteSyntax: { two_d: { shape: 'rectangle', fillColor: '#dbeafe' } },
+              },
+            ],
             pinMappings: [
               {
                 id: 'pin-1',
@@ -378,10 +471,25 @@ describe('SiriusInteropService', () => {
     expect(result.content).toContain('<description:Group');
     expect(result.content).toContain('xsi:type="diagram:DiagramDescription"');
     expect(result.content).toContain('xsi:type="diagram:EllipseDescription"');
-    expect(result.content).toMatch(/<nodeMappings[^>]*Root[\s\S]*<borderedNodeMappings[^>]*Port[\s\S]*<\/nodeMappings>/);
+    expect(result.content).toMatch(/<containerMappings[^>]*Root[\s\S]*<borderedNodeMappings[^>]*Port[\s\S]*<subNodeMappings[^>]*Child[^>]*semanticCandidatesExpression="feature:children"[\s\S]*<\/containerMappings>/);
     expect(result.content).toContain('targetFinderExpression="feature:children"');
     expect(result.content).toContain('targetArrow="NoDecoration"');
     expect(result.report.supported).toBe(true);
+
+    const roundTrip = await siriusInteropService.validate(
+      { content: result.content, metamodelId: 'metamodel-1' },
+      'user-1'
+    );
+    expect(roundTrip.viewpoints[0].representationDescriptions[0].containerMappings?.[0]).toEqual(
+      expect.objectContaining({
+        containerMetaClassId: 'cls-root',
+        containmentReferenceId: 'ref-children',
+        childMetaClassIds: ['cls-child'],
+        concreteSyntax: expect.objectContaining({
+          two_d: expect.objectContaining({ fillColor: '#dbeafe' }),
+        }),
+      })
+    );
   });
 
   it('rejects explicit export requests that include inaccessible viewpoint IDs', async () => {
@@ -410,7 +518,7 @@ const mockModel: Model = {
   metamodelId: 'metamodel-1',
   conformsTo: 'metamodel-1',
   elements: [
-    { id: 'component-api', name: 'API', modelElementId: 'cls-root', style: {}, references: {} },
+    { id: 'component-api', name: 'API', modelElementId: 'cls-root', style: {}, references: { children: ['component-db'] } },
     { id: 'component-db', name: 'Database', modelElementId: 'cls-child', style: {}, references: {} },
   ],
 };
@@ -429,6 +537,14 @@ const mockAirdViewpoint: Viewpoint = {
       kind: 'diagram',
       visibleMetaClassIds: ['cls-root', 'cls-child'],
       creatableMetaClassIds: ['cls-root', 'cls-child'],
+      containerMappings: [
+        {
+          id: 'sirius-map-container',
+          containerMetaClassId: 'cls-root',
+          containmentReferenceId: 'ref-children',
+          childMetaClassIds: ['cls-child'],
+        },
+      ],
       edgeMappings: [{ id: 'sirius-edge-children', referenceName: 'children' }],
       isDefault: true,
     },
@@ -458,9 +574,9 @@ const airdWithLayout = `<?xml version="1.0" encoding="UTF-8"?>
   <notation:Diagram xmi:id="gmf-1" element="#rep-1">
     <children xsi:type="notation:Node" xmi:id="gn-api" element="#dde-api">
       <layoutConstraint xsi:type="notation:Bounds" x="100" y="50" width="160" height="90"/>
-    </children>
-    <children xsi:type="notation:Node" xmi:id="gn-db" element="#dde-db">
-      <layoutConstraint xsi:type="notation:Bounds" x="400" y="260" width="160" height="90"/>
+      <children xsi:type="notation:Node" xmi:id="gn-db" element="#dde-db">
+        <layoutConstraint xsi:type="notation:Bounds" x="40" y="60" width="160" height="90"/>
+      </children>
     </children>
     <edges xsi:type="notation:Edge" xmi:id="ge-dep" element="#dde-dep" source="gn-api" target="gn-db">
       <points x="180" y="140"/>
@@ -472,6 +588,7 @@ const airdWithLayout = `<?xml version="1.0" encoding="UTF-8"?>
 describe('SiriusInteropService .aird import', () => {
   beforeEach(() => {
     modelServiceMock.getById.mockResolvedValue(mockModel);
+    modelServiceMock.getByMetamodelId.mockResolvedValue([mockModel]);
     viewpointServiceMock.getAll.mockResolvedValue([mockAirdViewpoint]);
     diagramServiceMock.create.mockImplementation(async (data: any) => ({ id: `diagram-${data.name}`, ...data }));
   });
@@ -500,6 +617,14 @@ describe('SiriusInteropService .aird import', () => {
 
     const apiNode = nodes.find(node => node.modelElementId === 'component-api');
     expect(apiNode).toEqual(expect.objectContaining({ x: 100, y: 50, width: 160, height: 90 }));
+    const databaseNode = nodes.find(node => node.modelElementId === 'component-db');
+    expect(databaseNode).toEqual(expect.objectContaining({
+      x: 140,
+      y: 110,
+      width: 160,
+      height: 90,
+      parentId: apiNode!.id,
+    }));
 
     const edge = edges[0];
     expect(edge.modelElementId).toBe('component-api');
@@ -602,7 +727,7 @@ const mockExportDiagram = {
   representationDescriptionId: 'sirius-diag-main',
   elements: [
     { id: 'el-api', type: 'node' as const, modelElementId: 'component-api', x: 100, y: 50, width: 160, height: 90, style: {} },
-    { id: 'el-db', type: 'node' as const, modelElementId: 'component-db', x: 400, y: 260, width: 160, height: 90, style: {} },
+    { id: 'el-db', type: 'node' as const, modelElementId: 'component-db', parentId: 'el-api', x: 400, y: 260, width: 160, height: 90, style: {} },
     {
       id: 'el-dep', type: 'edge' as const, modelElementId: 'component-api',
       sourceId: 'el-api', targetId: 'el-db',
@@ -614,6 +739,7 @@ const mockExportDiagram = {
 describe('SiriusInteropService .aird export', () => {
   beforeEach(() => {
     modelServiceMock.getById.mockResolvedValue(mockModel);
+    metamodelServiceMock.getById.mockResolvedValue(mockMetamodel);
     viewpointServiceMock.getAll.mockResolvedValue([mockAirdViewpoint]);
     diagramServiceMock.getByModelId.mockResolvedValue([mockExportDiagram]);
   });
@@ -657,7 +783,45 @@ describe('SiriusInteropService .aird export', () => {
     expect(xml).toContain('sourceNode="#el-api" targetNode="#el-db"');
     expect(xml).toContain('<notation:Diagram');
     expect(xml).toContain('<layoutConstraint xsi:type="notation:Bounds" x="100" y="50" width="160" height="90"/>');
+    expect(xml).toMatch(/element="#el-api">[\s\S]*element="#el-db">[\s\S]*x="300" y="210"/);
     expect(xml).toContain('<points x="180" y="140"/>');
+  });
+
+  it('derives nested GMF nodes from native view membership and semantic containment', async () => {
+    modelServiceMock.getById.mockResolvedValue({
+      ...mockModel,
+      elements: [
+        {
+          ...mockModel.elements[0],
+          presentation: {
+            position2D: { x: 100, y: 50 },
+            size2D: { width: 400, height: 260 },
+          },
+        },
+        {
+          ...mockModel.elements[1],
+          presentation: {
+            position2D: { x: 150, y: 130 },
+            size2D: { width: 160, height: 90 },
+          },
+        },
+      ],
+    });
+    diagramServiceMock.getByModelId.mockResolvedValue([{
+      ...mockExportDiagram,
+      id: 'diagram-native',
+      elements: [],
+      includedElementIds: ['component-api', 'component-db'],
+    }]);
+
+    const result = await siriusInteropService.exportAird(
+      { modelId: 'model-1', options: { includeAird: true } },
+      'user-1'
+    );
+
+    expect(result.content).toContain('target="demo-model.xmi#component-api" mapping="#sirius-map-container"');
+    expect(result.content).toContain('target="demo-model.xmi#component-db" mapping="#sirius-map-container-cls-child-node"');
+    expect(result.content).toMatch(/element="#diagram-native-component-api">[\s\S]*element="#diagram-native-component-db">[\s\S]*x="50" y="80"/);
   });
 
   it('round-trips: exported .aird re-imports to the same nodes, edges, and layout', async () => {
@@ -683,7 +847,51 @@ describe('SiriusInteropService .aird export', () => {
     expect(nodes.find(node => node.modelElementId === 'component-api')).toEqual(
       expect.objectContaining({ x: 100, y: 50, width: 160, height: 90 })
     );
+    expect(nodes.find(node => node.modelElementId === 'component-db')).toEqual(
+      expect.objectContaining({ x: 400, y: 260, parentId: nodes.find(node => node.modelElementId === 'component-api')!.id })
+    );
     expect(edges).toHaveLength(1);
     expect(edges[0].points).toEqual([{ x: 180, y: 140 }, { x: 480, y: 260 }]);
+  });
+
+  it('exports a complete Sirius project ZIP with consistent cross-resource references', async () => {
+    const result = await siriusInteropService.exportProject(
+      { metamodelId: 'metamodel-1', modelId: 'model-1' },
+      'user-1'
+    );
+
+    expect(result.filename).toBe('minimal.sirius-project.zip');
+    expect(result.report.supported).toBe(true);
+    expect(result.report.droppedFeatures).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'SIRIUS_DEFERRED_AIRD_EXPORT' }),
+    ]));
+
+    const zip = await JSZip.loadAsync(result.content, { base64: true });
+    expect(Object.keys(zip.files)).toEqual(expect.arrayContaining([
+      '.project',
+      'model/minimal.ecore',
+      'model/demo-model.xmi',
+      'description/minimal.odesign',
+      'representations.aird',
+      'compatibility-report.json',
+    ]));
+    const [ecore, xmi, odesign, aird, eclipseProject] = await Promise.all([
+      zip.file('model/minimal.ecore')!.async('text'),
+      zip.file('model/demo-model.xmi')!.async('text'),
+      zip.file('description/minimal.odesign')!.async('text'),
+      zip.file('representations.aird')!.async('text'),
+      zip.file('.project')!.async('text'),
+    ]);
+    expect(ecore).toContain('nsURI="http://example.com/minimal"');
+    expect(ecore).toContain('nsPrefix="minimal"');
+    expect(xmi).toContain('<minimal:Root');
+    expect(xmi).toContain('xmi:id="component-api"');
+    expect(xmi).toContain('<children xmi:id="component-db"');
+    expect(odesign).toContain('domainClass="minimal::Root"');
+    expect(aird).toContain('<semanticResources>model/demo-model.xmi</semanticResources>');
+    expect(aird).toContain('target="model/demo-model.xmi#component-api"');
+    expect(aird).toContain('viewpoint="description/minimal.odesign#viewpoint-1"');
+    expect(aird).toContain('description="description/minimal.odesign#sirius-diag-main"');
+    expect(eclipseProject).toContain('org.eclipse.sirius.nature.modelingproject');
   });
 });

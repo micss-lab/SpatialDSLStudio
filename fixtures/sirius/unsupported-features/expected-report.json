@@ -27,20 +27,6 @@
     },
     {
       "severity": "warning",
-      "code": "SIRIUS_UNSUPPORTED_STYLE",
-      "message": "Conditional styles are outside the supported subset.",
-      "sourcePath": "description/unsupported.odesign",
-      "sourceElementId": "style-child-conditional"
-    },
-    {
-      "severity": "warning",
-      "code": "SIRIUS_UNSUPPORTED_LAYER",
-      "message": "Additional layers are outside the supported subset.",
-      "sourcePath": "description/unsupported.odesign",
-      "sourceElementId": "layer-review"
-    },
-    {
-      "severity": "warning",
       "code": "SIRIUS_UNSUPPORTED_DIALECT",
       "message": "Table representations are outside the supported subset.",
       "sourcePath": "description/unsupported.odesign",

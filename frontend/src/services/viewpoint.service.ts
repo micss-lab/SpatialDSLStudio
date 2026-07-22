@@ -1,6 +1,10 @@
 import {
+  ConcreteSyntax,
+  RepresentationContainerMapping,
   RepresentationDescription,
   RepresentationKind,
+  RepresentationPropertySection,
+  ToolDefinition,
   Viewpoint
 } from '../models/types';
 import { apiClient, API_ENDPOINTS } from './core';
@@ -49,6 +53,155 @@ const uniqueStringIds = (value: unknown, fieldName: string): string[] => {
   return ids;
 };
 
+const normalizeContainerMappings = (
+  value: unknown,
+  fieldName: string
+): RepresentationContainerMapping[] => {
+  if (!Array.isArray(value)) throw new Error(`${fieldName} must be an array`);
+
+  const seenIds = new Set<string>();
+  return value.map((mapping, index) => {
+    if (!isRecord(mapping)) throw new Error(`${fieldName}[${index}] must be an object`);
+
+    const id = typeof mapping.id === 'string' && mapping.id.trim() ? mapping.id.trim() : uuidv4();
+    if (seenIds.has(id)) throw new Error(`${fieldName} IDs must be unique`);
+    seenIds.add(id);
+
+    const containerMetaClassId = normalizeName(
+      mapping.containerMetaClassId,
+      `${fieldName}[${index}].containerMetaClassId`
+    );
+    const containmentReferenceId = normalizeName(
+      mapping.containmentReferenceId,
+      `${fieldName}[${index}].containmentReferenceId`
+    );
+    if (mapping.concreteSyntax !== undefined && !isRecord(mapping.concreteSyntax)) {
+      throw new Error(`${fieldName}[${index}].concreteSyntax must be an object`);
+    }
+
+    return {
+      id,
+      containerMetaClassId,
+      containmentReferenceId,
+      ...(mapping.childMetaClassIds !== undefined && {
+        childMetaClassIds: uniqueStringIds(mapping.childMetaClassIds, `${fieldName}[${index}].childMetaClassIds`),
+      }),
+      ...(mapping.concreteSyntax !== undefined && {
+        concreteSyntax: mapping.concreteSyntax as ConcreteSyntax,
+      }),
+    };
+  });
+};
+
+const normalizePropertySections = (
+  value: unknown,
+  fieldName: string
+): RepresentationPropertySection[] => {
+  if (!Array.isArray(value)) throw new Error(`${fieldName} must be an array`);
+
+  const seenIds = new Set<string>();
+  return value.map((section, index) => {
+    if (!isRecord(section)) throw new Error(`${fieldName}[${index}] must be an object`);
+
+    const id = typeof section.id === 'string' && section.id.trim() ? section.id.trim() : uuidv4();
+    if (seenIds.has(id)) throw new Error(`${fieldName} IDs must be unique`);
+    seenIds.add(id);
+
+    return {
+      id,
+      name: normalizeName(section.name, `${fieldName}[${index}].name`),
+      ...(section.metaClassIds !== undefined && {
+        metaClassIds: uniqueStringIds(section.metaClassIds, `${fieldName}[${index}].metaClassIds`),
+      }),
+      ...(section.attributeNames !== undefined && {
+        attributeNames: uniqueStringIds(section.attributeNames, `${fieldName}[${index}].attributeNames`),
+      }),
+      ...(section.referenceNames !== undefined && {
+        referenceNames: uniqueStringIds(section.referenceNames, `${fieldName}[${index}].referenceNames`),
+      }),
+    };
+  });
+};
+
+const normalizeToolDefinitions = (value: unknown, fieldName: string): ToolDefinition[] => {
+  if (!Array.isArray(value)) throw new Error(`${fieldName} must be an array`);
+
+  const seenIds = new Set<string>();
+  return value.map((tool, toolIndex) => {
+    if (!isRecord(tool)) throw new Error(`${fieldName}[${toolIndex}] must be an object`);
+
+    const id = typeof tool.id === 'string' && tool.id.trim() ? tool.id.trim() : uuidv4();
+    if (seenIds.has(id)) throw new Error(`${fieldName} IDs must be unique`);
+    seenIds.add(id);
+
+    const name = normalizeName(tool.name, `${fieldName}[${toolIndex}].name`);
+    const legacyType = tool.type === 'node' ? 'create-node' : tool.type === 'edge' ? 'create-edge' : tool.type;
+    const type = typeof legacyType === 'string' && legacyType.trim() ? legacyType.trim() : 'create-node';
+    const supported = ['create-node', 'create-edge', 'delete', 'direct-edit', 'reconnect'].includes(type)
+      || type.startsWith('sirius:');
+    if (!supported) throw new Error(`${fieldName}[${toolIndex}].type is not supported`);
+
+    let payload: ToolDefinition['payload'];
+    if (tool.payload !== undefined) {
+      if (!isRecord(tool.payload)) throw new Error(`${fieldName}[${toolIndex}].payload must be an object`);
+      const rawOperations = tool.payload.operations;
+      if (rawOperations !== undefined && !Array.isArray(rawOperations)) {
+        throw new Error(`${fieldName}[${toolIndex}].payload.operations must be an array`);
+      }
+      if ((rawOperations || []).length > 50) {
+        throw new Error(`${fieldName}[${toolIndex}].payload.operations exceeds the 50-operation limit`);
+      }
+
+      const attributeNames = new Set<string>();
+      const operations = (rawOperations || []).map((operation: unknown, operationIndex: number) => {
+        if (!isRecord(operation) || operation.type !== 'set-attribute') {
+          throw new Error(`${fieldName}[${toolIndex}].payload.operations[${operationIndex}] must be set-attribute`);
+        }
+        const attributeName = normalizeName(
+          operation.attributeName,
+          `${fieldName}[${toolIndex}].payload.operations[${operationIndex}].attributeName`
+        );
+        if (attributeNames.has(attributeName)) {
+          throw new Error(`${fieldName}[${toolIndex}] initializes attribute "${attributeName}" more than once`);
+        }
+        attributeNames.add(attributeName);
+
+        const operationValue = operation.value;
+        const isSafeScalar = operationValue === null
+          || typeof operationValue === 'string'
+          || typeof operationValue === 'boolean'
+          || (typeof operationValue === 'number' && Number.isFinite(operationValue));
+        if (!isSafeScalar) {
+          throw new Error(`${fieldName}[${toolIndex}].payload.operations[${operationIndex}].value must be a scalar or null`);
+        }
+
+        return {
+          type: 'set-attribute' as const,
+          attributeName,
+          value: operationValue as string | number | boolean | null,
+        };
+      });
+      if (operations.length > 0 && type !== 'create-node') {
+        throw new Error(`${fieldName}[${toolIndex}] can only set attributes on create-node`);
+      }
+
+      payload = {
+        ...tool.payload,
+        ...(rawOperations !== undefined && { operations }),
+      };
+    }
+
+    return {
+      id,
+      name,
+      type,
+      ...(typeof tool.metaClassId === 'string' && tool.metaClassId.trim() && { metaClassId: tool.metaClassId.trim() }),
+      ...(typeof tool.referenceId === 'string' && tool.referenceId.trim() && { referenceId: tool.referenceId.trim() }),
+      ...(payload !== undefined && { payload }),
+    };
+  });
+};
+
 const normalizeRepresentationDescription = (
   value: unknown,
   viewpointId: string,
@@ -63,6 +216,25 @@ const normalizeRepresentationDescription = (
     throw new Error(`representationDescriptions[${index}].kind must be diagram, table, or tree`);
   }
 
+  const containerMappings = value.containerMappings === undefined
+    ? undefined
+    : normalizeContainerMappings(
+      value.containerMappings,
+      `representationDescriptions[${index}].containerMappings`
+    );
+  if (containerMappings?.length && kind !== 'diagram') {
+    throw new Error(`representationDescriptions[${index}].containerMappings are only supported on diagrams`);
+  }
+  const propertySections = value.propertySections === undefined
+    ? undefined
+    : normalizePropertySections(
+      value.propertySections,
+      `representationDescriptions[${index}].propertySections`
+    );
+  if (propertySections?.length && kind !== 'diagram') {
+    throw new Error(`representationDescriptions[${index}].propertySections are only supported on diagrams`);
+  }
+
   return {
     id: typeof value.id === 'string' && value.id.trim() ? value.id.trim() : uuidv4(),
     name: normalizeName(value.name, `representationDescriptions[${index}].name`),
@@ -71,11 +243,21 @@ const normalizeRepresentationDescription = (
     kind,
     visibleMetaClassIds: uniqueStringIds(value.visibleMetaClassIds, `representationDescriptions[${index}].visibleMetaClassIds`),
     creatableMetaClassIds: uniqueStringIds(value.creatableMetaClassIds, `representationDescriptions[${index}].creatableMetaClassIds`),
+    ...(value.tableColumns !== undefined && {
+      tableColumns: uniqueStringIds(value.tableColumns, `representationDescriptions[${index}].tableColumns`),
+    }),
     ...(value.concreteSyntaxByMetaClassId !== undefined && { concreteSyntaxByMetaClassId: value.concreteSyntaxByMetaClassId }),
     ...(value.concreteSyntaxByReferenceId !== undefined && { concreteSyntaxByReferenceId: value.concreteSyntaxByReferenceId }),
+    ...(containerMappings !== undefined && { containerMappings }),
+    ...(propertySections !== undefined && { propertySections }),
     ...(value.edgeMappings !== undefined && { edgeMappings: value.edgeMappings }),
     ...(value.pinMappings !== undefined && { pinMappings: value.pinMappings }),
-    ...(value.toolDefinitions !== undefined && { toolDefinitions: value.toolDefinitions }),
+    ...(value.toolDefinitions !== undefined && {
+      toolDefinitions: normalizeToolDefinitions(
+        value.toolDefinitions,
+        `representationDescriptions[${index}].toolDefinitions`
+      ),
+    }),
     isDefault: value.isDefault === true,
   };
 };

@@ -1,0 +1,11 @@
+#usda 1.0
+(
+    defaultPrim = "F1TenthAMR"
+    documentation = "F1TENTH AMR visual asset composed with reviewed collision proxies."
+    metersPerUnit = 1
+    upAxis = "Z"
+    subLayers = [
+        @./layers/collision.usda@,
+        @./f1tenth_amr.usda@
+    ]
+)

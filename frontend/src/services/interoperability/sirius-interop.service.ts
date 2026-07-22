@@ -9,6 +9,7 @@ import {
   SiriusImportResult,
   SiriusInteropWarning,
   SiriusOdesignPreview,
+  SiriusProjectExportResult,
   SiriusSourceFormat,
 } from '../../models/types';
 import { apiClient, API_ENDPOINTS } from '../core';
@@ -165,32 +166,25 @@ class SiriusInteropService {
 
   async exportProjectZip(
     metamodelId: string,
-    viewpointIds?: string[]
+    modelId: string,
+    viewpointIds?: string[],
+    diagramIds?: string[]
   ): Promise<SiriusProjectZipExportResult> {
-    const result = await this.exportOdesign(metamodelId, viewpointIds);
-    const report: SiriusCompatibilityReport = {
-      ...result.report,
-      sourceFormat: 'project-zip',
-      targetFormat: 'sirius-project',
-      droppedFeatures: [
-        ...result.report.droppedFeatures,
-        {
-          severity: 'warning',
-          code: 'SIRIUS_DEFERRED_AIRD_EXPORT',
-          message: 'Project ZIP export includes the .odesign specification; .aird session/diagram resources remain deferred.',
-        },
-      ],
-    };
-
-    const zip = new JSZip();
-    zip.file(`description/${result.filename}`, result.content);
-    zip.file('compatibility-report.json', JSON.stringify(report, null, 2));
-    const blob = await zip.generateAsync({ type: 'blob' });
+    const result = await apiClient.post<SiriusProjectExportResult>(
+      API_ENDPOINTS.SIRIUS_PROJECT_EXPORT,
+      { metamodelId, modelId, viewpointIds, diagramIds }
+    );
+    const binary = atob(result.content);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    const blob = new Blob([bytes], { type: 'application/zip' });
 
     return {
-      filename: result.filename.replace(/\.odesign$/i, '.sirius-project.zip'),
+      filename: result.filename,
       blob,
-      report,
+      report: result.report,
     };
   }
 

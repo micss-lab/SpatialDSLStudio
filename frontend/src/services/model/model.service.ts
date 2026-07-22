@@ -282,6 +282,44 @@ class ModelService {
     );
   }
 
+  removeModelElementReference(
+    modelId: string,
+    sourceElementId: string,
+    referenceName: string,
+    targetElementId: string
+  ): boolean {
+    const model = this.getModelById(modelId);
+    if (!model) return false;
+
+    return modelReferenceService.removeModelElementReference(
+      model,
+      sourceElementId,
+      referenceName,
+      targetElementId,
+      (id) => this.saveToStorage(id)
+    );
+  }
+
+  reconnectModelElementReference(
+    modelId: string,
+    sourceElementId: string,
+    referenceName: string,
+    oldTargetElementId: string,
+    newTargetElementId: string
+  ): boolean {
+    const model = this.getModelById(modelId);
+    if (!model) return false;
+
+    return modelReferenceService.reconnectModelElementReference(
+      model,
+      sourceElementId,
+      referenceName,
+      oldTargetElementId,
+      newTargetElementId,
+      (id) => this.saveToStorage(id)
+    );
+  }
+
   // Validation operations
   validateModel(modelId: string): ValidationResult {
     const model = this.getModelById(modelId);

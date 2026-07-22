@@ -1,6 +1,6 @@
-# Views Guide (2D and 3D)
+# Views Guide (Diagram, Table, and Tree)
 
-This guide explains how to create, edit, and manage model views in both 2D and 3D modes. Existing routes and APIs may still use the word `diagram` for compatibility.
+This guide explains how to create, edit, and manage diagram, table, and tree views. Diagram views have 2D and 3D modes. Existing routes and APIs may still use the word `diagram` for compatibility.
 A tutorial video demonstrating how to design a metamodel end-to-end can be found [here](../../videos/diagram_creation.mkv).
 
 <br><br>
@@ -49,16 +49,38 @@ Creation flow:
 2. Click Create View.
 3. Enter name.
 4. Select model.
-5. Select viewpoint and diagram representation if more than one is available.
+5. Select a viewpoint and representation if more than one is available.
 6. Open view.
 
 If no models exist, the UI prompts you to create a model first.
 
-Executable `diagram` and `table` representation descriptions are selectable when creating a view. A `table` view opens as a read-only table of the model's elements. Reserved `tree` specifications are hidden until an editor for that kind exists.
+Executable `diagram`, `table`, and `tree` representation descriptions are selectable when creating a view.
+
+## Table views
+
+A table view shows one row per model element allowed by the representation's visible metaclasses. Its representation description can select and order attribute columns with `tableColumns`; without an explicit selection, all attributes used by the visible rows are shown.
+
+- Click a column heading to sort ascending, then descending.
+- Edit text, number, date, enum, and multi-valued attributes inline.
+- Toggle boolean attributes with their checkbox.
+- Text-like edits are written to the semantic model when the field loses focus or Enter is pressed; boolean and enum changes are written immediately.
+
+Because edits update the semantic model, every other view over that model sees the new value.
+
+## Tree views
+
+A tree view derives an expandable hierarchy from containment references in the metamodel and model:
+
+- elements with no visible container appear as roots
+- containment children appear under their nearest visible ancestor
+- elements outside the representation's visible metaclasses are hidden
+- visible descendants of a hidden container are promoted so they remain reachable
+
+Tree views are currently navigational; semantic edits remain available through diagram, table, or model editors.
 
 ## Switch between 2D and 3D
 
-Inside the view editor page you can switch modes using:
+Inside a diagram view you can switch modes using:
 
 - 2D Mode button
 - 3D Mode button
@@ -79,6 +101,34 @@ Both modes edit the same view resource with different interaction styles.
 - Click an element to open its properties.
 - Drag nodes to reposition. Position is written back to the model element's canonical presentation data.
 
+### Validate a view
+
+Diagram views run the model's OCL and JavaScript constraints when the view opens.
+The Validation panel lists issues whose semantic elements are visible in the
+active representation, plus model-wide issues.
+
+- A colored `!` marker identifies an affected node or edge in 2D and 3D.
+- Click an issue to select its element; the 2D editor also centers it.
+- Click Validate view in the panel to run validation again after edits.
+- Validation does not run on every keystroke. Use the refresh action when a
+  correction should be checked immediately.
+
+### Work with mapped containers
+
+When the active diagram representation maps a metaclass and one of its
+containment references as a container:
+
+- the semantic parent renders with a header and an inner content boundary
+- visible compatible containment children render inside that boundary
+- dragging a child keeps it within the container
+- dragging a container moves its contained descendants by the same amount
+- the mapped containment reference does not also render as an edge
+- semantic pins keep their owner-boundary attachment behavior
+
+Container dimensions currently come from the saved instance size or the
+mapping's fixed default size. Automatic sizing and collapse/expand are follow-up
+features.
+
 ### Create edges (references)
 
 1. Click Create Edge in toolbar.
@@ -92,6 +142,27 @@ Behavior notes:
 - edge bend points can be added by clicking empty canvas while edge drawing is active
 - edge labels and containment visual markers are shown
 - edges connected to semantic pins anchor to the pin center
+
+### Run authored representation tools
+
+When the active representation defines tools, the palette shows their authored
+names and targets:
+
+- Drag a create-node tool to the canvas to create its target model element. Any
+  safe initial attribute operations are applied before the element appears.
+- Click a create-edge tool, then select its source and target nodes. The tool's
+  configured reference is used, so no reference-selection dialog is needed.
+- Click a delete tool, then select a node or edge. Deleting a node asks for
+  confirmation because it removes the semantic model element from every view;
+  deleting an edge removes its semantic reference or connection.
+- Click a reconnect tool, select an edge, then select its new target node. The
+  target must conform to the reference type.
+- Use the alert's Cancel action to leave an active interaction tool.
+
+Delete, reconnect, and authored edge interactions are available in the 2D
+editor. Create-node tools also run when placing an element in 3D. If a
+representation has no authored creation tools, the palette retains its
+creatable-metaclass fallback.
 
 ### Create semantic pins
 
@@ -157,8 +228,14 @@ The properties panel supports:
 
 - editing model element names and attributes through the view
 - type-aware input fields (string, number, boolean, date)
+- editing configured single- and multi-valued semantic references
 - applying default values for class attributes
 - edge-specific reference type handling
+
+When a diagram representation defines property sections, only the attributes and
+references named by sections applicable to the selected metaclass are shown.
+Sections also work in 3D. Diagram representations without this configuration keep
+the legacy 2D attribute panel; legacy 3D views keep their 3D-specific controls.
 
 ## Appearance and notation
 
@@ -166,7 +243,7 @@ Views use the active representation description when one is selected. Legacy vie
 
 Supported notation includes 2D shapes, colors, image assets, 3D model assets, default sizes, and reference edge styling.
 
-The palette uses the active representation description: existing elements are filtered by visible metaclasses, and create-new-instance entries are filtered by creatable metaclasses.
+The palette uses the active representation description: existing elements are filtered by visible metaclasses. Authored creation tools supply the create-new-instance entries when present; otherwise those entries are filtered by creatable metaclasses.
 
 Notation resolution order is:
 
@@ -181,6 +258,7 @@ Notation resolution order is:
 In view list and editor workflows you can:
 
 - delete view
+- run an authored delete tool to delete a selected semantic node or edge
 - remove model elements from the view without deleting them from the model
 - refresh visual state after updates
 
@@ -236,6 +314,8 @@ Fix: ensure referenced model exists and JSON format is correct.
 
 - `frontend/src/components/diagram/DiagramEditor.tsx`: Primary 2D view editor component.
 - `frontend/src/components/diagram/Diagram3DEditor.tsx`: 3D view editor and interaction layer.
+- `frontend/src/components/diagram/TableView.tsx`: Sortable, inline-editable table representation.
+- `frontend/src/components/diagram/TreeView.tsx`: Expandable containment-tree representation.
 - `frontend/src/components/palette/DiagramPalette.tsx`: Palette of model elements not yet included in the current view.
 - `frontend/src/services/diagram/view-projection.service.ts`: Materializes views from model elements and references.
 - `frontend/src/services/diagram/diagram.service.ts`: Frontend view/diagram compatibility service orchestration.

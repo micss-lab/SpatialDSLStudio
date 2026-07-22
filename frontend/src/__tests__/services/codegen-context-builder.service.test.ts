@@ -75,4 +75,31 @@ describe('CodegenContextBuilderService deterministic ordering', () => {
       'elem-b',
     ]);
   });
+
+  it('exposes stable OPC IDs and resolved reference target summaries', () => {
+    const service = new CodegenContextBuilderService();
+    const first = makeElement('elem-a', 'Conveyor A');
+    const second = makeElement('elem-b', 'Conveyor B');
+    first.references = { next: second.id };
+
+    const context = service.prepareMultiElementContext(
+      [second, first],
+      { id: 'diagram-1', name: 'View', modelId: 'model-1', elements: [] },
+      metamodel
+    );
+
+    expect(context.elementsByClassName.Conveyor[0]).toMatchObject({
+      id: 'elem-a',
+      opcNodeId: 'Conveyor1',
+      generationIndex: 1,
+      resolvedReferences: {
+        next: {
+          id: 'elem-b',
+          name: 'Conveyor B',
+          className: 'Conveyor',
+          opcNodeId: 'Conveyor2',
+        },
+      },
+    });
+  });
 });

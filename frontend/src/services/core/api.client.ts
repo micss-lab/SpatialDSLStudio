@@ -298,6 +298,7 @@ export const API_ENDPOINTS = {
   SIRIUS_AIRD_IMPORT: '/interoperability/sirius/aird/import',
   SIRIUS_AIRD_EXPORT: '/interoperability/sirius/aird/export',
   SIRIUS_EXPORT: '/interoperability/sirius/export',
+  SIRIUS_PROJECT_EXPORT: '/interoperability/sirius/project/export',
   
   // Transformations
   TRANSFORMATION_PATTERNS: '/transformations/patterns',

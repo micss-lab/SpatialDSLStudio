@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import DiagramPalette from '../../components/palette/DiagramPalette';
@@ -38,7 +38,7 @@ const diagram = {
   elements: [{ id: 'el-robot', type: 'node' }],
 } as any;
 
-const renderPalette = () =>
+const renderPalette = (props: Partial<React.ComponentProps<typeof DiagramPalette>> = {}) =>
   render(
     <MemoryRouter>
       <DiagramPalette
@@ -47,6 +47,7 @@ const renderPalette = () =>
         diagram={diagram}
         onDragStart={jest.fn()}
         onAddAll={jest.fn()}
+        {...props}
       />
     </MemoryRouter>
   );
@@ -107,5 +108,66 @@ describe('DiagramPalette with a viewpoint type filter', () => {
       screen.getByText(/tick them as visible or creatable/i)
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /manage view types/i })).toBeInTheDocument();
+  });
+});
+
+describe('DiagramPalette with authored tools', () => {
+  const tools = [
+    { id: 'tool-node', name: 'Deploy robot', type: 'create-node', metaClassId: 'mc-robot' },
+    { id: 'tool-edge', name: 'Assign station', type: 'create-edge', referenceId: 'ref-station' },
+    { id: 'tool-delete', name: 'Remove asset', type: 'delete' },
+    { id: 'tool-reconnect', name: 'Reassign station', type: 'reconnect', referenceId: 'ref-station' },
+  ];
+
+  beforeEach(() => {
+    mockResolve.mockReturnValue({
+      representationDescription: {
+        id: 'rd-tools',
+        name: 'Tool-driven floor',
+        visibleMetaClassIds: ['mc-robot', 'mc-station'],
+        creatableMetaClassIds: ['mc-robot', 'mc-station'],
+        toolDefinitions: tools,
+      },
+    });
+  });
+
+  it('renders named creation tools instead of the metaclass fallback', () => {
+    renderPalette({ onToolActivate: jest.fn() });
+
+    expect(screen.getByText('Deploy robot')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Assign station' })).toBeInTheDocument();
+    expect(screen.queryByText('ChargingStation')).not.toBeInTheDocument();
+  });
+
+  it('passes the authored create-node tool with its drag item', () => {
+    const onDragStart = jest.fn();
+    renderPalette({ onDragStart, onToolActivate: jest.fn() });
+
+    const toolEntry = screen.getByText('Deploy robot').closest('[draggable="true"]');
+    expect(toolEntry).not.toBeNull();
+    fireEvent.dragStart(toolEntry!, {
+      dataTransfer: { setData: jest.fn(), effectAllowed: '' },
+    });
+
+    expect(onDragStart).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'new-metaclass',
+      metaClass: expect.objectContaining({ id: 'mc-robot' }),
+      tool: expect.objectContaining({ id: 'tool-node' }),
+    }));
+  });
+
+  it('activates edge, delete, and reconnect tools from the palette', () => {
+    const onToolActivate = jest.fn();
+    renderPalette({ onToolActivate });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Assign station' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove asset' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reassign station' }));
+
+    expect(onToolActivate.mock.calls.map(call => call[0].id)).toEqual([
+      'tool-edge',
+      'tool-delete',
+      'tool-reconnect',
+    ]);
   });
 });

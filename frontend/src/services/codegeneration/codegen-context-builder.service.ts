@@ -247,6 +247,7 @@ export class CodegenContextBuilderService {
     const elementsByClass: Record<string, any[]> = {};
     // Group elements by metaclass name
     const elementsByClassName: Record<string, any[]> = {};
+    const elementContextById: Record<string, any> = {};
     
     // Create a map of metaclass IDs to names for quick lookup
     const metaclassIdToName: Record<string, string> = {};
@@ -257,12 +258,15 @@ export class CodegenContextBuilderService {
     console.log('Metaclass ID to Name mapping:', metaclassIdToName);
     
     // First, index all elements by their name for direct access
-    this.sortElementsForGeneration(elements).forEach(element => {
+    const sortedElements = this.sortElementsForGeneration(elements);
+    sortedElements.forEach(element => {
       const name = element.style.name;
       if (!name) return;
       
       // Create an element context
       const elementContext = this.prepareSingleElementContext(element);
+      elementContext.className = metaclassIdToName[element.modelElementId] || element.modelElementId;
+      elementContextById[element.id] = elementContext;
       
       // Add to the context by name
       context[name] = elementContext;
@@ -282,6 +286,59 @@ export class CodegenContextBuilderService {
         }
         elementsByClassName[metaclassName].push(elementContext);
       }
+    });
+
+    // Assign the stable runtime identifiers shared by generated Visual
+    // Components configuration and the Isaac Sim OPC UA bridge.
+    (elementsByClassName.MobileRobot || []).forEach((elementContext, index) => {
+      elementContext.opcNodeId = `Robot${index + 1}`;
+      elementContext.generationIndex = index + 1;
+    });
+    (elementsByClassName.Conveyor || []).forEach((elementContext, index) => {
+      elementContext.opcNodeId = `Conveyor${index + 1}`;
+      elementContext.generationIndex = index + 1;
+    });
+    (elementsByClassName.WarehouseController || []).forEach((elementContext, index) => {
+      elementContext.controlId = `Controller${index + 1}`;
+      elementContext.generationIndex = index + 1;
+    });
+    (elementsByClassName.Task || []).forEach((elementContext, index) => {
+      elementContext.taskId = `Task${index + 1}`;
+      elementContext.generationIndex = index + 1;
+    });
+    (elementsByClassName.Product || []).forEach((elementContext, index) => {
+      elementContext.productId = `Product${index + 1}`;
+      elementContext.generationIndex = index + 1;
+    });
+
+    // Preserve raw reference IDs for backwards compatibility and additionally
+    // expose immutable target summaries so templates never need hard-coded IDs.
+    const targetSummary = (targetId: string): any => {
+      const target = elementContextById[targetId];
+      if (!target) return { id: targetId, unresolved: true };
+      return {
+        id: target.id,
+        name: target.name,
+        className: target.className,
+        opcNodeId: target.opcNodeId,
+        controlId: target.controlId,
+        taskId: target.taskId,
+        productId: target.productId,
+      };
+    };
+    sortedElements.forEach(element => {
+      const source = elementContextById[element.id];
+      source.resolvedReferences = {};
+      const rawReferences = 'references' in element ? element.references : {};
+      Object.entries(rawReferences || {}).forEach(([referenceName, rawValue]) => {
+        if (Array.isArray(rawValue)) {
+          source.resolvedReferences[referenceName] = rawValue.map(value => targetSummary(String(value)));
+        } else if (typeof rawValue === 'string') {
+          source.resolvedReferences[referenceName] = targetSummary(rawValue);
+        } else {
+          source.resolvedReferences[referenceName] = rawValue;
+        }
+      });
     });
     
     // Add all elements by class groups 

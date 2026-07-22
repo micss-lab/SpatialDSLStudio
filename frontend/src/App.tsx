@@ -42,6 +42,7 @@ import { ViewpointManager } from './components/viewpoints';
 import ModelManager from './components/model/ModelManager';
 import DiagramEditor from './components/diagram/DiagramEditor';
 import TableView from './components/diagram/TableView';
+import TreeView from './components/diagram/TreeView';
 import Diagram3DEditor from './components/diagram/Diagram3DEditor';
 import CodeGenerator from './components/codegeneration/CodeGenerator';
 import TransformationDashboard from './components/transformation/TransformationDashboard';
@@ -1459,7 +1460,9 @@ const DiagramsPage: React.FC = () => {
     [availableViewpoints, selectedViewpointId]
   );
   const selectableRepresentationDescriptions = useMemo(
-    () => (selectedViewpoint?.representationDescriptions || []).filter(description => description.kind === 'diagram' || description.kind === 'table'),
+    () => (selectedViewpoint?.representationDescriptions || []).filter(
+      description => description.kind === 'diagram' || description.kind === 'table' || description.kind === 'tree'
+    ),
     [selectedViewpoint]
   );
 
@@ -2027,6 +2030,8 @@ const DiagramEditorPage: React.FC = () => {
   const viewpoint = explicitContext.viewpoint || fallbackContext.viewpoint;
   const representationDescription = explicitContext.representationDescription || fallbackContext.representationDescription;
   const isTable = representationDescription?.kind === 'table';
+  const isTree = representationDescription?.kind === 'tree';
+  const isStructuredView = isTable || isTree;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }} data-diagram-version={diagramVersion}>
@@ -2039,7 +2044,7 @@ const DiagramEditorPage: React.FC = () => {
             {viewpoint?.name || 'Default'} / {representationDescription?.name || 'Default Visual'}
           </Typography>
         </Box>
-        {!isTable && (
+        {!isStructuredView && (
           <>
             <Button
               variant={mode === '2D' ? 'contained' : 'outlined'}
@@ -2062,6 +2067,8 @@ const DiagramEditorPage: React.FC = () => {
       <Box sx={{ flexGrow: 1 }}>
         {isTable ? (
           <TableView diagramId={diagramId} />
+        ) : isTree ? (
+          <TreeView diagramId={diagramId} />
         ) : mode === '2D' ? (
           <DiagramEditor diagramId={diagramId} />
         ) : (

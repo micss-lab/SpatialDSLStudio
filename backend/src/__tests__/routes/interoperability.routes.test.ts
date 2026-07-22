@@ -9,6 +9,7 @@ const siriusInteropServiceMock = {
   importAird: jest.fn(),
   exportOdesign: jest.fn(),
   exportAird: jest.fn(),
+  exportProject: jest.fn(),
 };
 
 jest.mock('../../services', () => ({
@@ -174,6 +175,26 @@ describe('interoperability Sirius routes', () => {
     expect(res.body.data.filename).toBe('demo-model.aird');
     expect(siriusInteropServiceMock.exportAird).toHaveBeenCalledWith(
       expect.objectContaining({ modelId: 'model-1' }),
+      'user-1'
+    );
+  });
+
+  it('exports a complete Sirius project ZIP', async () => {
+    siriusInteropServiceMock.exportProject.mockResolvedValue({
+      filename: 'minimal.sirius-project.zip',
+      content: 'UEsDBAo=',
+      entries: ['model/minimal.ecore', 'model/demo.xmi', 'description/minimal.odesign', 'representations.aird'],
+      report: { supported: true, sourceFormat: 'project-zip' },
+    });
+
+    const res = await request(buildApp())
+      .post('/api/interoperability/sirius/project/export')
+      .send({ metamodelId: 'metamodel-1', modelId: 'model-1' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.filename).toBe('minimal.sirius-project.zip');
+    expect(siriusInteropServiceMock.exportProject).toHaveBeenCalledWith(
+      expect.objectContaining({ metamodelId: 'metamodel-1', modelId: 'model-1' }),
       'user-1'
     );
   });
