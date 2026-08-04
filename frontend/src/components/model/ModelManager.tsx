@@ -343,7 +343,10 @@ const ModelManager: React.FC = () => {
     <Paper
       elevation={3}
       sx={{
-        width: 250,
+        // Each row reserves room for up to four action icons, so a narrower
+        // panel leaves the name and description wrapping a word per line.
+        width: 340,
+        flexShrink: 0,
         p: 2,
         height: '100%',
         overflowY: 'auto',
@@ -464,11 +467,12 @@ const ModelManager: React.FC = () => {
                     primary={model.name}
                     primaryTypographyProps={{
                       sx: {
-                        wordBreak: 'keep-all',
-                        overflowWrap: 'normal',
+                        // A name with no spaces still has to break somewhere,
+                        // otherwise it overflows the panel instead of wrapping.
+                        wordBreak: 'normal',
+                        overflowWrap: 'anywhere',
                         hyphens: 'none',
                         lineHeight: '1.2',
-                        maxWidth: '210px',
                         whiteSpace: 'normal',
                         fontSize: (theme) =>
                           model.name.length > 20 ? theme.typography.body2.fontSize : theme.typography.body1.fontSize
