@@ -193,7 +193,13 @@ export const ProjectPickerPage: React.FC = () => {
             {projects.map(project => (
               <Grid size={{ xs: 12, md: 6, xl: 4 }} key={project.id}>
                 <Card variant="outlined" sx={{ height: '100%' }}>
-                  <CardActionArea onClick={() => openProject(project.id)} sx={{ height: '100%', alignItems: 'stretch' }}>
+                  {/* Cards in a row stretch to a common height, so content has
+                      to be pinned to the top; otherwise a short description
+                      leaves the title floating in the middle of the card. */}
+                  <CardActionArea
+                    onClick={() => openProject(project.id)}
+                    sx={{ height: '100%', alignItems: 'stretch', justifyContent: 'flex-start' }}
+                  >
                     <CardContent sx={{ p: 3 }}>
                       <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
                         <Typography variant="h6">{project.name}</Typography>

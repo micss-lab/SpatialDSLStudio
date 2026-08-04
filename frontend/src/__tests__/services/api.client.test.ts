@@ -115,6 +115,45 @@ describe('ApiClient', () => {
       );
     });
 
+    it('refuses artifact endpoints when no project is active', async () => {
+      client.setProjectId(null);
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true, data: [] }),
+      });
+
+      // The flat route answers with every project's artifacts, so a service
+      // that loads before the project context is ready must fail rather than
+      // cache another project's data.
+      await expect(client.get('/models')).rejects.toThrow('requires an active project');
+      await expect(client.get('/metamodels/metamodel-1')).rejects.toThrow('requires an active project');
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('still allows unscoped endpoints when no project is active', async () => {
+      client.setProjectId(null);
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true, data: [] }),
+      });
+
+      await client.get('/projects?includeArchived=true');
+      await client.get('/admin/stats');
+
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        1,
+        'http://localhost:3001/api/projects?includeArchived=true',
+        expect.objectContaining({ method: 'GET' })
+      );
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        2,
+        'http://localhost:3001/api/admin/stats',
+        expect.objectContaining({ method: 'GET' })
+      );
+    });
+
     it('does not rewrite project-management endpoints', async () => {
       client.setProjectId('project-1');
       mockFetch.mockResolvedValue({
