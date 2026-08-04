@@ -5,7 +5,11 @@ import { exampleDataService } from './exampleData.service';
 import { apiClient, API_ENDPOINTS } from '../core';
 import { migrateMetamodels } from './metamodel-migration.service';
 import { syncMetamodelToAPI, saveMetamodelToAPI, deleteMetamodelFromAPI } from './metamodel-api-sync.service';
-import { validateMetamodel } from './metamodel-validation.service';
+import {
+  validateMetamodel,
+  validateMetamodelVerticalPlacementPolicies,
+} from './metamodel-validation.service';
+import { validateConcreteSyntaxVerticalPlacement } from '../spatial';
 import { addMetaClass, updateMetaClass, deleteMetaClass } from './metaclass-crud.service';
 import { addMetaAttribute, updateMetaAttribute, deleteMetaAttribute } from './metaattribute-crud.service';
 import { 
@@ -33,8 +37,10 @@ class MetamodelService {
       // Try to load from API first
       await this.loadFromAPI();
       
-      // Load example metamodels if none exist
-      if (this.metamodels.length === 0) {
+      // Flat legacy sessions keep the historical demo bootstrap. A newly
+      // created project is intentionally empty so its language graph is not
+      // polluted with unrelated Smart Warehouse artifacts.
+      if (this.metamodels.length === 0 && !apiClient.getProjectId()) {
         await this.loadExampleMetamodels();
       }
       
@@ -161,6 +167,8 @@ class MetamodelService {
     if (!metamodelData.id || !metamodelData.name || !Array.isArray(metamodelData.classes)) {
       throw new Error('Invalid metamodel format');
     }
+    const policyErrors = validateMetamodelVerticalPlacementPolicies(metamodelData);
+    if (policyErrors.length > 0) throw new Error(policyErrors[0]);
 
     const corePackage = metaMetamodelService.getCoreEPackage();
     const importedMetamodel: Metamodel = {
@@ -374,6 +382,17 @@ class MetamodelService {
     const metamodel = this.getMetamodelById(metamodelId);
     if (!metamodel) return false;
 
+    const currentClass = metamodel.classes.find(metaClass => metaClass.id === classId);
+    if (!currentClass) return false;
+    const nextClass = { ...currentClass, ...updates };
+    if (nextClass.concreteSyntax !== undefined) {
+      const policyErrors = validateConcreteSyntaxVerticalPlacement(
+        nextClass.concreteSyntax,
+        'class.concreteSyntax'
+      );
+      if (policyErrors.length > 0) throw new Error(policyErrors[0]);
+    }
+
     const result = updateMetaClass(metamodel, classId, updates);
 
     if (result) {
@@ -471,6 +490,8 @@ class MetamodelService {
   updateMetamodel(id: string, updatedMetamodel: Metamodel): Metamodel | undefined {
     const index = this.metamodels.findIndex(m => m.id === id);
     if (index === -1) return undefined;
+    const policyErrors = validateMetamodelVerticalPlacementPolicies(updatedMetamodel);
+    if (policyErrors.length > 0) throw new Error(policyErrors[0]);
     
     this.metamodels[index] = updatedMetamodel;
     this.saveToStorage(id);

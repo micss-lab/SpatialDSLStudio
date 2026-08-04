@@ -57,11 +57,13 @@ import {
   SiriusInteropWarning,
   Viewpoint
 } from '../../models/types';
-import { useAuth } from '../../contexts/AuthContext';
+import { useProject } from '../../contexts/ProjectContext';
 import { metamodelService } from '../../services/metamodel';
 import { diagramService } from '../../services/diagram';
 import { modelInheritanceUtilsService, modelService } from '../../services/model';
-import viewpointService from '../../services/viewpoint.service';
+import viewpointService, {
+  validateRepresentationVerticalPlacementPolicies,
+} from '../../services/viewpoint.service';
 import { siriusInteropService } from '../../services/interoperability';
 import ColorSwatchField from '../common/ColorSwatchField';
 import { CreatedBy } from '../common';
@@ -178,6 +180,10 @@ const getRepresentationKindLabel = (kind: string): string => (
   kind === 'diagram' ? 'visual view' : kind
 );
 
+const displayVerticalPlacementError = (error: string): string => (
+  error.replace(/^.*?verticalPlacement/, 'Vertical placement')
+);
+
 const mergeConcreteSyntax = (
   fallback: ConcreteSyntax = {},
   override?: ConcreteSyntax
@@ -213,6 +219,19 @@ const mergeConcreteSyntax = (
         depthMm: override?.three_d?.defaultSizeMm?.depthMm ?? fallback.three_d?.defaultSizeMm?.depthMm ?? 200,
       };
     }
+    if (fallback.three_d?.verticalPlacement || override?.three_d?.verticalPlacement) {
+      threeD.verticalPlacement = {
+        mode: override?.three_d?.verticalPlacement?.mode
+          ?? fallback.three_d?.verticalPlacement?.mode
+          ?? 'grounded',
+        ...(
+          fallback.three_d?.verticalPlacement || {}
+        ),
+        ...(
+          override?.three_d?.verticalPlacement || {}
+        ),
+      };
+    }
     merged.three_d = threeD;
   }
 
@@ -222,7 +241,8 @@ const mergeConcreteSyntax = (
 const ViewpointManager: React.FC = () => {
   const { metamodelId } = useParams<{ metamodelId: string }>();
   const navigate = useNavigate();
-  const { canEditMetamodel } = useAuth();
+  const { can, project } = useProject();
+  const canEditMetamodel = can('viewpoint.update');
   const [metamodel, setMetamodel] = useState<Metamodel | null>(null);
   const [viewpoints, setViewpoints] = useState<Viewpoint[]>([]);
   const [selectedViewpointId, setSelectedViewpointId] = useState<string>('');
@@ -325,7 +345,7 @@ const ViewpointManager: React.FC = () => {
   const handleCreateDefault = async () => {
     if (!metamodelId || !canEditMetamodel) return;
     try {
-      const viewpoint = await viewpointService.getDefaultViewpoint(metamodelId);
+      const viewpoint = await viewpointService.createDefaultViewpoint(metamodelId);
       refreshViewpoint(viewpoint);
     } catch (error: any) {
       setError(error.message || 'Failed to create default viewpoint');
@@ -651,6 +671,12 @@ const ViewpointManager: React.FC = () => {
       return;
     }
 
+    const policyErrors = validateRepresentationVerticalPlacementPolicies(representationDraft);
+    if (policyErrors.length > 0) {
+      setError(displayVerticalPlacementError(policyErrors[0]));
+      return;
+    }
+
     try {
       const exists = selectedViewpoint.representationDescriptions.some(description => description.id === representationDraft.id);
       const payload = {
@@ -712,7 +738,7 @@ const ViewpointManager: React.FC = () => {
       <Paper sx={{ width: 320, borderRadius: 0, p: 2, overflowY: 'auto' }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
           <Tooltip title="Back to metamodel">
-            <Button size="small" startIcon={<ArrowBackIcon />} onClick={() => navigate(`/metamodels/${metamodel.id}`)}>
+            <Button size="small" startIcon={<ArrowBackIcon />} onClick={() => navigate(`/projects/${project.id}/metamodels/${metamodel.id}`)}>
               Back
             </Button>
           </Tooltip>
@@ -1115,6 +1141,10 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
     ? draft.concreteSyntaxByMetaClassId?.[selectedClass.id]
     : undefined;
   const classSyntax = mergeConcreteSyntax(classFallbackSyntax, classOverrideSyntax);
+  const verticalPlacementErrors = validateRepresentationVerticalPlacementPolicies(draft);
+  const verticalPlacementError = verticalPlacementErrors.length > 0
+    ? displayVerticalPlacementError(verticalPlacementErrors[0])
+    : '';
   const referenceFallbackSyntax = selectedReferenceEntry?.reference.concreteSyntax || {};
   const referenceOverrideSyntax = selectedReferenceEntry
     ? draft.concreteSyntaxByReferenceId?.[selectedReferenceEntry.reference.id]
@@ -1461,6 +1491,13 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
     });
   };
 
+  const updateClassVerticalPlacement = (key: string, value: string | number) => {
+    updateClass3D('verticalPlacement', {
+      ...(classSyntax.three_d?.verticalPlacement || { mode: 'grounded' }),
+      [key]: value,
+    });
+  };
+
   const handleClass3DModelUpload = (file?: File) => {
     if (!file || readOnly) return;
     if (!file.name.toLowerCase().endsWith('.glb')) {
@@ -1508,10 +1545,14 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
         <Typography variant="h6">Representation Editor</Typography>
         <Stack direction="row" spacing={1}>
-          {!readOnly && <Button data-testid="save-representation" variant="contained" startIcon={<SaveIcon />} onClick={onSave}>Save</Button>}
+          {!readOnly && <Button data-testid="save-representation" variant="contained" startIcon={<SaveIcon />} disabled={Boolean(verticalPlacementError)} onClick={onSave}>Save</Button>}
           <Button onClick={onCancel}>Close</Button>
         </Stack>
       </Stack>
+
+      {verticalPlacementError && (
+        <Alert severity="error" sx={{ mb: 2 }}>{verticalPlacementError}</Alert>
+      )}
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { md: '360px 1fr' }, gap: 2 }}>
         <Stack spacing={2}>
@@ -1771,10 +1812,30 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
                 </FormControl>
                 <ColorSwatchField label="Fallback color" value={classSyntax.three_d?.fallbackColor || '#4287f5'} disabled={readOnly} onChange={value => updateClass3D('fallbackColor', value)} />
                 <Stack direction="row" spacing={1}>
-                  <TextField label="W mm" type="number" size="small" value={classSyntax.three_d?.defaultSizeMm?.widthMm || 500} disabled={readOnly} onChange={event => updateClass3DSize('widthMm', Number(event.target.value))} />
-                  <TextField label="H mm" type="number" size="small" value={classSyntax.three_d?.defaultSizeMm?.heightMm || 800} disabled={readOnly} onChange={event => updateClass3DSize('heightMm', Number(event.target.value))} />
-                  <TextField label="D mm" type="number" size="small" value={classSyntax.three_d?.defaultSizeMm?.depthMm || 200} disabled={readOnly} onChange={event => updateClass3DSize('depthMm', Number(event.target.value))} />
+                  <TextField label="Length X" type="number" size="small" value={classSyntax.three_d?.defaultSizeMm?.widthMm ?? 500} disabled={readOnly} onChange={event => updateClass3DSize('widthMm', Number(event.target.value))} />
+                  <TextField label="Width Y" type="number" size="small" value={classSyntax.three_d?.defaultSizeMm?.heightMm ?? 800} disabled={readOnly} onChange={event => updateClass3DSize('heightMm', Number(event.target.value))} />
+                  <TextField label="Height Z" type="number" size="small" value={classSyntax.three_d?.defaultSizeMm?.depthMm ?? 200} disabled={readOnly} onChange={event => updateClass3DSize('depthMm', Number(event.target.value))} />
                 </Stack>
+                <FormControl size="small">
+                  <InputLabel>Vertical placement</InputLabel>
+                  <Select
+                    label="Vertical placement"
+                    value={classSyntax.three_d?.verticalPlacement?.mode || 'grounded'}
+                    disabled={readOnly}
+                    onChange={event => updateClassVerticalPlacement('mode', event.target.value)}
+                  >
+                    <MenuItem value="grounded">Grounded</MenuItem>
+                    <MenuItem value="adjustable">Adjustable</MenuItem>
+                  </Select>
+                </FormControl>
+                {classSyntax.three_d?.verticalPlacement?.mode === 'adjustable' && (
+                  <Stack direction="row" spacing={1}>
+                    <TextField label="Default Z" type="number" size="small" value={classSyntax.three_d.verticalPlacement.defaultBaseZMm ?? 0} disabled={readOnly} error={verticalPlacementError.includes('defaultBaseZMm')} onChange={event => updateClassVerticalPlacement('defaultBaseZMm', Number(event.target.value))} />
+                    <TextField label="Min Z" type="number" size="small" value={classSyntax.three_d.verticalPlacement.minBaseZMm ?? 0} disabled={readOnly} error={verticalPlacementError.includes('minBaseZMm')} onChange={event => updateClassVerticalPlacement('minBaseZMm', Number(event.target.value))} />
+                    <TextField label="Max Z" type="number" size="small" value={classSyntax.three_d.verticalPlacement.maxBaseZMm ?? 10000} disabled={readOnly} error={verticalPlacementError.includes('maxBaseZMm')} onChange={event => updateClassVerticalPlacement('maxBaseZMm', Number(event.target.value))} />
+                    <TextField label="Step" type="number" size="small" value={classSyntax.three_d.verticalPlacement.stepMm ?? 100} disabled={readOnly} error={verticalPlacementError.includes('stepMm')} inputProps={{ min: Number.MIN_VALUE }} onChange={event => updateClassVerticalPlacement('stepMm', Number(event.target.value))} />
+                  </Stack>
+                )}
                 {!readOnly && (
                   <Stack direction="row" spacing={1}>
                     <Button size="small" onClick={() => updateClassSyntax(hasObjectValues(classFallbackSyntax as Record<string, unknown>) ? classFallbackSyntax : undefined)}>Copy fallback</Button>

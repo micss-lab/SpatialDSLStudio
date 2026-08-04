@@ -11,12 +11,23 @@ import {
   SiriusOdesignPreview,
   SiriusProjectExportResult,
   SiriusSourceFormat,
+  ModelElementPresentation,
 } from '../../models/types';
 import { apiClient, API_ENDPOINTS } from '../core';
+import { modelService } from '../model';
+import { normalizePosition3D, validatePresentation } from '../spatial';
+
+interface SpatialDslPresentationSidecar {
+  schemaVersion: 1;
+  model: { id: string; name?: string; metamodelId?: string };
+  elements: Record<string, ModelElementPresentation>;
+}
 
 interface SiriusProjectBundle {
   odesignContent?: string;
   odesignPath?: string;
+  presentationSidecar?: SpatialDslPresentationSidecar;
+  presentationSidecarPath?: string;
   warnings: SiriusInteropWarning[];
   unresolvedReferences: SiriusInteropWarning[];
 }
@@ -95,6 +106,7 @@ class SiriusInteropService {
         throw new Error('The Sirius project ZIP does not contain an .odesign file to import.');
       }
       const result = await this.importOdesign(bundle.odesignContent, metamodelId);
+      await this.restorePresentationSidecar(bundle, metamodelId);
       result.report = this.mergeLocalReport(result.report, 'project-zip', bundle);
       return result;
     }
@@ -211,6 +223,58 @@ class SiriusInteropService {
 
     files.forEach(entry => this.assertSafeProjectPath((entry as any).unsafeOriginalName || entry.name));
 
+    const sidecars = files.filter(entry => (
+      entry.name.split('/').pop()?.toLowerCase() === 'spatialdsl-presentation.json'
+    ));
+    let presentationSidecar: SpatialDslPresentationSidecar | undefined;
+    let presentationSidecarPath: string | undefined;
+    if (sidecars.length === 0) {
+      warnings.push({
+        severity: 'warning',
+        code: 'SPATIALDSL_PRESENTATION_SIDECAR_MISSING',
+        message: 'No spatialdsl-presentation.json was found. Sirius 2D layout can still be imported, but elevation and 3D extents cannot be restored losslessly.',
+      });
+    } else if (sidecars.length > 1) {
+      unresolvedReferences.push({
+        severity: 'error',
+        code: 'SPATIALDSL_PRESENTATION_SIDECAR_AMBIGUOUS',
+        message: 'The project ZIP contains more than one spatialdsl-presentation.json sidecar.',
+      });
+    } else {
+      presentationSidecarPath = sidecars[0].name;
+      try {
+        const parsed = JSON.parse(await sidecars[0].async('text')) as SpatialDslPresentationSidecar;
+        const presentationsAreCanonical = parsed.elements && typeof parsed.elements === 'object'
+          && !Array.isArray(parsed.elements)
+          && Object.entries(parsed.elements).every(([elementId, presentation]) => (
+            Boolean(elementId)
+            && validatePresentation(presentation).length === 0
+            && (
+              !presentation.position3D
+              || (Boolean(normalizePosition3D(presentation.position3D))
+                && typeof presentation.position3D.z === 'number')
+            )
+          ));
+        if (parsed.schemaVersion !== 1 || !parsed.model?.id || !presentationsAreCanonical) {
+          throw new Error('unsupported or malformed sidecar schema');
+        }
+        presentationSidecar = parsed;
+        warnings.push({
+          severity: 'info',
+          code: 'SPATIALDSL_PRESENTATION_SIDECAR_RECOGNIZED',
+          message: `Validated lossless SpatialDSL presentation data from "${sidecars[0].name}".`,
+          sourcePath: sidecars[0].name,
+        });
+      } catch (error) {
+        unresolvedReferences.push({
+          severity: 'error',
+          code: 'SPATIALDSL_PRESENTATION_SIDECAR_INVALID',
+          message: `Could not validate "${sidecars[0].name}" as a SpatialDSL presentation sidecar.`,
+          sourcePath: sidecars[0].name,
+        });
+      }
+    }
+
     files
       .filter(entry => entry.name.toLowerCase().endsWith('.aird'))
       .forEach(entry => warnings.push({
@@ -236,12 +300,14 @@ class SiriusInteropService {
         code: 'SIRIUS_ODSIGN_NOT_FOUND',
         message: 'The Sirius project ZIP does not contain an .odesign Viewpoint Specification Model.',
       });
-      return { warnings, unresolvedReferences };
+      return { presentationSidecar, presentationSidecarPath, warnings, unresolvedReferences };
     }
 
     return {
       odesignContent: await odesign.async('text'),
       odesignPath: odesign.name,
+      presentationSidecar,
+      presentationSidecarPath,
       warnings: [
         ...warnings,
         {
@@ -253,6 +319,69 @@ class SiriusInteropService {
       ],
       unresolvedReferences,
     };
+  }
+
+  private async restorePresentationSidecar(
+    bundle: SiriusProjectBundle,
+    metamodelId: string
+  ): Promise<void> {
+    const sidecar = bundle.presentationSidecar;
+    if (!sidecar) return;
+
+    const conformingModels = modelService.getAllModels().filter(model => (
+      (model.conformsTo || model.metamodelId) === metamodelId
+    ));
+    const model = conformingModels.find(candidate => candidate.id === sidecar.model.id)
+      || conformingModels.find(candidate => candidate.name === sidecar.model.name)
+      || (conformingModels.length === 1 ? conformingModels[0] : undefined);
+    if (!model) {
+      bundle.unresolvedReferences.push({
+        severity: 'warning',
+        code: 'SPATIALDSL_PRESENTATION_MODEL_UNRESOLVED',
+        message: `Presentation sidecar model "${sidecar.model.name || sidecar.model.id}" is not present in this project. Import its semantic XMI first, then re-import the bundle to restore 3D placement.`,
+        sourcePath: bundle.presentationSidecarPath,
+      });
+      return;
+    }
+
+    let restored = 0;
+    const restoredElements = [...model.elements];
+    Object.entries(sidecar.elements).forEach(([elementId, sidecarPresentation]) => {
+      const elementIndex = restoredElements.findIndex(candidate => candidate.id === elementId);
+      const element = restoredElements[elementIndex];
+      if (!element) {
+        bundle.unresolvedReferences.push({
+          severity: 'warning',
+          code: 'SPATIALDSL_PRESENTATION_ELEMENT_UNRESOLVED',
+          message: `Presentation sidecar element "${elementId}" is not present in model "${model.name}".`,
+          sourcePath: bundle.presentationSidecarPath,
+          spatialElementId: elementId,
+        });
+        return;
+      }
+
+      const position3D = normalizePosition3D(sidecarPresentation.position3D);
+      const presentation: ModelElementPresentation = {
+        ...(element.presentation || {}),
+        ...sidecarPresentation,
+        ...(position3D && { position3D }),
+      };
+      restoredElements[elementIndex] = { ...element, presentation };
+      restored += 1;
+    });
+
+    if (restored > 0) {
+      // Await the whole-model upsert so import completion means the sidecar is
+      // durable, rather than merely queued by a fire-and-forget presentation save.
+      await modelService.importModel({ ...model, elements: restoredElements });
+    }
+
+    bundle.warnings.push({
+      severity: 'info',
+      code: 'SPATIALDSL_PRESENTATION_SIDECAR_RESTORED',
+      message: `Restored SpatialDSL presentation data for ${restored} model element${restored === 1 ? '' : 's'} in "${model.name}".`,
+      sourcePath: bundle.presentationSidecarPath,
+    });
   }
 
   private detectSourceFormat(filename: string): SiriusSourceFormat {

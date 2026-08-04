@@ -26,6 +26,13 @@ jest.mock('../../contexts/AuthContext', () => ({
   }),
 }));
 
+jest.mock('../../contexts/ProjectContext', () => ({
+  useProject: () => ({
+    can: () => true,
+    project: { id: 'project-1' },
+  }),
+}));
+
 jest.mock('../../contexts/OwnerFilterContext', () => ({
   useOwnerFilterMatcher: () => () => true,
 }));

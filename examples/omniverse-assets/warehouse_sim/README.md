@@ -16,7 +16,13 @@ simulator over OPC UA.
 - **Planner** (`nav.py`): engine-independent A* + dynamic-window avoidance.
 - **Layout** (`warehouse_layout.json`): the model data, produced by the
   "Generate Warehouse Layout" code generation template from a Smart Warehouse
-  model. Both processes read the same file.
+  model. Both processes read the same file. Every spatial record carries
+  `[x, y, z]` in the declared units; `z` is base elevation.
+
+Inspection drones are rendered at their modeled X/Y/Z/yaw pose and receive a
+kinematic rigid body so gravity does not move them. They are intentionally absent
+from the ground navigation grid and OPC UA robot loop: this phase demonstrates
+aerial placement, not flight dynamics or 3D path planning.
 
 ## OPC UA node contract
 
@@ -43,7 +49,7 @@ The Omniverse code generation project now emits four directly composable files:
 - `warehouse_layout.usda`: model transforms and render-neutral floor;
 - `warehouse_assets.usda`: portable relative asset references;
 - `warehouse_physics.usda`: `PhysicsScene`, material, static proxy colliders,
-  and robot mass/body defaults;
+  robot mass/body defaults, and separate kinematic drone proxy colliders;
 - `warehouse_simulation.usda`: root layer composing the other three.
 
 Keep an `omniverse-assets` directory beside those layers so their relative
@@ -98,7 +104,7 @@ crossings; the brain reassigns pickup/drop-off goals as they arrive.
 Pure-Python, no Isaac Sim or OPC UA needed:
 
 ```bash
-python3 -m unittest test_nav test_brain test_runtime_modes
+python3 -m unittest test_nav test_brain test_runtime_modes test_layout
 ```
 
 - `test_nav.py`: A* routes around obstacles / returns None when walled off;
@@ -107,6 +113,8 @@ python3 -m unittest test_nav test_brain test_runtime_modes
   ferry tasks and keep clearance, exercising the exact contract OPC UA carries.
 - `test_runtime_modes.py`: rigid/articulation control math and manifest-provided
   joint geometry.
+- `test_layout.py`: millimetre-to-metre XYZ scaling, exact 4.5 m/0 m drone base
+  elevations, and separation from the ground obstacle set.
 
 ## Swapping the transport
 

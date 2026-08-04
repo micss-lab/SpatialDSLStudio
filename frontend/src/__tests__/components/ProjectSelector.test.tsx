@@ -21,6 +21,7 @@ const renderSelector = (overrides: Record<string, unknown> = {}) => {
       onNewProject={onNewProject}
       onGenerate={onGenerate}
       canCreate
+      canGenerate
       {...overrides}
     />
   );
@@ -28,12 +29,12 @@ const renderSelector = (overrides: Record<string, unknown> = {}) => {
 };
 
 describe('ProjectSelector', () => {
-  it('groups Generate Code with the project select, before New Project', () => {
+  it('groups Generate Code with the configuration select, before New Configuration', () => {
     renderSelector();
 
     const generate = screen.getByRole('button', { name: /generate code/i });
-    const newProject = screen.getByRole('button', { name: /new project/i });
-    const select = screen.getByLabelText(/project/i);
+    const newProject = screen.getByRole('button', { name: /new configuration/i });
+    const select = screen.getByLabelText(/generator configuration/i);
 
     // The select and Generate Code share a parent group; New Project sits outside it
     expect(generate.parentElement).toBe(select.closest('.MuiFormControl-root')?.parentElement);
@@ -50,7 +51,7 @@ describe('ProjectSelector', () => {
     const { onGenerate, onNewProject } = renderSelector();
 
     fireEvent.click(screen.getByRole('button', { name: /generate code/i }));
-    fireEvent.click(screen.getByRole('button', { name: /new project/i }));
+    fireEvent.click(screen.getByRole('button', { name: /new configuration/i }));
 
     expect(onGenerate).toHaveBeenCalled();
     expect(onNewProject).toHaveBeenCalled();

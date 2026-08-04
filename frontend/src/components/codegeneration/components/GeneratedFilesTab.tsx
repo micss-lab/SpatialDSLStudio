@@ -40,7 +40,7 @@ export const GeneratedFilesTab: React.FC<GeneratedFilesTabProps> = ({
   if (files.length === 0) {
     return (
       <Typography variant="body2" color="textSecondary" align="center">
-        No files generated yet. Select a project and generate code.
+        No files generated yet. Select a generator configuration and generate code.
       </Typography>
     );
   }

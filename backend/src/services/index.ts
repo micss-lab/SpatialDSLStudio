@@ -10,3 +10,7 @@ export { fileStorageService } from './fileStorage.service';
 export { sharingService } from './sharing.service';
 export { authService } from './auth.service';
 export { siriusInteropService } from './sirius-interop.service';
+export { projectService } from './project.service';
+export { projectCheckpointService } from './lifecycle/project-checkpoint.service';
+export { metamodelEvolutionService } from './lifecycle/metamodel-evolution.service';
+export { headlessPipelineService } from './pipeline/headless-pipeline.service';

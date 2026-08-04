@@ -1,12 +1,19 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { body, param, query } from 'express-validator';
-import { validate, authenticate, AuthenticatedRequest } from '../middleware';
+import {
+  validate,
+  authenticate,
+  AuthenticatedRequest,
+  projectResourceParam,
+  projectArgs,
+} from '../middleware';
 import { testService } from '../services';
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
 // All routes require authentication
 router.use(authenticate);
+router.param('id', projectResourceParam('testCase'));
 
 // Async handler wrapper
 const asyncHandler = (fn: Function) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -21,11 +28,11 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
   const { modelId } = req.query;
   
   if (modelId && typeof modelId === 'string') {
-    const testCases = await testService.getByModelId(modelId, req.user!.userId);
+    const testCases = await testService.getByModelId(modelId, req.user!.userId, ...projectArgs(req));
     return res.json({ success: true, data: testCases });
   }
   
-  const testCases = await testService.getAll(req.user!.userId);
+  const testCases = await testService.getAll(req.user!.userId, ...projectArgs(req));
   res.json({ success: true, data: testCases });
 }));
 
@@ -37,11 +44,11 @@ router.get('/cases', asyncHandler(async (req: AuthenticatedRequest, res: Respons
   const { modelId } = req.query;
   
   if (modelId && typeof modelId === 'string') {
-    const testCases = await testService.getByModelId(modelId, req.user!.userId);
+    const testCases = await testService.getByModelId(modelId, req.user!.userId, ...projectArgs(req));
     return res.json({ success: true, data: testCases });
   }
   
-  const testCases = await testService.getAll(req.user!.userId);
+  const testCases = await testService.getAll(req.user!.userId, ...projectArgs(req));
   res.json({ success: true, data: testCases });
 }));
 
@@ -52,7 +59,7 @@ router.get('/cases', asyncHandler(async (req: AuthenticatedRequest, res: Respons
 router.post(
   '/cases',
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const testCase = await testService.create(req.body, req.user!.userId, req.user!.role);
+    const testCase = await testService.create(req.body, req.user!.userId, req.user!.role, ...projectArgs(req));
     res.status(201).json({ success: true, data: testCase });
   })
 );
@@ -74,7 +81,7 @@ router.put(
  * @desc    Get a single test case by ID
  */
 router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const testCase = await testService.getById(req.params.id, req.user!.userId);
+  const testCase = await testService.getById(req.params.id, req.user!.userId, ...projectArgs(req));
   if (!testCase) {
     return res.status(404).json({ success: false, error: 'Test case not found' });
   }
@@ -95,7 +102,7 @@ router.post(
     body('modelId').isUUID().withMessage('Valid model ID is required'),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const testCase = await testService.create(req.body, req.user!.userId, req.user!.role);
+    const testCase = await testService.create(req.body, req.user!.userId, req.user!.role, ...projectArgs(req));
     res.status(201).json({ success: true, data: testCase });
   })
 );
@@ -110,7 +117,7 @@ router.post(
     body().isArray().withMessage('Request body must be an array of test cases'),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const testCases = await testService.createMany(req.body, req.user!.userId, req.user!.role);
+    const testCases = await testService.createMany(req.body, req.user!.userId, req.user!.role, ...projectArgs(req));
     res.status(201).json({ success: true, data: testCases });
   })
 );
@@ -169,7 +176,11 @@ router.delete(
   '/:id',
   validate([param('id').isUUID().withMessage('Invalid ID format')]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    await testService.delete(req.params.id, req.user!.userId);
+    if (req.projectContext) {
+      await testService.delete(req.params.id, req.user!.userId, req.user!.role, req.projectContext.projectId);
+    } else {
+      await testService.delete(req.params.id, req.user!.userId);
+    }
     res.json({ success: true, message: 'Test case deleted successfully' });
   })
 );
@@ -182,7 +193,14 @@ router.delete(
   '/model/:modelId',
   validate([param('modelId').isUUID().withMessage('Invalid model ID format')]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const count = await testService.deleteByModelId(req.params.modelId, req.user!.userId);
+    const count = req.projectContext
+      ? await testService.deleteByModelId(
+          req.params.modelId,
+          req.user!.userId,
+          req.user!.role,
+          req.projectContext.projectId
+        )
+      : await testService.deleteByModelId(req.params.modelId, req.user!.userId);
     res.json({ success: true, message: `${count} test case(s) deleted successfully` });
   })
 );
@@ -195,7 +213,12 @@ router.post(
   '/model/:modelId/reset',
   validate([param('modelId').isUUID().withMessage('Invalid model ID format')]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const count = await testService.resetByModelId(req.params.modelId, req.user!.userId, req.user!.role);
+    const count = await testService.resetByModelId(
+      req.params.modelId,
+      req.user!.userId,
+      req.user!.role,
+      ...projectArgs(req)
+    );
     res.json({ success: true, message: `${count} test case(s) reset successfully` });
   })
 );

@@ -29,6 +29,7 @@ const mockModelRow = {
   connections: [],
   conformsToId: 'mm-uuid-1',
   userId: 'user-uuid-1',
+  projectId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -143,21 +144,72 @@ describe('ModelService', () => {
       expect(result.name).toBe('TestModel');
     });
 
-    it('throws 403 for MODELER role', async () => {
-      await expect(
-        modelService.create(
-          {
-            id: 'model-uuid-1',
-            name: 'TestModel',
-            metamodelId: 'mm-uuid-1',
-            conformsTo: 'mm-uuid-1',
-            elements: [],
-            connections: [],
-          },
-          'user-uuid-1',
-          'MODELER'
-        )
-      ).rejects.toThrow(ApiError);
+    it('allows MODELER role to create a model from a readable metamodel', async () => {
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: false, permission: 'VIEWER' });
+      prismaMock.model.create.mockResolvedValue(mockModelRow);
+
+      const result = await modelService.create(
+        {
+          id: 'model-uuid-1',
+          name: 'TestModel',
+          metamodelId: 'mm-uuid-1',
+          conformsTo: 'mm-uuid-1',
+          elements: [],
+          connections: [],
+        },
+        'user-uuid-1',
+        'MODELER'
+      );
+
+      expect(result.name).toBe('TestModel');
+    });
+
+    it('lets a project Modeler create a Model only from a Metamodel in the same project', async () => {
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: false, permission: 'EDITOR' });
+      prismaMock.metamodel.findFirst.mockResolvedValue({ id: 'mm-uuid-1', projectId: 'project-uuid-1' } as any);
+      prismaMock.model.create.mockResolvedValue({ ...mockModelRow, projectId: 'project-uuid-1' });
+
+      await modelService.create(
+        {
+          id: 'model-uuid-1',
+          name: 'TestModel',
+          metamodelId: 'mm-uuid-1',
+          conformsTo: 'mm-uuid-1',
+          elements: [],
+          connections: [],
+        },
+        'member-uuid',
+        'MODELER',
+        'project-uuid-1'
+      );
+
+      expect(prismaMock.metamodel.findFirst).toHaveBeenCalledWith({
+        where: { id: 'mm-uuid-1', projectId: 'project-uuid-1' },
+      });
+      expect(prismaMock.model.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ projectId: 'project-uuid-1' }),
+      }));
+    });
+
+    it('rejects a cross-project Metamodel reference', async () => {
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: false, permission: 'EDITOR' });
+      prismaMock.metamodel.findFirst.mockResolvedValue(null);
+
+      await expect(modelService.create(
+        {
+          id: 'model-uuid-1',
+          name: 'TestModel',
+          metamodelId: 'mm-uuid-1',
+          conformsTo: 'mm-uuid-1',
+          elements: [],
+          connections: [],
+        },
+        'member-uuid',
+        'MODELER',
+        'project-uuid-1'
+      )).rejects.toThrow('Referenced metamodel is not in this project');
+
+      expect(prismaMock.model.create).not.toHaveBeenCalled();
     });
 
     it('throws 400 when referenced metamodel not accessible', async () => {

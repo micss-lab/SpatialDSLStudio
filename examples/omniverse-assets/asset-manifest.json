@@ -44,6 +44,19 @@
     "Dock": {
       "asset": "warehouse-kit/dock.usda",
       "scaleMode": "fit"
+    },
+    "InspectionDrone": {
+      "asset": "warehouse-kit/inspection_drone.usda",
+      "zOffsetM": 0,
+      "assetVersion": "1.0.0-spatialdsl",
+      "sourceUri": "https://github.com/haphan/SpatialDSLStudio",
+      "sourceRevision": "project-authored",
+      "license": "CC0-1.0",
+      "metersPerUnit": 1,
+      "upAxis": "Z",
+      "forwardAxis": "+X",
+      "bodyMode": "kinematic",
+      "massKg": 1.5
     }
   },
   "overrides": {}

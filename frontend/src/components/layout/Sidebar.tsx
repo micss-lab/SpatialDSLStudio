@@ -9,6 +9,8 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  MenuItem,
+  Select,
   Tooltip,
   Typography,
   useMediaQuery,
@@ -30,9 +32,12 @@ import InfoIcon from '@mui/icons-material/Info';
 import UpgradeIcon from '@mui/icons-material/Upgrade';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { AuthUser } from '../../services/core';
-import OwnerFilterControl from '../common/OwnerFilterControl';
+import { useProject } from '../../contexts/ProjectContext';
+import { StudioProject } from '../../models/project.types';
+import { projectService } from '../../services/project.service';
 
 const EXPANDED_WIDTH = 264;
 const COLLAPSED_WIDTH = 72;
@@ -56,10 +61,18 @@ interface NavItem {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ user, isAdmin, onLogout, onRoleRequest }) => {
+  const { project, openProject } = useProject();
   const location = useLocation();
   const theme = useTheme();
   const shouldAutoCollapse = useMediaQuery(theme.breakpoints.down('md'));
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(STORAGE_KEY) === 'true');
+  const [projects, setProjects] = useState<StudioProject[]>([project]);
+
+  useEffect(() => {
+    projectService.list(project.status === 'ARCHIVED')
+      .then(items => setProjects(items.some(item => item.id === project.id) ? items : [project, ...items]))
+      .catch(() => setProjects([project]));
+  }, [project]);
 
   useEffect(() => {
     if (shouldAutoCollapse) {
@@ -71,40 +84,40 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isAdmin, onLogout, onRoleReques
     localStorage.setItem(STORAGE_KEY, String(collapsed));
   }, [collapsed]);
 
-  const navItems = useMemo<NavItem[]>(() => [
-    { label: 'Home', path: '/', icon: <HomeIcon />, match: pathname => pathname === '/' },
-    { label: 'Metamodels', path: '/metamodels', icon: <SchemaIcon /> },
+  const navItems = useMemo<NavItem[]>(() => {
+    const base = `/projects/${project.id}`;
+    return [
+    { label: 'Overview', path: base, icon: <HomeIcon />, match: pathname => pathname === base },
+    { label: 'Metamodels', path: `${base}/metamodels`, icon: <SchemaIcon /> },
+    { label: 'Models', path: `${base}/models`, icon: <ModelTrainingIcon /> },
     {
       label: 'Viewpoints',
-      path: '/viewpoints',
+      path: `${base}/viewpoints`,
       icon: <AccountTreeIcon />,
-      match: pathname => pathname.startsWith('/viewpoints') || /^\/metamodels\/[^/]+\/viewpoints/.test(pathname),
+      match: pathname => pathname.startsWith(`${base}/viewpoints`)
+        || (pathname.startsWith(`${base}/metamodels/`) && pathname.endsWith('/viewpoints')),
     },
-    {
-      label: 'Representations',
-      path: '/representations',
-      icon: <ViewModuleIcon />,
-      match: pathname => pathname.startsWith('/representations'),
-    },
-    { label: 'Models', path: '/models', icon: <ModelTrainingIcon /> },
     {
       label: 'Views',
-      path: '/views',
+      path: `${base}/views`,
       icon: <DesignServicesIcon />,
-      match: pathname => pathname.startsWith('/views') || pathname.startsWith('/diagrams'),
+      match: pathname => pathname.startsWith(`${base}/views`) || pathname.startsWith(`${base}/diagrams`),
     },
-    { label: 'Code Generation', path: '/code-generation', icon: <CodeIcon /> },
-    { label: 'Transformations', path: '/transformations', icon: <AutorenewIcon /> },
-    { label: 'Testing', path: '/testing', icon: <BugReportIcon /> },
+    { label: 'Code Generation', path: `${base}/code-generation`, icon: <CodeIcon /> },
+    { label: 'Transformations', path: `${base}/transformations`, icon: <AutorenewIcon /> },
+    { label: 'Testing', path: `${base}/testing`, icon: <BugReportIcon /> },
+    { label: 'Project Settings', path: `${base}/settings`, icon: <SettingsIcon /> },
     { label: 'Admin', path: '/admin', icon: <AdminPanelSettingsIcon />, adminOnly: true },
-  ], []);
+  ];
+  }, [project.id]);
 
   const utilityItems = useMemo<NavItem[]>(() => [
     { label: 'Request Role', icon: <UpgradeIcon />, onClick: onRoleRequest, nonAdminOnly: true },
-    { label: 'Help', path: '/help', icon: <HelpOutlineIcon /> },
-    { label: 'About', path: '/about', icon: <InfoIcon /> },
+    { label: 'All Projects', path: '/projects', icon: <FolderOpenIcon /> },
+    { label: 'Help', path: `/projects/${project.id}/help`, icon: <HelpOutlineIcon /> },
+    { label: 'About', path: `/projects/${project.id}/about`, icon: <InfoIcon /> },
     { label: 'Logout', icon: <LogoutIcon />, onClick: onLogout },
-  ], [onLogout, onRoleRequest]);
+  ], [onLogout, onRoleRequest, project.id]);
 
   const visibleNavItems = navItems.filter(item => !item.adminOnly || isAdmin);
   const visibleUtilityItems = utilityItems.filter(item => !item.nonAdminOnly || !isAdmin);
@@ -190,7 +203,27 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isAdmin, onLogout, onRoleReques
 
       <Divider />
 
-      {!collapsed && isAdmin && <OwnerFilterControl />}
+      <Box sx={{ px: collapsed ? 1 : 2, py: 1.5 }}>
+        {collapsed ? (
+          <Tooltip title={`Project: ${project.name}`} placement="right">
+            <IconButton component={Link} to="/projects" aria-label="Switch project">
+              <FolderOpenIcon />
+            </IconButton>
+          </Tooltip>
+        ) : (
+          <Select
+            fullWidth
+            size="small"
+            value={project.id}
+            onChange={event => openProject(event.target.value)}
+            aria-label="Active project"
+          >
+            {projects.map(item => <MenuItem value={item.id} key={item.id}>{item.name}</MenuItem>)}
+          </Select>
+        )}
+      </Box>
+
+      <Divider />
 
       <List sx={{ py: 1, flex: 1 }}>
         {visibleNavItems.map(renderItem)}
@@ -208,7 +241,11 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isAdmin, onLogout, onRoleReques
                   {user?.email?.split('@')[0] || 'User'}
                 </Typography>
                 <Typography variant="caption" color="textSecondary" noWrap>
-                  {user?.role || 'Viewer'}
+                  {project.isPlatformAdmin
+                    ? 'Platform Admin'
+                    : project.role === 'DSL_DESIGNER'
+                      ? 'DSL Designer'
+                      : project.role.charAt(0) + project.role.slice(1).toLowerCase()}
                 </Typography>
               </Box>
             )}

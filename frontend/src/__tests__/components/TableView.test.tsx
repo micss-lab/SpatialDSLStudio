@@ -8,6 +8,8 @@ import { metamodelService } from '../../services/metamodel';
 import viewpointService from '../../services/viewpoint.service';
 import smartWarehouseMetamodel from '../../examples/data/smart-warehouse-metamodel.json';
 import smartWarehouseModel from '../../examples/data/smart-warehouse-model.json';
+import smartWarehouseViewpoints from '../../examples/data/smart-warehouse-viewpoints.json';
+import { Viewpoint } from '../../models/types';
 
 jest.mock('../../services/diagram', () => ({ diagramService: { getDiagramById: jest.fn() } }));
 jest.mock('../../services/model', () => ({
@@ -134,8 +136,10 @@ describe('TableView', () => {
   });
 
   it('opens and edits a configured table against the Smart Warehouse example', () => {
-    const robotClassId = '10000000-0000-4000-8000-000000000102';
     const firstRobotId = '20000000-0000-4000-8000-000000000002';
+    const tableDescription = (smartWarehouseViewpoints as unknown as Viewpoint[])[0].representationDescriptions.find(
+      description => description.kind === 'table'
+    );
     (diagramService.getDiagramById as jest.Mock).mockReturnValue({
       id: 'warehouse-table',
       modelId: smartWarehouseModel.id,
@@ -143,16 +147,12 @@ describe('TableView', () => {
     (modelService.getModelById as jest.Mock).mockReturnValue(smartWarehouseModel);
     (metamodelService.getMetamodelById as jest.Mock).mockReturnValue(smartWarehouseMetamodel);
     (viewpointService.resolveRepresentationDescription as jest.Mock).mockReturnValue({
-      representationDescription: {
-        name: 'Robot Inventory',
-        kind: 'table',
-        visibleMetaClassIds: [robotClassId],
-        tableColumns: ['name', 'BatteryLevel'],
-      },
+      representationDescription: tableDescription,
     });
 
     render(<TableView diagramId="warehouse-table" />);
 
+    expect(tableDescription?.name).toBe('Robot Fleet Inventory');
     expect(screen.getByRole('textbox', { name: 'Edit name for Mobile Robot Resource' })).toBeInTheDocument();
     const battery = screen.getByRole('spinbutton', { name: 'Edit BatteryLevel for Mobile Robot Resource' });
     fireEvent.change(battery, { target: { value: '85' } });

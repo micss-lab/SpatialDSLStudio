@@ -1,19 +1,21 @@
 import prisma from '../config/database';
 import { ApiError } from '../middleware';
-import { EPackage } from '../../../shared/types';
+import { EPackage, UserRole } from '../../../shared/types';
+import { canPerformOperation } from '../middleware/permissions';
 
 class MetametamodelService {
   /**
    * Get all EPackages (meta-metamodels) for a user
    */
-  async getAll(userId: string): Promise<EPackage[]> {
+  async getAll(userId: string, projectId?: string): Promise<EPackage[]> {
     const packages = await prisma.ePackage.findMany({
-      where: { userId },
+      where: projectId ? { projectId } : { userId },
       orderBy: { name: 'asc' },
     });
 
     return packages.map(pkg => ({
       id: pkg.id,
+      projectId: pkg.projectId || undefined,
       name: pkg.name,
       nsURI: pkg.nsURI,
       nsPrefix: pkg.nsPrefix,
@@ -24,15 +26,16 @@ class MetametamodelService {
   /**
    * Get a single EPackage by ID (with user ownership check)
    */
-  async getById(id: string, userId: string): Promise<EPackage | null> {
+  async getById(id: string, userId: string, projectId?: string): Promise<EPackage | null> {
     const pkg = await prisma.ePackage.findFirst({
-      where: { id, userId },
+      where: projectId ? { id, projectId } : { id, userId },
     });
 
     if (!pkg) return null;
 
     return {
       id: pkg.id,
+      projectId: pkg.projectId || undefined,
       name: pkg.name,
       nsURI: pkg.nsURI,
       nsPrefix: pkg.nsPrefix,
@@ -43,15 +46,16 @@ class MetametamodelService {
   /**
    * Get EPackage by namespace URI (with user ownership check)
    */
-  async getByUri(nsURI: string, userId: string): Promise<EPackage | null> {
+  async getByUri(nsURI: string, userId: string, projectId?: string): Promise<EPackage | null> {
     const pkg = await prisma.ePackage.findFirst({
-      where: { nsURI, userId },
+      where: projectId ? { nsURI, projectId } : { nsURI, userId },
     });
 
     if (!pkg) return null;
 
     return {
       id: pkg.id,
+      projectId: pkg.projectId || undefined,
       name: pkg.name,
       nsURI: pkg.nsURI,
       nsPrefix: pkg.nsPrefix,
@@ -62,7 +66,15 @@ class MetametamodelService {
   /**
    * Create a new EPackage for a user
    */
-  async create(data: Partial<EPackage> & Omit<EPackage, 'id'>, userId: string): Promise<EPackage> {
+  async create(
+    data: Partial<EPackage> & Omit<EPackage, 'id'>,
+    userId: string,
+    projectId?: string,
+    userRole?: UserRole
+  ): Promise<EPackage> {
+    if (projectId && userRole && !canPerformOperation(userRole, 'metamodel', 'create')) {
+      throw new ApiError(403, 'Your role does not allow creating meta-metamodel packages');
+    }
     const pkg = await prisma.ePackage.create({
       data: {
         ...(data.id && { id: data.id }), // Use provided ID if available
@@ -71,11 +83,13 @@ class MetametamodelService {
         nsPrefix: data.nsPrefix,
         classes: data.classes as any,
         userId,
+        projectId,
       },
     });
 
     return {
       id: pkg.id,
+      projectId: pkg.projectId || undefined,
       name: pkg.name,
       nsURI: pkg.nsURI,
       nsPrefix: pkg.nsPrefix,
@@ -86,10 +100,19 @@ class MetametamodelService {
   /**
    * Update an existing EPackage (with user ownership check)
    */
-  async update(id: string, data: Partial<Omit<EPackage, 'id'>>, userId: string): Promise<EPackage> {
+  async update(
+    id: string,
+    data: Partial<Omit<EPackage, 'id'>>,
+    userId: string,
+    projectId?: string,
+    userRole?: UserRole
+  ): Promise<EPackage> {
+    if (projectId && userRole && !canPerformOperation(userRole, 'metamodel', 'editClass')) {
+      throw new ApiError(403, 'Your role does not allow editing meta-metamodel packages');
+    }
     // First verify ownership
     const existing = await prisma.ePackage.findFirst({
-      where: { id, userId },
+      where: projectId ? { id, projectId } : { id, userId },
     });
     
     if (!existing) {
@@ -108,6 +131,7 @@ class MetametamodelService {
 
     return {
       id: pkg.id,
+      projectId: pkg.projectId || undefined,
       name: pkg.name,
       nsURI: pkg.nsURI,
       nsPrefix: pkg.nsPrefix,
@@ -118,10 +142,13 @@ class MetametamodelService {
   /**
    * Delete an EPackage (with user ownership check)
    */
-  async delete(id: string, userId: string): Promise<void> {
+  async delete(id: string, userId: string, projectId?: string, userRole?: UserRole): Promise<void> {
+    if (projectId && userRole && !canPerformOperation(userRole, 'metamodel', 'deleteClass')) {
+      throw new ApiError(403, 'Your role does not allow deleting meta-metamodel packages');
+    }
     // First verify ownership
     const existing = await prisma.ePackage.findFirst({
-      where: { id, userId },
+      where: projectId ? { id, projectId } : { id, userId },
     });
     
     if (!existing) {
@@ -130,7 +157,7 @@ class MetametamodelService {
 
     // Check if any metamodels depend on this package
     const dependentMetamodels = await prisma.metamodel.count({
-      where: { conformsToId: id, userId },
+      where: projectId ? { conformsToId: id, projectId } : { conformsToId: id, userId },
     });
 
     if (dependentMetamodels > 0) {
@@ -148,8 +175,8 @@ class MetametamodelService {
   /**
    * Initialize core Ecore-like meta-metamodel for a user if it doesn't exist
    */
-  async initializeCoreEcore(userId: string): Promise<EPackage> {
-    const existingCore = await this.getByUri('http://www.modeling-tool.com/ecore', userId);
+  async initializeCoreEcore(userId: string, projectId?: string, userRole?: UserRole): Promise<EPackage> {
+    const existingCore = await this.getByUri('http://www.modeling-tool.com/ecore', userId, projectId);
     
     if (existingCore) {
       return existingCore;
@@ -210,7 +237,7 @@ class MetametamodelService {
           references: [],
         },
       ],
-    }, userId);
+    }, userId, projectId, userRole);
 
     return corePackage;
   }

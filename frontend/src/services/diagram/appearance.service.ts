@@ -174,9 +174,9 @@ class AppearanceService {
     const shapeType = appearance.shape || 'rectangle';
     
     // Get dimensions from element's style or use defaults
-    const widthMm = element.style.widthMm || appearance.widthMm || 500; // Default length in mm (Z-axis)
-    const heightMm = element.style.heightMm || appearance.heightMm || 800; // Default width in mm (X-axis)
-    const depthMm = element.style.depthMm || appearance.depthMm || (lowPerformance ? 100 : 200);
+    const widthMm = element.style.widthMm ?? appearance.widthMm ?? 500;
+    const heightMm = element.style.heightMm ?? appearance.heightMm ?? 800;
+    const depthMm = element.style.depthMm ?? appearance.depthMm ?? (lowPerformance ? 100 : 200);
     
     // Convert to scene units (which are in millimeters)
     const width = widthMm * mmToPixel(1);
@@ -205,7 +205,13 @@ class AppearanceService {
           bevelEnabled: false
         };
         
-        return new THREE.ExtrudeGeometry(triangleShape, extrudeSettings);
+        const triangleGeometry = new THREE.ExtrudeGeometry(triangleShape, extrudeSettings);
+        // ExtrudeGeometry authors its profile in X/Y and extrusion along Z.
+        // Rotate into Three's X/Z ground plane with Y vertical, then center it
+        // so Node3D's half-height offset keeps the base at local Y=0.
+        triangleGeometry.rotateX(-Math.PI / 2);
+        triangleGeometry.center();
+        return triangleGeometry;
       
       case 'star':
         // Create extruded star shape
@@ -236,7 +242,10 @@ class AppearanceService {
           bevelEnabled: false
         };
         
-        return new THREE.ExtrudeGeometry(starShape, starExtrudeSettings);
+        const starGeometry = new THREE.ExtrudeGeometry(starShape, starExtrudeSettings);
+        starGeometry.rotateX(-Math.PI / 2);
+        starGeometry.center();
+        return starGeometry;
       
       case 'square':
         // Use box for squares with equal width and height
@@ -250,8 +259,8 @@ class AppearanceService {
         
       case 'rectangle':
       default:
-        // Use box for rectangles (default) - heightMm controls X-axis (width), widthMm controls Z-axis (length)
-        return new THREE.BoxGeometry(height, depth, width);
+        // Domain X/Y/Z maps to Three.js X/Z/Y.
+        return new THREE.BoxGeometry(width, depth, height);
     }
   }
   

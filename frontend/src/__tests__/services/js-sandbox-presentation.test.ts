@@ -21,7 +21,7 @@ const placedElement: ModelElement = {
   references: {},
   presentation: {
     position2D: { x: 120, y: 80 },
-    position3D: { x: 1200, y: 800 },
+    position3D: { x: 1200, y: 800, z: 4500 },
     size3D: { widthMm: 1000, heightMm: 400, depthMm: 2000 },
     rotationZ: 90
   }
@@ -55,20 +55,20 @@ describe('prepareContextForJS placement exposure', () => {
   it('exposes the presentation record on self', () => {
     const context = prepareContextForJS(placedElement, makeModel([placedElement]), metamodel);
 
-    expect(context.self.position3D).toEqual({ x: 1200, y: 800 });
+    expect(context.self.position3D).toEqual({ x: 1200, y: 800, z: 4500 });
     expect(context.self.position2D).toEqual({ x: 120, y: 80 });
     expect(context.self.size3D).toEqual({ widthMm: 1000, heightMm: 400, depthMm: 2000 });
     expect(context.self.rotationZ).toBe(90);
   });
 
-  it('gives style values precedence over presentation values', () => {
+  it('keeps presentation authoritative over unmigrated legacy style placement', () => {
     const overridden: ModelElement = {
       ...placedElement,
-      style: { name: 'Rack A', position3D: { x: 5, y: 6 } }
+      style: { name: 'Rack A', position3D: { x: 5, y: 6, z: 25 } }
     };
     const context = prepareContextForJS(overridden, makeModel([overridden]), metamodel);
 
-    expect(context.self.position3D).toEqual({ x: 5, y: 6 });
+    expect(context.self.position3D).toEqual({ x: 1200, y: 800, z: 4500 });
   });
 
   it('exposes placement on peer elements via model.elements', () => {
@@ -79,7 +79,7 @@ describe('prepareContextForJS placement exposure', () => {
     );
 
     const peer = context.model.elements.find((e: any) => e.id === 'el-1');
-    expect(peer.position3D).toEqual({ x: 1200, y: 800 });
+    expect(peer.position3D).toEqual({ x: 1200, y: 800, z: 4500 });
     expect(peer.name).toBe('Rack A');
   });
 
@@ -96,8 +96,8 @@ describe('prepareContextForJS placement exposure', () => {
       metamodel
     );
 
-    expect(context.self.neighbor.position3D).toEqual({ x: 1200, y: 800 });
-    expect(context.self.shelves[0].position3D).toEqual({ x: 1200, y: 800 });
+    expect(context.self.neighbor.position3D).toEqual({ x: 1200, y: 800, z: 4500 });
+    expect(context.self.shelves[0].position3D).toEqual({ x: 1200, y: 800, z: 4500 });
   });
 
   it('evaluates a spatial constraint against real placement values end-to-end', () => {
@@ -116,7 +116,7 @@ describe('prepareContextForJS placement exposure', () => {
     const outOfBounds: ModelElement = {
       ...placedElement,
       id: 'el-4',
-      presentation: { position3D: { x: -50, y: 800 } }
+      presentation: { position3D: { x: -50, y: 800, z: 0 } }
     };
     const context = prepareContextForJS(outOfBounds, makeModel([outOfBounds]), metamodel);
     const sandbox = createJSSandbox(context, makeModel([outOfBounds]));

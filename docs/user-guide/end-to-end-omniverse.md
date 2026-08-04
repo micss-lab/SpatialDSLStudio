@@ -18,7 +18,9 @@ one continuous path that goes from the model to robots navigating a live scene.
 
 ## Quick Path (TL;DR)
 
-In SpatialDSL Studio:
+In SpatialDSL Studio, the shortest path is to create a project with `Include
+Smart Warehouse starter`, then open Code Generation. For a manual import into an
+existing project:
 
 1. `Metamodels > Import` -> `frontend/src/examples/data/smart-warehouse-metamodel.json`
 2. `Models > Import` -> `frontend/src/examples/data/smart-warehouse-model.json`
@@ -55,7 +57,7 @@ chargers when low. Details for every step are below.
 
 The sample generates a `.usda` USD stage of a warehouse with a floor, pathway
 areas, conveyors, output locations, charging stations, mobile robots, storage
-racks, and a loading dock. Every physical class resolves to a referenced USD
+racks, a loading dock, and landed/airborne inspection drones. Every physical class resolves to a referenced USD
 asset (the normalized MIT NVIDIA F1TENTH AMR for robots, reviewed
 `warehouse-kit` props for the rest);
 elements fall back to cubes only when the asset root is missing. The model also
@@ -63,7 +65,9 @@ carries
 a control layer (a `WarehouseController`, `Task`, and `Product` entities) that
 enriches the model and the generated MAS configuration but is not rendered as
 scene geometry. Physics and collision are generated in a separate layer;
-navigation remains in the external MAS bridge. See
+navigation remains in the external MAS bridge. Drones are kinematic placement
+examples and are deliberately excluded from the ground navigation/control loop.
+See
 [Omniverse Code Generation](omniverse-code-generation.md) for the boundaries.
 
 ## Prerequisites

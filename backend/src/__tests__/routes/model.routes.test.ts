@@ -15,6 +15,7 @@ const modelServiceMock = {
   delete: jest.fn(),
   addElement: jest.fn(),
   updateElement: jest.fn(),
+  updateElementPresentation: jest.fn(),
   deleteElement: jest.fn(),
   addConnection: jest.fn(),
   deleteConnection: jest.fn(),
@@ -190,6 +191,48 @@ describe('POST /api/models/:id/elements', () => {
       .send({ id: 'elem-1' }); // missing modelElementId
 
     expect(res.status).toBe(400);
+  });
+});
+
+describe('PUT /api/models/:id/elements/:elementId/presentation', () => {
+  const modelId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+
+  it.each([0, 4500])('accepts a finite base elevation of %s mm', async z => {
+    modelServiceMock.updateElementPresentation.mockResolvedValue(mockModel);
+
+    const res = await request(buildApp())
+      .put(`/api/models/${modelId}/elements/elem-1/presentation`)
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({
+        position3D: { x: 1200, y: 800, z },
+        size3D: { widthMm: 1200, heightMm: 800, depthMm: 400 },
+        rotationZ: 15,
+      });
+
+    expect(res.status).toBe(200);
+    expect(modelServiceMock.updateElementPresentation).toHaveBeenCalledWith(
+      modelId,
+      'elem-1',
+      expect.objectContaining({ position3D: { x: 1200, y: 800, z } }),
+      'user-uuid-1',
+      'DSL_DESIGNER'
+    );
+  });
+
+  it.each([
+    { position3D: { x: 1 } },
+    { position3D: { x: 1, y: 2, z: '4500' } },
+    { position3D: { x: null, y: 2, z: 0 } },
+    { size3D: { widthMm: 1, heightMm: 2 } },
+    { rotationZ: '15' },
+  ])('rejects malformed or non-finite presentation data: %j', async presentation => {
+    const res = await request(buildApp())
+      .put(`/api/models/${modelId}/elements/elem-1/presentation`)
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send(presentation);
+
+    expect(res.status).toBe(400);
+    expect(modelServiceMock.updateElementPresentation).not.toHaveBeenCalled();
   });
 });
 

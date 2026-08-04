@@ -1,5 +1,7 @@
 import { CodegenContextBuilderService } from '../../services/codegeneration/codegen-context-builder.service';
+import { CodegenHandlebarsService } from '../../services/codegeneration/codegen-handlebars.service';
 import { Metamodel, ModelElement } from '../../models/types';
+import Handlebars from 'handlebars';
 
 function makeElement(id: string, name: string, modelElementId = 'Conveyor'): ModelElement {
   return {
@@ -8,7 +10,7 @@ function makeElement(id: string, name: string, modelElementId = 'Conveyor'): Mod
     style: { name },
     references: {},
     presentation: {
-      position3D: { x: 0, y: 0 },
+      position3D: { x: 0, y: 0, z: 0 },
       size3D: { widthMm: 100, heightMm: 200, depthMm: 50 },
     },
   };
@@ -101,5 +103,66 @@ describe('CodegenContextBuilderService deterministic ordering', () => {
         },
       },
     });
+  });
+});
+
+describe('CodegenContextBuilderService elevation contract', () => {
+  it.each([
+    [4500, 4500],
+    [0, 0],
+    [-750, -750],
+  ])('exposes z=%s as Z and BaseElevationMm', (z, expected) => {
+    const element = makeElement('drone', 'Inspection Drone', 'InspectionDrone');
+    element.presentation!.position3D = { x: 1200, y: 800, z };
+
+    const context = new CodegenContextBuilderService().prepareSingleElementContext(element);
+    expect(context.position3D).toEqual({ x: 1200, y: 800, z });
+    expect(context.Z).toBe(expected);
+    expect(context.BaseElevationMm).toBe(expected);
+  });
+
+  it('normalizes a legacy two-coordinate position to z = 0', () => {
+    const element = makeElement('legacy', 'Legacy');
+    element.presentation!.position3D = { x: 5, y: 6 } as any;
+
+    expect(new CodegenContextBuilderService().prepareSingleElementContext(element)).toMatchObject({
+      position3D: { x: 5, y: 6, z: 0 },
+      X: 5,
+      Y: 6,
+      Z: 0,
+      BaseElevationMm: 0,
+    });
+  });
+
+  it('uses a diagram-local position override, including elevation', () => {
+    const context = new CodegenContextBuilderService().prepareSingleElementContext({
+      id: 'diagram-drone',
+      type: 'node',
+      modelElementId: 'InspectionDrone',
+      style: {
+        name: 'Drone view',
+        position3D: { x: 20, y: 30, z: 4700 },
+      },
+    });
+
+    expect(context.position3D).toEqual({ x: 20, y: 30, z: 4700 });
+    expect(context.Z).toBe(4700);
+  });
+
+  it('does not invent Z for non-spatial elements', () => {
+    const context = new CodegenContextBuilderService().prepareSingleElementContext({
+      id: 'logical', modelElementId: 'Task', style: { name: 'Pick task' }, references: {},
+    });
+    expect(context.Z).toBeUndefined();
+    expect(context.BaseElevationMm).toBeUndefined();
+  });
+});
+
+describe('baseCenterMeters Handlebars helper', () => {
+  beforeAll(() => new CodegenHandlebarsService().registerAllHelpers());
+
+  it('converts base elevation plus half the vertical extent to metres', () => {
+    expect(Handlebars.compile('{{baseCenterMeters Z Height}}')({ Z: 4500, Height: 400 })).toBe('4.7');
+    expect(Handlebars.compile('{{baseCenterMeters Z Height}}')({ Z: -500, Height: 200 })).toBe('-0.4');
   });
 });

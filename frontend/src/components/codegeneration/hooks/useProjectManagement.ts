@@ -61,7 +61,7 @@ export const useProjectManagement = (): UseProjectManagementReturn => {
    */
   const handleCreateProject = useCallback((templates: ProjectTemplate[]) => {
     if (!projectName.trim()) {
-      alert('Please enter a project name');
+      alert('Please enter a generator configuration name');
       return;
     }
     
@@ -108,7 +108,7 @@ export const useProjectManagement = (): UseProjectManagementReturn => {
    */
   const handleUpdateProject = useCallback((templates: ProjectTemplate[]) => {
     if (!selectedProjectForEditing || !projectName || !projectTarget) {
-      alert('Please provide a project name and target metamodel');
+      alert('Please provide a generator configuration name and target metamodel');
       return;
     }
     
@@ -174,8 +174,8 @@ export const useProjectManagement = (): UseProjectManagementReturn => {
         setSelectedProject(importedProjects[0].id);
       }
     } catch (error) {
-      console.error('Error importing code generation project:', error);
-      alert(`Error importing project: ${error instanceof Error ? error.message : String(error)}`);
+      console.error('Error importing generator configuration:', error);
+      alert(`Error importing generator configuration: ${error instanceof Error ? error.message : String(error)}`);
     }
   }, []);
 
@@ -215,7 +215,7 @@ export const useProjectManagement = (): UseProjectManagementReturn => {
    * Delete a project
    */
   const handleDeleteProject = useCallback((projectId: string) => {
-    if (window.confirm('Are you sure you want to delete this project?')) {
+    if (window.confirm('Are you sure you want to delete this generator configuration?')) {
       codeGenerationService.deleteProject(projectId);
       
       // Check if it was a user project or example project

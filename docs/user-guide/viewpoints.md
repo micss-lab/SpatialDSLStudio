@@ -160,10 +160,24 @@ Metaclass notation is still useful as fallback notation for simple metamodels an
 Representation descriptions can override:
 
 - metaclass 2D notation: shape, fill, stroke, size, and text settings
-- metaclass 3D fallback notation: shape, color, and default size
+- metaclass 3D fallback notation: shape, color, default size, and vertical
+  placement policy
 - reference edge notation: line color, width, dash pattern, arrowhead, and labels
 
 Use metaclass notation for defaults that apply everywhere. Use representation notation when one viewpoint needs a different appearance for the same semantic concept.
+
+For 3D notation, `verticalPlacement.mode` is `grounded` by default. Choose
+`adjustable` to let Modelers edit base elevation and optionally set
+`defaultBaseZMm`, `minBaseZMm`, `maxBaseZMm`, and `stepMm`. This is a general
+placement policy for drones, shelf sensors, cranes, and mezzanine equipment;
+it is not an aerial-domain flag.
+
+Vertical-placement policies are validated when they are authored, imported, or
+saved through the API. The mode must be `grounded` or `adjustable`; supplied
+numeric values must be finite; `stepMm` must be positive; the minimum cannot
+exceed the maximum; and the default must fall within any supplied bounds. These
+limits describe editing behavior in a representation. They do not globally
+reject an instance elevation imported without that representation.
 
 ## Pins And Attached Nodes
 
@@ -196,7 +210,13 @@ Pin behavior:
 
 ## Examples
 
-The Smart Warehouse example includes a `Warehouse Operations` viewpoint with diagram representation descriptions for the floor plan, fleet/charging, and material flow concerns. `Fleet and Charging` configures robot/station property sections and includes a deliberately low-battery robot so the view validation workflow is visible.
+The Smart Warehouse example includes a `Warehouse Operations` viewpoint that
+demonstrates all three executable view types: floor-plan, fleet/charging,
+material-flow, and `Aerial Inspection` diagrams; an editable `Robot Fleet
+Inventory` table; and an expandable `Warehouse Resource Hierarchy` tree. The
+aerial representation gives `InspectionDrone` adjustable placement from 0 to
+10,000 mm with a 3,000 mm creation default and 100 mm step. Its two saved drone
+instances demonstrate landed Z=0 and airborne Z=4,500 mm placement.
 
 The UML Activity example includes a `UML Activity` viewpoint with an executable `Activity Diagram` representation, containment-driven activity containers, semantic input/output pins, object flows, and an editable `Activity Node Inventory` table.
 
@@ -204,4 +224,4 @@ The UML Activity example includes a `UML Activity` viewpoint with an executable 
 
 The API path and database table remain `/api/diagrams` and `Diagram` for compatibility. User-facing terminology should treat these as Views: concrete saved representation instances.
 
-SpatialDSL viewpoints are Sirius-style concepts stored as SpatialDSL records. Use the Sirius compatibility actions or API for the supported `.odesign` and `.aird` diagram subsets. For import/export expectations, see [Sirius Desktop Compatibility](../reference/sirius-compatibility.md).
+SpatialDSL viewpoints are Sirius-style concepts stored as SpatialDSL records. Use the Sirius compatibility actions or API for the supported `.odesign` and `.aird` diagram subsets. For import/export expectations, see [Sirius Desktop Interoperability](../reference/sirius-desktop-interop.md).

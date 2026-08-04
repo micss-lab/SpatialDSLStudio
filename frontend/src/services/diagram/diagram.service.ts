@@ -282,7 +282,11 @@ class DiagramService {
     ) {
       return {
         ...presentation,
-        position3D: { x: presentation.position2D.x, y: presentation.position2D.y },
+        position3D: {
+          x: presentation.position2D.x,
+          y: presentation.position2D.y,
+          z: modelElement.presentation.position3D.z,
+        },
       };
     }
     return presentation;

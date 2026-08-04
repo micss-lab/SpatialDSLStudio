@@ -28,6 +28,7 @@ export class ModelElementCrudService {
       position3D: {
         x: current.position3D.x + deltaX,
         y: current.position3D.y + deltaY,
+        z: current.position3D.z,
       },
     };
   }

@@ -203,8 +203,8 @@ export const roleOperationPermissions: Record<UserRole, {
   },
   MODELER: {
     metamodel: { create: false, addClass: false, editClass: false, deleteClass: false },
-    model: { create: false, addInstance: true, editInstance: true, deleteInstance: true },
-    diagram: { create: false, editPositions: true },
+    model: { create: true, addInstance: true, editInstance: true, deleteInstance: true },
+    diagram: { create: true, editPositions: true },
     transformation: { create: false, execute: true },
     codegen: { create: false, editTemplate: false, generate: true },
     test: { create: false, edit: false, run: true },

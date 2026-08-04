@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
 import * as THREE from 'three';
-import { Text, Billboard } from '@react-three/drei';
-import { DiagramElement, MetaClass, Metamodel, Model, RepresentationDescription, Viewpoint } from '../../models/types';
+import { Text, Billboard, Line } from '@react-three/drei';
+import { DiagramElement, MetaClass, Metamodel, Model, Position3D, RepresentationDescription, Viewpoint } from '../../models/types';
 import { appearanceService, mmToPixel } from '../../services/diagram';
+import { domainToRenderPosition, normalizePosition3D } from '../../services/spatial';
 import ShapeIndicator3D from './ShapeIndicator3D';
 
 // Represents a 3D element with position and rotation information
@@ -12,8 +13,7 @@ export interface Element3D extends DiagramElement {
   widthMm?: number;
   heightMm?: number;
   depthMm?: number;
-  // 3D specific coordinates - won't affect 2D mode
-  position3D?: { x: number, y: number };
+  position3D?: Position3D;
 }
 
 interface Node3DProps {
@@ -71,12 +71,18 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
     : (appearance.fallbackShape === 'box' ? 'rectangle' : appearance.fallbackShape || 'rectangle');
   
   // Get dimensions from style first (for persistence) or fallback to direct props
-  const widthMm = element.style.widthMm || element.widthMm || appearance.widthMm || 500; // Default length in mm (Z-axis)
-  const heightMm = element.style.heightMm || element.heightMm || appearance.heightMm || 800; // Default width in mm (X-axis)
-  const depthMm = element.style.depthMm || element.depthMm || (lowPerformance ? 100 : 200);
+  const widthMm = element.style.widthMm ?? element.widthMm ?? appearance.widthMm ?? 500;
+  const heightMm = element.style.heightMm ?? element.heightMm ?? appearance.heightMm ?? 800;
+  const depthMm = element.style.depthMm ?? element.depthMm ?? appearance.depthMm ?? (lowPerformance ? 100 : 200);
+  const position3D = normalizePosition3D(
+    element.style.position3D || element.position3D || {
+      x: element.x ?? 0,
+      y: element.y ?? 0,
+    }
+  ) || { x: 0, y: 0, z: 0 };
   
   // Apply rotation (in radians)
-  const rotationZ = ((element.rotationZ || 0) * Math.PI) / 180;
+  const rotationZ = ((element.style.rotationZ ?? element.rotationZ ?? 0) * Math.PI) / 180;
 
   // Load 3D model if needed - using shared model instances
   useEffect(() => {
@@ -118,13 +124,13 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
               
               // Convert element dimensions from mm to Three.js units
               const targetWidth = widthMm * mmToPixel(1);
-              const targetHeight = heightMm * mmToPixel(1);  
-              const targetDepth = depthMm * mmToPixel(1);
+              const targetHeight = depthMm * mmToPixel(1);
+              const targetDepth = heightMm * mmToPixel(1);
               
               // Calculate scale factors to exactly match target dimensions
               const scaleX = originalSize.x > 0 ? targetWidth / originalSize.x : 1;
-              const scaleY = originalSize.y > 0 ? targetDepth / originalSize.y : 1;
-              const scaleZ = originalSize.z > 0 ? targetHeight / originalSize.z : 1;
+              const scaleY = originalSize.y > 0 ? targetHeight / originalSize.y : 1;
+              const scaleZ = originalSize.z > 0 ? targetDepth / originalSize.z : 1;
               
               // Apply scaling to match target dimensions
               instanceModel.scale.set(scaleX, scaleY, scaleZ);
@@ -132,9 +138,13 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
               // After scaling, adjust position so the bottom of the model sits at Y=0
               const scaledBox = new THREE.Box3().setFromObject(instanceModel);
               const scaledMin = scaledBox.min;
+              const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
               
-              // Move the model up so its bottom is at Y=0 (sits on the grid)
+              // Keep the authored pose at the footprint centre and base rather
+              // than inheriting an arbitrary GLB pivot.
+              instanceModel.position.x -= scaledCenter.x;
               instanceModel.position.y -= scaledMin.y;
+              instanceModel.position.z -= scaledCenter.z;
               
               setLoadedModel(instanceModel);
               setModelLoading(false);
@@ -229,8 +239,10 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
   // Get the geometry for this element based on shape type
   const geometry = React.useMemo(() => {
     return appearanceService.getGeometry(element, model, lowPerformance);
+  // Width/height/depth are resolved inside the service, but retaining them as
+  // dependencies refreshes geometry when representation defaults change.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [element, model, lowPerformance, widthMm, heightMm, depthMm, shapeType]);
+  }, [element, model, lowPerformance, widthMm, heightMm, depthMm]);
   
   // Get the material for this element
   const material = React.useMemo(() => {
@@ -244,36 +256,18 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
   const positionAdjustment: [number, number, number] = React.useMemo(() => {
     const halfDepth = (depthMm * mmToPixel(1)) * 0.5;
     
-    // Add a small offset above the plane to prevent raycasting conflicts at certain camera angles
-    const planeOffset = 2; // Small offset to ensure elements are clearly above the plane
-    
-    // For custom 3D models, position them so they sit on the grid (not centered)
-    if (shapeType === 'custom-3d-model') {
-      return [0, halfDepth + planeOffset, 0]; // Position so bottom sits on grid
-    }
-    
-    switch (shapeType) {
-      case 'cylinder':
-        return [0, halfDepth + planeOffset, 0]; // Center the cylinder above plane
-      case 'sphere':
-        return [0, halfDepth + planeOffset, 0]; // Center the sphere above plane
-      case 'cone':
-        return [0, halfDepth + planeOffset, 0]; // Center the cone above plane
-      case 'rectangle':
-      default:
-        return [0, halfDepth + planeOffset, 0]; // Center the box above plane
-    }
-  }, [shapeType, depthMm]);
+    return [0, halfDepth, 0];
+  }, [depthMm]);
 
   // Calculate text positioning
   const textPosition: [number, number, number] = React.useMemo(() => {
     const textOffset = 50; // Offset from the object in mm
-    const halfWidth = (heightMm * mmToPixel(1)) * 0.5; // Use heightMm for X-axis width
+    const halfWidth = (widthMm * mmToPixel(1)) * 0.5;
     const halfDepth = (depthMm * mmToPixel(1)) * 0.5;
     
     // Position text to the right side of the object (X-axis)
     return [halfWidth + textOffset, halfDepth, 0];
-  }, [heightMm, depthMm]);
+  }, [widthMm, depthMm]);
 
   // Calculate text size based on element size
   const textSize = React.useMemo(() => {
@@ -291,11 +285,7 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
   return (
     <group
       ref={groupRef}
-      position={[
-        element.style.position3D?.x ?? element.position3D?.x ?? element.x ?? 0, 
-        0, 
-        -(element.style.position3D?.y ?? element.position3D?.y ?? element.y ?? 0) // Negate Y to fix mirroring
-      ]}
+      position={domainToRenderPosition(position3D)}
       rotation={[0, rotationZ, 0]}
       onClick={handleClick}
       onPointerDown={handlePointerDown}
@@ -364,6 +354,28 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
         </group>
       )}
 
+      {selected && position3D.z !== 0 && !lowPerformance && (
+        <group name={`elevation-cue-${element.id}`}>
+          <Line
+            points={[[0, 0, 0], [0, -position3D.z, 0]]}
+            color="#0288d1"
+            lineWidth={2}
+            dashed
+            dashSize={100}
+            gapSize={60}
+          />
+          <mesh position={[0, -position3D.z + 1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[Math.max(50, Math.min(widthMm, heightMm) * 0.12), Math.max(70, Math.min(widthMm, heightMm) * 0.18), 32]} />
+            <meshBasicMaterial color="#0288d1" transparent opacity={0.75} side={THREE.DoubleSide} />
+          </mesh>
+          <Billboard position={[0, Math.max(120, depthMm * 0.2), 0]} follow>
+            <Text fontSize={Math.max(24, textSize.nameSize * 0.75)} color="#01579b">
+              {`Base Z ${Math.round(position3D.z)} mm`}
+            </Text>
+          </Billboard>
+        </group>
+      )}
+
       {validationSeverity && (
         <group name={`validation-marker-${element.id}`}>
           <mesh position={positionAdjustment}>
@@ -415,7 +427,7 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
           element={element} 
           model={model}
           lowPerformance={lowPerformance}
-          position={[0, depthMm * mmToPixel(1) * 0.5 + 5, 0]}
+          position={[0, depthMm * mmToPixel(1) + 5, 0]}
           scale={0.8}
         />
       )}

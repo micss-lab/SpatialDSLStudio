@@ -5,12 +5,13 @@ import smartWarehouseModelData from '../../examples/data/smart-warehouse-model.j
 import smartWarehouseViewsData from '../../examples/data/smart-warehouse-views.json';
 import smartWarehouseViewpointsData from '../../examples/data/smart-warehouse-viewpoints.json';
 import smartWarehouseProjectData from '../../examples/data/smart-warehouse-project.json';
+import smartWarehouseOmniverseProjectData from '../../examples/data/smart-warehouse-omniverse-project.json';
 import activityDiagramMetamodelData from '../../examples/data/activity-diagram-metamodel.json';
 import activityDiagramModelData from '../../examples/data/activity-diagram-model.json';
 import activityDiagramViewsData from '../../examples/data/activity-diagram-views.json';
 import activityDiagramViewpointsData from '../../examples/data/activity-diagram-viewpoints.json';
 
-interface ExampleBundle {
+export interface ExampleBundle {
   metamodels: Metamodel[];
   models: Model[];
   views: Diagram[];
@@ -70,7 +71,7 @@ const remapNode = (node: any, idMap: Map<string, string>): any => {
  * getters therefore serve a bundle remapped to fresh UUIDs, computed once per
  * session so cross-references between artifacts stay consistent.
  *
- * Views are projections of the model — they do not own element instances,
+ * Views are projections of the model; they do not own element instances,
  * only `includedElementIds` referencing model elements.
  */
 class ExampleDataService {
@@ -83,7 +84,13 @@ class ExampleDataService {
         models: [smartWarehouseModelData, activityDiagramModelData],
         views: [...(smartWarehouseViewsData as unknown[]), ...(activityDiagramViewsData as unknown[])],
         viewpoints: [...(smartWarehouseViewpointsData as unknown[]), ...(activityDiagramViewpointsData as unknown[])],
-        projects: [smartWarehouseProjectData],
+        projects: [smartWarehouseProjectData, smartWarehouseOmniverseProjectData].map(project => ({
+          ...project,
+          templates: project.templates.map(template => ({
+            ...template,
+            targetMetamodelId: project.targetMetamodelId,
+          })),
+        })),
       };
 
       const ids = new Set<string>();
@@ -105,7 +112,7 @@ class ExampleDataService {
   }
 
   /**
-   * Returns example views (Diagram type — diagrams are the storage shape for views
+   * Returns example views (Diagram type: diagrams are the storage shape for views
    * under the view-projection model).
    */
   getExampleViews(): Diagram[] {
@@ -129,13 +136,37 @@ class ExampleDataService {
     ];
   }
 
-  /** @deprecated Use getExampleViews() — kept for transitional callers. */
+  /** @deprecated Use getExampleViews(); kept for transitional callers. */
   getExampleDiagrams(): Diagram[] {
     return this.getExampleViews();
   }
 
   getExampleProjects(): CodeGenerationProject[] {
     return this.getBundle().projects;
+  }
+
+  /**
+   * Return the connected Smart Warehouse artifact graph for project-scoped
+   * starter import. Every artifact comes from the same remapped bundle, so all
+   * metamodel, semantic element, viewpoint, representation, and view IDs agree.
+   */
+  getSmartWarehouseBundle(): ExampleBundle {
+    const bundle = this.getBundle();
+    const metamodel = bundle.metamodels.find(candidate => candidate.name === 'Smart Warehouse');
+    if (!metamodel) throw new Error('The Smart Warehouse metamodel fixture is unavailable');
+
+    const models = bundle.models.filter(model => (
+      (model.conformsTo || model.metamodelId) === metamodel.id
+    ));
+    const modelIds = new Set(models.map(model => model.id));
+
+    return {
+      metamodels: [metamodel],
+      models,
+      viewpoints: bundle.viewpoints.filter(viewpoint => viewpoint.metamodelId === metamodel.id),
+      views: bundle.views.filter(view => modelIds.has(view.modelId)),
+      projects: bundle.projects.filter(project => project.targetMetamodelId === metamodel.id),
+    };
   }
 
   /**
@@ -163,13 +194,14 @@ class ExampleDataService {
     );
   }
 
-  /** @deprecated Use isExampleView — kept for transitional callers. */
+  /** @deprecated Use isExampleView; kept for transitional callers. */
   isExampleDiagram(diagramId: string): boolean {
     return this.isExampleView(diagramId);
   }
 
   isExampleProject(projectId: string): boolean {
-    return projectId === smartWarehouseProjectData.id;
+    return projectId === smartWarehouseProjectData.id
+      || projectId === smartWarehouseOmniverseProjectData.id;
   }
 }
 

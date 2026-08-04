@@ -42,7 +42,20 @@ class TransformationService {
   /**
    * Get all rules accessible by a user (owned + shared)
    */
-  async getAllRules(userId: string): Promise<TransformationRuleWithPermission[]> {
+  async getAllRules(userId: string, projectId?: string): Promise<TransformationRuleWithPermission[]> {
+    if (projectId) {
+      const projectRules = await prisma.transformationRule.findMany({
+        where: { projectId },
+        orderBy: [{ priority: 'desc' }, { name: 'asc' }],
+        include: { user: { select: { email: true } } },
+      });
+      return projectRules.map(rule => ({
+        ...this.mapToRule(rule),
+        isOwner: rule.userId === userId,
+        permission: rule.userId === userId ? undefined : 'EDITOR',
+        ownerEmail: rule.userId === userId ? undefined : rule.user.email,
+      }));
+    }
     // Platform admins see and can edit every rule on the platform.
     if (await sharingService.isAdmin(userId)) {
       const all = await prisma.transformationRule.findMany({
@@ -101,9 +114,9 @@ class TransformationService {
   /**
    * Get a single rule by ID (with access check)
    */
-  async getRuleById(id: string, userId: string): Promise<TransformationRuleWithPermission | null> {
+  async getRuleById(id: string, userId: string, projectId?: string): Promise<TransformationRuleWithPermission | null> {
     const rule = await prisma.transformationRule.findFirst({
-      where: { id },
+      where: { id, ...(projectId && { projectId }) },
     });
 
     if (!rule) return null;
@@ -124,9 +137,13 @@ class TransformationService {
   /**
    * Create a new rule (requires ADMIN or DSL_DESIGNER role)
    */
-  async createRule(data: CreateRuleData, userId: string, userRole: UserRole): Promise<TransformationRule> {
+  async createRule(data: CreateRuleData, userId: string, userRole: UserRole, projectId?: string): Promise<TransformationRule> {
     if (!canPerformOperation(userRole, 'transformation', 'create')) {
       throw new ApiError(403, 'Your role does not allow creating transformation rules');
+    }
+    if (projectId && data.diagramId) {
+      const diagram = await prisma.diagram.findFirst({ where: { id: data.diagramId, projectId } });
+      if (!diagram) throw new ApiError(400, 'Referenced view is not in this project');
     }
 
     const rule = await prisma.transformationRule.create({
@@ -142,6 +159,7 @@ class TransformationService {
         conditions: (data.conditions || []) as any,
         diagramId: data.diagramId,
         userId,
+        projectId,
       },
     });
 
@@ -151,7 +169,16 @@ class TransformationService {
   /**
    * Update an existing rule (with permission check)
    */
-  async updateRule(id: string, data: UpdateRuleData, userId: string, userRole: UserRole): Promise<TransformationRule> {
+  async updateRule(
+    id: string,
+    data: UpdateRuleData,
+    userId: string,
+    userRole: UserRole,
+    projectId?: string
+  ): Promise<TransformationRule> {
+    if (!canPerformOperation(userRole, 'transformation', 'create')) {
+      throw new ApiError(403, 'Your role does not allow editing transformation rules');
+    }
     const access = await sharingService.checkAccess('TRANSFORMATION_RULE', id, userId);
     
     if (!access.hasAccess) {
@@ -164,6 +191,10 @@ class TransformationService {
 
     if (!canEdit) {
       throw new ApiError(403, 'You do not have permission to edit this rule');
+    }
+    if (projectId && data.diagramId) {
+      const diagram = await prisma.diagram.findFirst({ where: { id: data.diagramId, projectId } });
+      if (!diagram) throw new ApiError(400, 'Referenced view is not in this project');
     }
 
     const rule = await prisma.transformationRule.update({
@@ -187,9 +218,12 @@ class TransformationService {
   /**
    * Delete a rule (owner only)
    */
-  async deleteRule(id: string, userId: string): Promise<void> {
+  async deleteRule(id: string, userId: string, userRole?: UserRole, projectId?: string): Promise<void> {
+    if (projectId && userRole && !canPerformOperation(userRole, 'transformation', 'create')) {
+      throw new ApiError(403, 'Your role does not allow deleting transformation rules');
+    }
     const existing = await prisma.transformationRule.findFirst({
-      where: { id, userId },
+      where: projectId ? { id, projectId } : { id, userId },
     });
 
     if (!existing) {
@@ -209,6 +243,7 @@ class TransformationService {
     
     return {
       id: r.id,
+      projectId: r.projectId || undefined,
       name: r.name,
       description: r.description || undefined,
       lhs: lhs.id || '',

@@ -18,14 +18,18 @@
           "10000000-0000-4000-8000-000000000103",
           "10000000-0000-4000-8000-000000000104",
           "10000000-0000-4000-8000-000000000105",
-          "10000000-0000-4000-8000-000000000106"
+          "10000000-0000-4000-8000-000000000106",
+          "10000000-0000-4000-8000-00000000010a",
+          "10000000-0000-4000-8000-00000000010b",
+          "10000000-0000-4000-8000-00000000010c"
         ],
         "creatableMetaClassIds": [
           "10000000-0000-4000-8000-000000000102",
           "10000000-0000-4000-8000-000000000103",
           "10000000-0000-4000-8000-000000000104",
           "10000000-0000-4000-8000-000000000105",
-          "10000000-0000-4000-8000-000000000106"
+          "10000000-0000-4000-8000-000000000106",
+          "10000000-0000-4000-8000-00000000010c"
         ],
         "concreteSyntaxByMetaClassId": {
           "10000000-0000-4000-8000-000000000101": {
@@ -157,6 +161,34 @@
                 "depthMm": 900
               },
               "modelUrl": "/models/pathway_area.glb"
+            }
+          },
+          "10000000-0000-4000-8000-00000000010c": {
+            "two_d": {
+              "shape": "diamond",
+              "fillColor": "#ede9fe",
+              "strokeColor": "#7c3aed",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 70,
+                "height": 70
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#8b5cf6",
+              "defaultSizeMm": {
+                "widthMm": 1200,
+                "heightMm": 1200,
+                "depthMm": 400
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 3000,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 10000,
+                "stepMm": 100
+              }
             }
           }
         },
@@ -561,7 +593,7 @@
           {
             "id": "edge-flow-pathway",
             "referenceId": "f7530f99-1b89-4570-8ca6-6894f56521d6",
-            "referenceName": "contains",
+            "referenceName": "pathwayAreas",
             "targetMetaClassIds": [
               "10000000-0000-4000-8000-000000000106"
             ],
@@ -579,7 +611,7 @@
           {
             "id": "edge-flow-output",
             "referenceId": "9c2b6a3a-7a36-4da1-8720-3e4948cfd021",
-            "referenceName": "contains",
+            "referenceName": "outputLocations",
             "targetMetaClassIds": [
               "10000000-0000-4000-8000-000000000104"
             ],
@@ -593,7 +625,7 @@
           {
             "id": "edge-flow-conveyor",
             "referenceId": "865fa445-a8a6-4ae6-b171-44d19f36bf62",
-            "referenceName": "contains",
+            "referenceName": "conveyors",
             "targetMetaClassIds": [
               "10000000-0000-4000-8000-000000000103"
             ],
@@ -623,6 +655,170 @@
             "name": "Pathway Area",
             "type": "create-node",
             "metaClassId": "10000000-0000-4000-8000-000000000106"
+          }
+        ]
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000206",
+        "name": "Robot Fleet Inventory",
+        "description": "Editable table for reviewing robot priority, battery state, load state, and current routing information.",
+        "viewpointId": "40000000-0000-4000-8000-000000000101",
+        "kind": "table",
+        "visibleMetaClassIds": [
+          "10000000-0000-4000-8000-000000000102"
+        ],
+        "creatableMetaClassIds": [],
+        "tableColumns": [
+          "name",
+          "Priority",
+          "BatteryLevel",
+          "HasProduct",
+          "Location",
+          "Target"
+        ]
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000207",
+        "name": "Warehouse Resource Hierarchy",
+        "description": "Expandable tree of the warehouse system and the resources it contains.",
+        "viewpointId": "40000000-0000-4000-8000-000000000101",
+        "kind": "tree",
+        "visibleMetaClassIds": [
+          "10000000-0000-4000-8000-000000000101",
+          "10000000-0000-4000-8000-000000000102",
+          "10000000-0000-4000-8000-000000000103",
+          "10000000-0000-4000-8000-000000000104",
+          "10000000-0000-4000-8000-000000000105",
+          "10000000-0000-4000-8000-000000000106",
+          "10000000-0000-4000-8000-00000000010a",
+          "10000000-0000-4000-8000-00000000010b",
+          "10000000-0000-4000-8000-00000000010c"
+        ],
+        "creatableMetaClassIds": []
+      },
+      {
+        "id": "40000000-0000-4000-8000-000000000208",
+        "name": "Aerial Inspection",
+        "description": "Elevation-aware diagram for authoring drone patrol placement around warehouse racks and loading infrastructure.",
+        "viewpointId": "40000000-0000-4000-8000-000000000101",
+        "kind": "diagram",
+        "visibleMetaClassIds": [
+          "10000000-0000-4000-8000-00000000010c",
+          "10000000-0000-4000-8000-00000000010a",
+          "10000000-0000-4000-8000-00000000010b",
+          "10000000-0000-4000-8000-000000000105"
+        ],
+        "creatableMetaClassIds": [
+          "10000000-0000-4000-8000-00000000010c"
+        ],
+        "concreteSyntaxByMetaClassId": {
+          "10000000-0000-4000-8000-00000000010c": {
+            "two_d": {
+              "shape": "diamond",
+              "fillColor": "#ede9fe",
+              "strokeColor": "#6d28d9",
+              "strokeWidth": 3,
+              "defaultSize": {
+                "width": 76,
+                "height": 76
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#8b5cf6",
+              "defaultSizeMm": {
+                "widthMm": 1200,
+                "heightMm": 1200,
+                "depthMm": 400
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 3000,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 10000,
+                "stepMm": 100
+              }
+            }
+          },
+          "10000000-0000-4000-8000-00000000010a": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#fef3c7",
+              "strokeColor": "#92400e",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 80,
+                "height": 120
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#b45309",
+              "defaultSizeMm": {
+                "widthMm": 2000,
+                "heightMm": 1000,
+                "depthMm": 2500
+              },
+              "verticalPlacement": {
+                "mode": "grounded"
+              }
+            }
+          },
+          "10000000-0000-4000-8000-00000000010b": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#e2e8f0",
+              "strokeColor": "#475569",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 160,
+                "height": 100
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#64748b",
+              "defaultSizeMm": {
+                "widthMm": 5000,
+                "heightMm": 3000,
+                "depthMm": 500
+              },
+              "verticalPlacement": {
+                "mode": "grounded"
+              }
+            }
+          },
+          "10000000-0000-4000-8000-000000000105": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#cffafe",
+              "strokeColor": "#0e7490",
+              "strokeWidth": 2,
+              "defaultSize": {
+                "width": 120,
+                "height": 80
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#06b6d4",
+              "defaultSizeMm": {
+                "widthMm": 2000,
+                "heightMm": 2000,
+                "depthMm": 6000
+              },
+              "verticalPlacement": {
+                "mode": "grounded"
+              }
+            }
+          }
+        },
+        "toolDefinitions": [
+          {
+            "id": "tool-aerial-inspection-drone",
+            "name": "Inspection Drone",
+            "type": "create-node",
+            "metaClassId": "10000000-0000-4000-8000-00000000010c"
           }
         ]
       }
@@ -880,7 +1076,7 @@
           {
             "id": "edge-coverage-pathway",
             "referenceId": "f7530f99-1b89-4570-8ca6-6894f56521d6",
-            "referenceName": "contains",
+            "referenceName": "pathwayAreas",
             "targetMetaClassIds": [
               "10000000-0000-4000-8000-000000000106"
             ],
@@ -898,7 +1094,7 @@
           {
             "id": "edge-coverage-output",
             "referenceId": "9c2b6a3a-7a36-4da1-8720-3e4948cfd021",
-            "referenceName": "contains",
+            "referenceName": "outputLocations",
             "targetMetaClassIds": [
               "10000000-0000-4000-8000-000000000104"
             ],

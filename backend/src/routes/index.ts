@@ -14,6 +14,7 @@ import shareRoutes from './share.routes';
 import adminRoutes from './admin.routes';
 import roleRequestRoutes from './roleRequest.routes';
 import interoperabilityRoutes from './interoperability.routes';
+import projectRoutes from './project.routes';
 
 const router = Router();
 
@@ -43,5 +44,6 @@ router.use('/share', authenticate, shareRoutes);
 router.use('/admin', authenticate, adminRoutes);
 router.use('/role-requests', authenticate, roleRequestRoutes);
 router.use('/interoperability', authenticate, interoperabilityRoutes);
+router.use('/projects', projectRoutes);
 
 export default router;

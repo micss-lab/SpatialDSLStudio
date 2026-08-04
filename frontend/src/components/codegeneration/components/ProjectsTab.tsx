@@ -55,7 +55,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
 
   return (
     <>
-      <Typography variant="h6" gutterBottom>Projects</Typography>
+      <Typography variant="h6" gutterBottom>Generator Configurations</Typography>
       <List>
         {groupByParent(
           projects,
@@ -114,7 +114,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
         
         {projects.length === 0 && (
           <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 2 }}>
-            No projects defined yet. Create a project to generate code.
+            No generator configurations defined yet. Create one to generate code.
           </Typography>
         )}
       </List>
@@ -139,14 +139,14 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
             startIcon={<UploadFileIcon />}
             onClick={() => fileInputRef.current?.click()}
           >
-            Import Project
+            Import Configuration
           </Button>
           <Button
             variant="outlined"
             startIcon={<AddIcon />}
             onClick={onNewProject}
           >
-            New Project
+            New Configuration
           </Button>
         </Box>
       )}

@@ -26,6 +26,7 @@ interface ProjectSelectorProps {
   onNewProject: () => void;
   onGenerate: () => void;
   canCreate: boolean;
+  canGenerate: boolean;
 }
 
 /**
@@ -39,23 +40,24 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
   onProjectChange,
   onNewProject,
   onGenerate,
-  canCreate
+  canCreate,
+  canGenerate
 }) => {
   return (
     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
       {/* Generate Code operates on the selected project, so they form one group */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <FormControl sx={{ minWidth: 300 }}>
-          <InputLabel id="project-select-label">Project</InputLabel>
+          <InputLabel id="project-select-label">Generator Configuration</InputLabel>
           <Select
             labelId="project-select-label"
             value={selectedProject}
-            label="Project"
+            label="Generator Configuration"
             onChange={onProjectChange}
           >
-            {/* User Projects */}
+            {/* User generator configurations */}
             {projects.length > 0 && (
-              <ListSubheader>Your Projects</ListSubheader>
+              <ListSubheader>Your Configurations</ListSubheader>
             )}
             {projects.map((project) => (
               <MenuItem key={project.id} value={project.id}>
@@ -63,9 +65,9 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
               </MenuItem>
             ))}
 
-            {/* Example Projects */}
+            {/* Example generator configurations */}
             {exampleProjects.length > 0 && (
-              <ListSubheader>Example Projects</ListSubheader>
+              <ListSubheader>Example Configurations</ListSubheader>
             )}
             {exampleProjects.map((project) => (
               <MenuItem key={project.id} value={project.id}>
@@ -80,7 +82,7 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
           color="primary"
           startIcon={<PlayArrowIcon />}
           onClick={onGenerate}
-          disabled={!selectedProject}
+          disabled={!selectedProject || !canGenerate}
         >
           Generate Code
         </Button>
@@ -92,7 +94,7 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
           startIcon={<AddIcon />}
           onClick={onNewProject}
         >
-          New Project
+          New Configuration
         </Button>
       )}
     </Box>

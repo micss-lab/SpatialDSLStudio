@@ -19,6 +19,254 @@ export type ResourceType =
 
 export type SharePermission = 'VIEWER' | 'EDITOR';
 
+// Project roles are intentionally separate from the platform-wide UserRole.
+// ADMIN remains a platform concern; content authority comes from membership.
+export type ProjectRole = 'OWNER' | 'DSL_DESIGNER' | 'MODELER' | 'VIEWER';
+export type ProjectStatus = 'ACTIVE' | 'ARCHIVED';
+
+export type ProjectCapability =
+  | 'project.read'
+  | 'project.settings.update'
+  | 'project.members.manage'
+  | 'project.archive'
+  | 'metamodel.create'
+  | 'metamodel.update'
+  | 'metamodel.delete'
+  | 'viewpoint.create'
+  | 'viewpoint.update'
+  | 'viewpoint.delete'
+  | 'model.create'
+  | 'model.update'
+  | 'model.delete'
+  | 'view.create'
+  | 'view.update'
+  | 'view.delete'
+  | 'transformation.author'
+  | 'transformation.execute'
+  | 'codegen.author'
+  | 'codegen.execute'
+  | 'test.author'
+  | 'test.execute'
+  | 'checkpoint.create'
+  | 'checkpoint.restore'
+  | 'metamodel.evolve'
+  | 'pipeline.execute';
+
+export interface ProjectArtifactCounts {
+  metamodels: number;
+  viewpoints: number;
+  models: number;
+  views: number;
+  transformations: number;
+  generatorConfigurations: number;
+  tests: number;
+  files: number;
+}
+
+export interface ProjectMember {
+  id: string;
+  userId: string;
+  email: string;
+  role: ProjectRole;
+  createdAt: string;
+}
+
+export interface StudioProject {
+  id: string;
+  name: string;
+  description?: string;
+  status: ProjectStatus;
+  ownerId: string;
+  ownerEmail: string;
+  role: ProjectRole;
+  isPlatformAdmin: boolean;
+  capabilities: ProjectCapability[];
+  memberCount: number;
+  artifactCounts?: ProjectArtifactCounts;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateStudioProjectRequest {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateStudioProjectRequest {
+  name?: string;
+  description?: string;
+}
+
+export interface AddProjectMemberRequest {
+  email: string;
+  role: Exclude<ProjectRole, 'OWNER'>;
+}
+
+export interface UpdateProjectMemberRequest {
+  role: Exclude<ProjectRole, 'OWNER'>;
+}
+
+// ============ Versioned MDE Lifecycle Types ============
+
+export type ProjectArtifactType =
+  | 'epackage'
+  | 'metamodel'
+  | 'viewpoint'
+  | 'model'
+  | 'view'
+  | 'transformation'
+  | 'generator'
+  | 'test'
+  | 'file';
+
+export interface ProjectArtifactRef {
+  type: ProjectArtifactType;
+  id: string;
+}
+
+export interface ProjectArtifactSnapshot extends ProjectArtifactRef {
+  name: string;
+  contentHash: string;
+  dependencies: ProjectArtifactRef[];
+  data: Record<string, any>;
+}
+
+export interface ProjectArtifactManifest {
+  schemaVersion: 1;
+  projectId: string;
+  project: { name: string; description?: string };
+  artifacts: ProjectArtifactSnapshot[];
+  contentHash: string;
+}
+
+export interface ProjectCheckpoint {
+  id: string;
+  projectId: string;
+  sequence: number;
+  tag?: string;
+  message?: string;
+  contentHash: string;
+  manifest?: ProjectArtifactManifest;
+  createdById: string;
+  createdAt: string;
+}
+
+export interface ProjectCheckpointDiff {
+  fromHash: string;
+  toHash: string;
+  added: ProjectArtifactRef[];
+  removed: ProjectArtifactRef[];
+  changed: ProjectArtifactRef[];
+  unchanged: number;
+}
+
+export type MetamodelEvolutionChangeKind =
+  | 'class-added'
+  | 'class-removed'
+  | 'class-renamed'
+  | 'attribute-added'
+  | 'attribute-removed'
+  | 'attribute-renamed'
+  | 'attribute-type-changed'
+  | 'attribute-cardinality-changed'
+  | 'reference-added'
+  | 'reference-removed'
+  | 'reference-renamed'
+  | 'reference-target-changed'
+  | 'reference-cardinality-changed';
+
+export interface MetamodelEvolutionChange {
+  kind: MetamodelEvolutionChangeKind;
+  classId: string;
+  featureId?: string;
+  before?: Record<string, any>;
+  after?: Record<string, any>;
+  breaking: boolean;
+}
+
+export interface MetamodelEvolutionImpact {
+  artifact: ProjectArtifactRef;
+  reasons: string[];
+  affectedElementIds?: string[];
+}
+
+export interface MetamodelEvolutionReport {
+  metamodelId: string;
+  sourceHash: string;
+  targetHash: string;
+  changes: MetamodelEvolutionChange[];
+  impacts: MetamodelEvolutionImpact[];
+  blockers: string[];
+  warnings: string[];
+}
+
+export interface MetamodelMigrationRule {
+  kind: 'rename-attribute' | 'remove-attribute' | 'remove-class';
+  classId: string;
+  fromName?: string;
+  toName?: string;
+  featureId?: string;
+  deleteInstances?: boolean;
+}
+
+export interface ApplyMetamodelEvolutionRequest {
+  nextMetamodel: Metamodel;
+  expectedSourceHash: string;
+  rules?: MetamodelMigrationRule[];
+  checkpointTag?: string;
+  message?: string;
+}
+
+export interface MetamodelMigrationResult {
+  id: string;
+  projectId: string;
+  metamodelId: string;
+  sourceCheckpointId: string;
+  sourceHash: string;
+  targetHash: string;
+  status: 'APPLIED' | 'FAILED';
+  report: MetamodelEvolutionReport;
+  migratedModels: Array<{ modelId: string; changedElements: number; deletedElements: number }>;
+  createdAt: string;
+  appliedAt?: string;
+}
+
+export type HeadlessPipelineStep =
+  | { id: string; kind: 'validate-model'; modelId: string }
+  | { id: string; kind: 'generate'; modelId: string; codegenProjectId: string }
+  | { id: string; kind: 'run-tests'; modelId: string }
+  | { id: string; kind: 'apply-transformation'; modelId: string; ruleId: string; maxIterations?: number };
+
+export interface HeadlessPipelineDefinition {
+  name: string;
+  checkpointTag?: string;
+  steps: HeadlessPipelineStep[];
+}
+
+export interface HeadlessPipelineStepResult {
+  stepId: string;
+  kind: HeadlessPipelineStep['kind'];
+  status: 'SUCCEEDED' | 'FAILED';
+  output?: Record<string, any>;
+  error?: string;
+}
+
+export interface HeadlessPipelineRun {
+  id: string;
+  projectId: string;
+  name: string;
+  status: 'RUNNING' | 'SUCCEEDED' | 'FAILED';
+  definition: HeadlessPipelineDefinition;
+  sourceCheckpointId?: string;
+  contentHash?: string;
+  results: HeadlessPipelineStepResult[];
+  failureMessage?: string;
+  createdById: string;
+  createdAt: string;
+  startedAt: string;
+  completedAt?: string;
+}
+
 export interface SharedResource {
   id: string;
   resourceType: ResourceType;
@@ -74,6 +322,7 @@ export interface EReference extends MetaMetaElement {
 }
 
 export interface EPackage extends MetaMetaElement {
+  projectId?: string;
   nsURI: string;
   nsPrefix: string;
   classes: EClass[];
@@ -166,6 +415,7 @@ export interface MetaReference extends MetamodelElement {
 }
 
 export interface Metamodel extends MetamodelElement {
+  projectId?: string;
   uri: string;
   prefix: string;
   classes: MetaClass[];
@@ -188,6 +438,18 @@ export interface ConcreteSyntax2D {
   defaultSize?: { width: number; height: number };
 }
 
+/**
+ * Representation-level authoring policy for the base elevation of a 3D item.
+ * A missing policy is interpreted as grounded for backwards compatibility.
+ */
+export interface VerticalPlacement3D {
+  mode: 'grounded' | 'adjustable';
+  defaultBaseZMm?: number;
+  minBaseZMm?: number;
+  maxBaseZMm?: number;
+  stepMm?: number;
+}
+
 export interface ConcreteSyntax3D {
   modelFileId?: string;
   modelUrl?: string;
@@ -195,6 +457,7 @@ export interface ConcreteSyntax3D {
   fallbackShape?: 'box' | 'sphere' | 'cylinder';
   fallbackColor?: string;
   defaultSizeMm?: { widthMm: number; heightMm: number; depthMm: number };
+  verticalPlacement?: VerticalPlacement3D;
 }
 
 export interface ConcreteSyntaxEdge {
@@ -356,6 +619,7 @@ export interface RepresentationDescription {
 }
 
 export interface Viewpoint {
+  projectId?: string;
   id: string;
   name: string;
   description?: string;
@@ -377,11 +641,27 @@ export interface ModelElement {
   presentation?: ModelElementPresentation;
 }
 
+/** Right-handed, Z-up domain position in millimetres. Z is base elevation. */
+export interface Position3D {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface Size3D {
+  /** Domain X extent in millimetres. */
+  widthMm: number;
+  /** Domain Y extent in millimetres. */
+  heightMm: number;
+  /** Domain Z extent in millimetres. */
+  depthMm: number;
+}
+
 export interface ModelElementPresentation {
   position2D?: { x: number; y: number };
-  position3D?: { x: number; y: number };
+  position3D?: Position3D;
   size2D?: { width: number; height: number };
-  size3D?: { widthMm: number; heightMm: number; depthMm: number };
+  size3D?: Size3D;
   rotationZ?: number;
   appearance?: Record<string, any>;
   attachedToElementId?: string;
@@ -401,6 +681,7 @@ export interface ModelConnection {
 }
 
 export interface Model {
+  projectId?: string;
   id: string;
   name: string;
   description?: string;
@@ -435,6 +716,7 @@ export interface GridSettings {
 }
 
 export interface Diagram {
+  projectId?: string;
   id: string;
   name: string;
   description?: string;
@@ -473,6 +755,7 @@ export interface TransformationPattern {
 }
 
 export interface TransformationRule {
+  projectId?: string;
   id: string;
   name: string;
   description?: string;
@@ -527,6 +810,7 @@ export interface CodeGenerationTemplate {
 }
 
 export interface CodeGenerationProject {
+  projectId?: string;
   id: string;
   name: string;
   description?: string;
@@ -558,6 +842,8 @@ export interface TestValue {
 }
 
 export interface TestCase {
+  projectId?: string;
+  modelId?: string;
   id: string;
   name: string;
   description: string;
@@ -602,6 +888,7 @@ export interface TestGenerationOptions {
 export type FileType = 'image' | 'model' | 'other';
 
 export interface StoredFile {
+  projectId?: string;
   id: string;
   filename: string;
   mimetype: string;

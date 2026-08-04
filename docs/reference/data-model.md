@@ -24,6 +24,72 @@ Key fields:
 
 Owns all primary resources through `userId` relations.
 
+### StudioProject
+
+Workspace, navigation context, and authorization boundary. Every modeling
+artifact carries a `projectId` and belongs to exactly one project.
+
+Key fields:
+
+- `name`, `description`
+- `status` (`ACTIVE`, `ARCHIVED`)
+- `ownerId` (restricted delete, so a project cannot be orphaned)
+
+Deleting a project cascades to its memberships, artifacts, checkpoints,
+migrations, and pipeline runs.
+
+### ProjectMembership
+
+Grants a user a role inside one project.
+
+Key fields:
+
+- `projectId`, `userId`
+- `role` (`OWNER`, `DSL_DESIGNER`, `MODELER`, `VIEWER`)
+
+Unique on `(projectId, userId)`, so a user holds at most one role per project.
+
+### ProjectCheckpoint
+
+Immutable, dependency-closed snapshot of a project's artifact graph.
+
+Key fields:
+
+- `sequence` (per-project, monotonically increasing)
+- `tag`, `message`
+- `manifest` (JSON: ordered artifact snapshots with per-artifact hashes)
+- `contentHash` (canonical root hash of the manifest)
+- `createdById`
+
+Unique on `(projectId, sequence)` and on `(projectId, tag)`. Manifests
+deliberately exclude membership and sharing state, so restoring a checkpoint
+never restores access.
+
+### MetamodelMigration
+
+Evidence for an applied language-evolution operation.
+
+Key fields:
+
+- `metamodelId`, `sourceHash`, `targetHash`
+- `status` (`APPLIED`, `FAILED`)
+- `changeSet`, `impactReport`, `migrationReport` (JSON)
+- `sourceCheckpointId` (restricted delete: the recovery checkpoint for this
+  migration cannot be removed while the record refers to it)
+
+### PipelineRun
+
+Retained result of a headless pipeline execution.
+
+Key fields:
+
+- `name`, `status` (`RUNNING`, `SUCCEEDED`, `FAILED`)
+- `definition`, `result` (JSON)
+- `sourceCheckpointId` (nulled if the checkpoint is removed)
+- `contentHash` (deterministic hash over source checkpoint, definition, and step
+  results)
+- `failureMessage`, `startedAt`, `completedAt`
+
 ### SharedResource
 
 Maps owner resource access to recipient users.
@@ -171,7 +237,11 @@ Key fields:
 
 ## Enums and domain vocabulary
 
-- `UserRole`: ADMIN, DSL_DESIGNER, MODELER, VIEWER
+- `UserRole`: ADMIN, DSL_DESIGNER, MODELER, VIEWER (platform-wide)
+- `ProjectRole`: OWNER, DSL_DESIGNER, MODELER, VIEWER (per project membership)
+- `ProjectStatus`: ACTIVE, ARCHIVED
+- `MetamodelMigrationStatus`: APPLIED, FAILED
+- `PipelineRunStatus`: RUNNING, SUCCEEDED, FAILED
 - `ResourceType`: METAMODEL, MODEL, DIAGRAM, TRANSFORMATION_RULE, CODEGEN_PROJECT, TEST_CASE (`DIAGRAM` is the compatibility resource type for views)
 - `SharePermission`: VIEWER, EDITOR
 - `TestCaseType`: attribute, reference, constraint, reference_attribute
@@ -189,6 +259,19 @@ Isolation model:
 - cross-user access is only through sharing records
 - cascade deletes on some relations enforce cleanup
 
+## Project scoping
+
+Every primary resource also carries `projectId`. Project membership, not the
+platform role, decides what a user may do inside a project, and `userId` remains
+on each resource as creator attribution.
+
+The one-project invariant means a resource is reachable only through its own
+project's routes. Addressing an artifact through a different project's URL
+returns `404` even when the caller is a member of both projects.
+
+Existing users were migrated by giving each a private Legacy Project and
+backfilling their owned artifacts into it, so no resource is left unscoped.
+
 ## Sharing model
 
 Shared access is represented explicitly in `SharedResource`.
@@ -203,9 +286,13 @@ Semantics:
 
 Main dependency chain:
 
+- `StudioProject` -> every primary resource
 - `EPackage` -> `Metamodel` -> `Viewpoint` -> `RepresentationDescription`
 - `Metamodel` -> `Model` -> `Diagram/View`
 - `Diagram/View` -> optional `Viewpoint` + `RepresentationDescription`
+
+This chain is also the order in which a `ProjectCheckpoint` manifest serializes
+artifacts, which is what makes its root hash deterministic.
 
 Additional dependency links:
 
@@ -238,12 +325,18 @@ Current migration set:
 - `20260123055303_make_target_metamodel_id_optional`
 - `20260223024320_add_rbac_sharing`
 - `20260321071500_sync_user_schema_for_auth`
+- `20260401120000_add_password_reset_and_role_requests`
 - `20260427000000_add_view_membership_to_diagrams`
 - `20260525000000_add_metamodel_enums`
 - `20260528000000_add_viewpoints`
+- `20260608000000_add_resource_descriptions`
+- `20260612000000_add_email_verification`
+- `20260722000000_add_studio_project_scope`
+- `20260723010000_add_mde_lifecycle`
 
 ## Related docs
 
 - [API Reference](api.md)
+- [Project Lifecycle](../user-guide/project-lifecycle.md)
 - [Architecture](architecture.md)
 - [Sirius Desktop Compatibility](sirius-compatibility.md)

@@ -129,6 +129,17 @@ export interface ConcreteSyntax2D {
         height: number;
     };
 }
+/**
+ * Representation-level authoring policy for the base elevation of a 3D item.
+ * A missing policy is interpreted as grounded for backwards compatibility.
+ */
+export interface VerticalPlacement3D {
+    mode: 'grounded' | 'adjustable';
+    defaultBaseZMm?: number;
+    minBaseZMm?: number;
+    maxBaseZMm?: number;
+    stepMm?: number;
+}
 export interface ConcreteSyntax3D {
     modelFileId?: string;
     modelUrl?: string;
@@ -140,6 +151,7 @@ export interface ConcreteSyntax3D {
         heightMm: number;
         depthMm: number;
     };
+    verticalPlacement?: VerticalPlacement3D;
 }
 export interface ConcreteSyntaxEdge {
     lineColor?: string;
@@ -365,24 +377,31 @@ export interface ModelElement {
     references: Record<string, string | string[] | null>;
     presentation?: ModelElementPresentation;
 }
+/** Right-handed, Z-up domain position in millimetres. Z is base elevation. */
+export interface Position3D {
+    x: number;
+    y: number;
+    z: number;
+}
+export interface Size3D {
+    /** Domain X extent in millimetres. */
+    widthMm: number;
+    /** Domain Y extent in millimetres. */
+    heightMm: number;
+    /** Domain Z extent in millimetres. */
+    depthMm: number;
+}
 export interface ModelElementPresentation {
     position2D?: {
         x: number;
         y: number;
     };
-    position3D?: {
-        x: number;
-        y: number;
-    };
+    position3D?: Position3D;
     size2D?: {
         width: number;
         height: number;
     };
-    size3D?: {
-        widthMm: number;
-        heightMm: number;
-        depthMm: number;
-    };
+    size3D?: Size3D;
     rotationZ?: number;
     appearance?: Record<string, any>;
     attachedToElementId?: string;

@@ -6,12 +6,13 @@ class FileStorageService {
   /**
    * Get all stored files for a user
    */
-  async getAll(userId: string, type?: FileType): Promise<Omit<StoredFile, 'data'>[]> {
+  async getAll(userId: string, type?: FileType, projectId?: string): Promise<Omit<StoredFile, 'data'>[]> {
     const files = await prisma.storedFile.findMany({
-      where: { userId, ...(type ? { type } : {}) },
+      where: { ...(projectId ? { projectId } : { userId }), ...(type ? { type } : {}) },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
+        projectId: true,
         filename: true,
         mimetype: true,
         size: true,
@@ -24,6 +25,7 @@ class FileStorageService {
 
     return files.map(f => ({
       id: f.id,
+      projectId: f.projectId || undefined,
       filename: f.filename,
       mimetype: f.mimetype,
       size: f.size,
@@ -37,11 +39,12 @@ class FileStorageService {
   /**
    * Get file metadata by ID (without data, with user ownership check)
    */
-  async getMetadataById(id: string, userId: string): Promise<Omit<StoredFile, 'data'> | null> {
+  async getMetadataById(id: string, userId: string, projectId?: string): Promise<Omit<StoredFile, 'data'> | null> {
     const file = await prisma.storedFile.findFirst({
-      where: { id, userId },
+      where: projectId ? { id, projectId } : { id, userId },
       select: {
         id: true,
+        projectId: true,
         filename: true,
         mimetype: true,
         size: true,
@@ -56,6 +59,7 @@ class FileStorageService {
 
     return {
       id: file.id,
+      projectId: file.projectId || undefined,
       filename: file.filename,
       mimetype: file.mimetype,
       size: file.size,
@@ -69,15 +73,16 @@ class FileStorageService {
   /**
    * Get file with data by ID (with user ownership check)
    */
-  async getById(id: string, userId: string): Promise<StoredFile | null> {
+  async getById(id: string, userId: string, projectId?: string): Promise<StoredFile | null> {
     const file = await prisma.storedFile.findFirst({
-      where: { id, userId },
+      where: projectId ? { id, projectId } : { id, userId },
     });
 
     if (!file) return null;
 
     return {
       id: file.id,
+      projectId: file.projectId || undefined,
       filename: file.filename,
       mimetype: file.mimetype,
       size: file.size,
@@ -92,9 +97,13 @@ class FileStorageService {
   /**
    * Get raw file data as Buffer (with user ownership check)
    */
-  async getRawData(id: string, userId: string): Promise<{ data: Buffer; mimetype: string; filename: string } | null> {
+  async getRawData(
+    id: string,
+    userId: string,
+    projectId?: string
+  ): Promise<{ data: Buffer; mimetype: string; filename: string } | null> {
     const file = await prisma.storedFile.findFirst({
-      where: { id, userId },
+      where: projectId ? { id, projectId } : { id, userId },
       select: {
         data: true,
         mimetype: true,
@@ -120,7 +129,8 @@ class FileStorageService {
     mimetype: string,
     type: FileType,
     userId: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
+    projectId?: string
   ): Promise<FileUploadResponse> {
     const file = await prisma.storedFile.create({
       data: {
@@ -131,6 +141,7 @@ class FileStorageService {
         data,
         metadata: metadata || {},
         userId,
+        projectId,
       },
     });
 
@@ -152,21 +163,27 @@ class FileStorageService {
     mimetype: string,
     type: FileType,
     userId: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
+    projectId?: string
   ): Promise<FileUploadResponse> {
     // Remove data URL prefix if present
     const base64Clean = base64Data.replace(/^data:[^;]+;base64,/, '');
     const data = Buffer.from(base64Clean, 'base64');
 
-    return this.storeFromBuffer(data, filename, mimetype, type, userId, metadata);
+    return this.storeFromBuffer(data, filename, mimetype, type, userId, metadata, projectId);
   }
 
   /**
    * Update file metadata (with user ownership check)
    */
-  async updateMetadata(id: string, metadata: Record<string, any>, userId: string): Promise<Omit<StoredFile, 'data'>> {
+  async updateMetadata(
+    id: string,
+    metadata: Record<string, any>,
+    userId: string,
+    projectId?: string
+  ): Promise<Omit<StoredFile, 'data'>> {
     const existing = await prisma.storedFile.findFirst({
-      where: { id, userId },
+      where: projectId ? { id, projectId } : { id, userId },
     });
 
     if (!existing) {
@@ -183,6 +200,7 @@ class FileStorageService {
       },
       select: {
         id: true,
+        projectId: true,
         filename: true,
         mimetype: true,
         size: true,
@@ -195,6 +213,7 @@ class FileStorageService {
 
     return {
       id: file.id,
+      projectId: file.projectId || undefined,
       filename: file.filename,
       mimetype: file.mimetype,
       size: file.size,
@@ -208,10 +227,10 @@ class FileStorageService {
   /**
    * Delete a file (with user ownership check)
    */
-  async delete(id: string, userId: string): Promise<void> {
+  async delete(id: string, userId: string, projectId?: string): Promise<void> {
     // First verify ownership
     const existing = await prisma.storedFile.findFirst({
-      where: { id, userId },
+      where: projectId ? { id, projectId } : { id, userId },
     });
 
     if (!existing) {
@@ -226,12 +245,16 @@ class FileStorageService {
   /**
    * Delete files older than a specified age (in milliseconds) for a user
    */
-  async cleanupOldFiles(userId: string, maxAge: number = 7 * 24 * 60 * 60 * 1000): Promise<number> {
+  async cleanupOldFiles(
+    userId: string,
+    maxAge: number = 7 * 24 * 60 * 60 * 1000,
+    projectId?: string
+  ): Promise<number> {
     const cutoffDate = new Date(Date.now() - maxAge);
 
     const result = await prisma.storedFile.deleteMany({
       where: {
-        userId,
+        ...(projectId ? { projectId } : { userId }),
         createdAt: {
           lt: cutoffDate,
         },
@@ -244,14 +267,14 @@ class FileStorageService {
   /**
    * Get storage statistics for a user
    */
-  async getStorageStats(userId: string): Promise<{
+  async getStorageStats(userId: string, projectId?: string): Promise<{
     totalFiles: number;
     totalSize: number;
     byType: Record<FileType, { count: number; size: number }>;
   }> {
     const files = await prisma.storedFile.groupBy({
       by: ['type'],
-      where: { userId },
+      where: projectId ? { projectId } : { userId },
       _count: true,
       _sum: {
         size: true,

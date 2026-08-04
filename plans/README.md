@@ -32,6 +32,15 @@ inside the phase plans until run on the required software/hardware.
 | 7 | [Production AMR asset and Isaac Sim QA](phase-07-production-asset-qa.md) | [x] |
 | 8 | [PhysX physics and layered USD](phase-08-physx-and-layered-usd.md) | [x] |
 | 9 | [Visual Components MAS wiring](phase-09-visual-components-mas.md) | [x] |
+| 10 | [Elevation and aerial placement](phase-10-elevation-and-aerial-placement.md) | [x] |
+
+### MDE lifecycle track
+
+| Phase | Plan | Status |
+| --- | --- | --- |
+| 11 | [Versioned artifact graph](phase-11-versioned-artifact-graph.md) | [x] |
+| 12 | [Metamodel evolution and co-evolution](phase-12-metamodel-coevolution.md) | [x] |
+| 13 | [Reproducible headless MDE pipelines](phase-13-headless-mde-pipelines.md) | [x] |
 
 ## How to use
 

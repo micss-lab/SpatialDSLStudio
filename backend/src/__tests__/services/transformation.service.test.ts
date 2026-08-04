@@ -32,6 +32,7 @@ const mockRuleRow = {
   conditions: [],
   diagramId: null,
   userId: 'user-uuid-1',
+  projectId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -148,6 +149,21 @@ describe('TransformationService', () => {
       await expect(
         transformationService.updateRule('rule-uuid-1', { name: 'Updated' }, 'other-user', 'DSL_DESIGNER')
       ).rejects.toThrow(ApiError);
+    });
+
+    it('rejects a view reference outside the active project', async () => {
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: false, permission: 'EDITOR' });
+      prismaMock.diagram.findFirst.mockResolvedValue(null);
+
+      await expect(transformationService.updateRule(
+        'rule-uuid-1',
+        { diagramId: 'other-project-view' },
+        'designer-uuid',
+        'DSL_DESIGNER',
+        'project-uuid-1'
+      )).rejects.toThrow('Referenced view is not in this project');
+
+      expect(prismaMock.transformationRule.update).not.toHaveBeenCalled();
     });
   });
 

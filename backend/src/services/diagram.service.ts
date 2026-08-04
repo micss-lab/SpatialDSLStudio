@@ -22,6 +22,12 @@ import {
 import { sharingService } from './sharing.service';
 import { canPerformOperation } from '../middleware/permissions';
 import { viewpointService } from './viewpoint.service';
+import { spatialElementErrors } from '../middleware/presentationValidation';
+import {
+  normalizePosition3D,
+  normalizePresentation,
+  validatePresentation,
+} from '../../../shared/spatial';
 
 export interface DiagramWithPermission extends Diagram, ResourceWithPermission {}
 
@@ -30,6 +36,25 @@ type AttachmentSide = NonNullable<ModelElementPresentation['attachmentSide']>;
 const ATTACHMENT_SIDES: AttachmentSide[] = ['top', 'right', 'bottom', 'left'];
 
 class DiagramService {
+  private assertValidPresentation(
+    presentation: ModelElementPresentation,
+    path = 'presentation'
+  ): void {
+    const errors = validatePresentation(presentation, path);
+    if (errors.length > 0) throw new ApiError(400, errors[0]);
+  }
+
+  private normalizeDiagramElements(elements: DiagramElement[] = []): DiagramElement[] {
+    return elements.map((element, index) => {
+      const errors = spatialElementErrors(element, `elements[${index}]`);
+      if (errors.length > 0) throw new ApiError(400, errors[0]);
+      const position3D = normalizePosition3D(element.style?.position3D);
+      return position3D
+        ? { ...element, style: { ...element.style, position3D } }
+        : element;
+    });
+  }
+
   private getIncludedElementIds(diagram: any): string[] {
     const ids = Array.isArray(diagram.includedElementIds) ? diagram.includedElementIds : [];
     return Array.from(new Set(ids.filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)));
@@ -180,16 +205,19 @@ class DiagramService {
         : null as any;
     }
 
+    const normalizedPresentation = normalizePresentation({
+      position2D: { x: 0, y: 0 },
+      size2D: { width: 120, height: 80 },
+      ...(presentation || {}),
+    });
+    this.assertValidPresentation(normalizedPresentation);
+
     return {
       id: uuidv4(),
       modelElementId: metaClass.id,
       style: elementStyle,
       references,
-      presentation: {
-        position2D: { x: 0, y: 0 },
-        size2D: { width: 120, height: 80 },
-        ...(presentation || {}),
-      },
+      presentation: normalizedPresentation,
     };
   }
 
@@ -197,6 +225,8 @@ class DiagramService {
     element: Partial<DiagramElement>,
     current?: ModelElementPresentation
   ): ModelElementPresentation {
+    const spatialErrors = spatialElementErrors(element);
+    if (spatialErrors.length > 0) throw new ApiError(400, spatialErrors[0]);
     const style = element.style || {};
     const rawElement = element as Partial<DiagramElement> & Record<string, any>;
     const presentation: ModelElementPresentation = {};
@@ -216,7 +246,8 @@ class DiagramService {
     }
 
     if (style.position3D && typeof style.position3D === 'object') {
-      presentation.position3D = style.position3D;
+      const position3D = normalizePosition3D(style.position3D);
+      if (position3D) presentation.position3D = position3D;
     }
 
     const hasSize3D = ['widthMm', 'heightMm', 'depthMm'].some(key => typeof style[key] === 'number');
@@ -259,22 +290,41 @@ class DiagramService {
       presentation.attachmentOffsetRatio = attachmentOffsetRatio;
     }
 
-    return presentation;
+    this.assertValidPresentation(presentation);
+    return normalizePresentation(presentation);
   }
 
   private withSyncedSpatialPosition(
     current: ModelElementPresentation | undefined,
     updates: ModelElementPresentation
   ): ModelElementPresentation {
-    if (!updates.position2D || updates.position3D || !current?.position2D || !current?.position3D) {
-      return updates;
+    const normalizedCurrent = normalizePresentation(current);
+    const normalizedUpdates = normalizePresentation(updates);
+    const current2D = normalizedCurrent?.position2D;
+    const current3D = normalizedCurrent?.position3D;
+    const aligned = !current2D || !current3D
+      || (current2D.x === current3D.x && current2D.y === current3D.y);
+
+    if (normalizedUpdates.position3D && !normalizedUpdates.position2D && aligned) {
+      return {
+        ...normalizedUpdates,
+        position2D: {
+          x: normalizedUpdates.position3D.x,
+          y: normalizedUpdates.position3D.y,
+        },
+      };
+    }
+
+    if (!aligned || !normalizedUpdates.position2D || normalizedUpdates.position3D || !current2D || !current3D) {
+      return normalizedUpdates;
     }
 
     return {
-      ...updates,
+      ...normalizedUpdates,
       position3D: {
-        x: current.position3D.x + (updates.position2D.x - current.position2D.x),
-        y: current.position3D.y + (updates.position2D.y - current.position2D.y),
+        x: current3D.x + (normalizedUpdates.position2D.x - current2D.x),
+        y: current3D.y + (normalizedUpdates.position2D.y - current2D.y),
+        z: current3D.z,
       },
     };
   }
@@ -283,16 +333,20 @@ class DiagramService {
     current: ModelElementPresentation | undefined,
     updates: ModelElementPresentation
   ): ModelElementPresentation {
-    const syncedUpdates = this.withSyncedSpatialPosition(current, updates);
+    this.assertValidPresentation(updates);
+    const normalizedCurrent = normalizePresentation(current);
+    const syncedUpdates = this.withSyncedSpatialPosition(normalizedCurrent, updates);
 
     return {
-      ...(current || {}),
+      ...(normalizedCurrent || {}),
       ...syncedUpdates,
-      position2D: syncedUpdates.position2D || current?.position2D,
-      position3D: syncedUpdates.position3D || current?.position3D,
-      size2D: syncedUpdates.size2D || current?.size2D,
-      size3D: syncedUpdates.size3D || current?.size3D,
-      appearance: syncedUpdates.appearance || current?.appearance,
+      position2D: syncedUpdates.position2D || normalizedCurrent?.position2D,
+      position3D: syncedUpdates.position3D || normalizedCurrent?.position3D,
+      size2D: syncedUpdates.size2D || normalizedCurrent?.size2D,
+      size3D: syncedUpdates.size3D || normalizedCurrent?.size3D,
+      appearance: Object.prototype.hasOwnProperty.call(syncedUpdates, 'appearance')
+        ? syncedUpdates.appearance
+        : normalizedCurrent?.appearance,
     };
   }
 
@@ -346,7 +400,8 @@ class DiagramService {
       diagram.modelId,
       userId,
       diagram.viewpointId || undefined,
-      diagram.representationDescriptionId || undefined
+      diagram.representationDescriptionId || undefined,
+      diagram.projectId || undefined
     );
 
     if (resolved.representationDescription.kind !== 'diagram') {
@@ -470,7 +525,20 @@ class DiagramService {
   /**
    * Get all diagrams accessible by a user (owned + shared)
    */
-  async getAll(userId: string): Promise<DiagramWithPermission[]> {
+  async getAll(userId: string, projectId?: string): Promise<DiagramWithPermission[]> {
+    if (projectId) {
+      const projectDiagrams = await prisma.diagram.findMany({
+        where: { projectId },
+        orderBy: { name: 'asc' },
+        include: { user: { select: { email: true } } },
+      });
+      return Promise.all(projectDiagrams.map(async diagram => ({
+        ...(await this.mapToDiagramWithResolvedRepresentation(diagram, userId)),
+        isOwner: diagram.userId === userId,
+        permission: diagram.userId === userId ? undefined : 'EDITOR' as const,
+        ownerEmail: diagram.userId === userId ? undefined : diagram.user.email,
+      })));
+    }
     // Platform admins see and can edit every diagram on the platform.
     if (await sharingService.isAdmin(userId)) {
       const all = await prisma.diagram.findMany({
@@ -536,17 +604,17 @@ class DiagramService {
   /**
    * Get diagrams by model ID accessible by user
    */
-  async getByModelId(modelId: string, userId: string): Promise<DiagramWithPermission[]> {
-    const allDiagrams = await this.getAll(userId);
+  async getByModelId(modelId: string, userId: string, projectId?: string): Promise<DiagramWithPermission[]> {
+    const allDiagrams = await this.getAll(userId, projectId);
     return allDiagrams.filter(d => d.modelId === modelId);
   }
 
   /**
    * Get a single diagram by ID (with access check)
    */
-  async getById(id: string, userId: string): Promise<DiagramWithPermission | null> {
+  async getById(id: string, userId: string, projectId?: string): Promise<DiagramWithPermission | null> {
     const diagram = await prisma.diagram.findFirst({
-      where: { id },
+      where: { id, ...(projectId && { projectId }) },
     });
 
     if (!diagram) return null;
@@ -568,7 +636,7 @@ class DiagramService {
   /**
    * Create a new diagram (requires ADMIN or DSL_DESIGNER role)
    */
-  async create(data: CreateDiagramRequest, userId: string, userRole: UserRole): Promise<Diagram> {
+  async create(data: CreateDiagramRequest, userId: string, userRole: UserRole, projectId?: string): Promise<Diagram> {
     if (!canPerformOperation(userRole, 'diagram', 'create')) {
       throw new ApiError(403, 'Your role does not allow creating diagrams');
     }
@@ -578,12 +646,17 @@ class DiagramService {
     if (!access.hasAccess) {
       throw new ApiError(400, 'Referenced model not found');
     }
+    if (projectId) {
+      const model = await prisma.model.findFirst({ where: { id: data.modelId, projectId } });
+      if (!model) throw new ApiError(400, 'Referenced model is not in this project');
+    }
 
     const resolvedRepresentation = await viewpointService.resolveDiagramRepresentation(
       data.modelId,
       userId,
       data.viewpointId,
-      data.representationDescriptionId
+      data.representationDescriptionId,
+      projectId
     );
 
     const diagram = await prisma.diagram.create({
@@ -594,12 +667,13 @@ class DiagramService {
         modelId: data.modelId,
         viewpointId: resolvedRepresentation.viewpoint.id,
         representationDescriptionId: resolvedRepresentation.representationDescription.id,
-        elements: (data.elements || []) as any,
+        elements: this.normalizeDiagramElements(data.elements || []) as any,
         includedElementIds: (data.includedElementIds || []) as any,
         schemaVersion: 2,
         migrationWarnings: [] as any,
         gridSettings: (data.gridSettings || { sizeX: 20000, sizeY: 20000 }) as any,
         userId,
+        projectId,
       },
     });
 
@@ -632,7 +706,8 @@ class DiagramService {
         existingDiagram.modelId,
         userId,
         data.viewpointId ?? existingDiagram.viewpointId ?? undefined,
-        data.representationDescriptionId ?? existingDiagram.representationDescriptionId ?? undefined
+        data.representationDescriptionId ?? existingDiagram.representationDescriptionId ?? undefined,
+        existingDiagram.projectId || undefined
       );
     }
 
@@ -645,7 +720,9 @@ class DiagramService {
           viewpointId: resolvedRepresentation.viewpoint.id,
           representationDescriptionId: resolvedRepresentation.representationDescription.id,
         }),
-        ...(data.elements !== undefined && { elements: data.elements as any }),
+        ...(data.elements !== undefined && {
+          elements: this.normalizeDiagramElements(data.elements) as any,
+        }),
         ...(data.includedElementIds !== undefined && { includedElementIds: Array.from(new Set(data.includedElementIds)) as any }),
         ...(data.gridSettings !== undefined && { gridSettings: data.gridSettings as any }),
         ...(data.schemaVersion !== undefined && { schemaVersion: data.schemaVersion }),
@@ -659,9 +736,14 @@ class DiagramService {
   /**
    * Delete a diagram (owner or platform admin)
    */
-  async delete(id: string, userId: string, userRole: UserRole): Promise<void> {
+  async delete(id: string, userId: string, userRole: UserRole, projectId?: string): Promise<void> {
+    if (projectId && !canPerformOperation(userRole, 'diagram', 'editPositions')) {
+      throw new ApiError(403, 'Your role does not allow deleting views');
+    }
     const existing = await prisma.diagram.findFirst({
-      where: userRole === 'ADMIN' ? { id } : { id, userId },
+      where: projectId
+        ? { id, projectId }
+        : userRole === 'ADMIN' ? { id } : { id, userId },
     });
 
     if (!existing) {
@@ -1147,6 +1229,7 @@ class DiagramService {
   private mapToDiagram(d: any): Diagram {
     return {
       id: d.id,
+      projectId: d.projectId || undefined,
       name: d.name,
       description: d.description || undefined,
       modelId: d.modelId,
@@ -1171,7 +1254,8 @@ class DiagramService {
         diagram.modelId,
         userId,
         diagram.viewpointId,
-        diagram.representationDescriptionId
+        diagram.representationDescriptionId,
+        d.projectId || undefined
       );
 
       return {

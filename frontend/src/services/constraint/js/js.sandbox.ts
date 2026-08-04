@@ -3,7 +3,15 @@ import {
   ModelElement,
   Metamodel
 } from '../../../models/types';
-import { spatialContextFields, boundsOf, overlaps, clearance } from '../spatial.helpers';
+import {
+  spatialContextFields,
+  boundsOf,
+  bounds3DOf,
+  overlaps,
+  overlaps3D,
+  clearance,
+  clearance3D
+} from '../spatial.helpers';
 
 /**
  * Prepare context for JavaScript evaluation
@@ -16,8 +24,8 @@ export function prepareContextForJS(
   // Create a clean context
   const context: Record<string, any> = {
     self: {
-      ...spatialContextFields(element),
       ...element.style,
+      ...spatialContextFields(element),
       id: element.id,
       type: element.modelElementId
     },
@@ -27,8 +35,8 @@ export function prepareContextForJS(
       elements: model.elements.map(e => ({
         id: e.id,
         type: e.modelElementId,
-        ...spatialContextFields(e),
-        ...e.style
+        ...e.style,
+        ...spatialContextFields(e)
       }))
     },
     metamodel: {
@@ -37,8 +45,11 @@ export function prepareContextForJS(
     },
     spatial: {
       boundsOf,
+      bounds3DOf,
       overlaps,
-      clearance
+      overlaps3D,
+      clearance,
+      clearance3D
     }
   };
 
@@ -52,8 +63,8 @@ export function prepareContextForJS(
             const refElement = model.elements.find(e => e.id === refId);
             if (refElement) {
               return {
-                ...spatialContextFields(refElement),
                 ...refElement.style,
+                ...spatialContextFields(refElement),
                 id: refElement.id,
                 type: refElement.modelElementId
               };
@@ -65,8 +76,8 @@ export function prepareContextForJS(
           const refElement = model.elements.find(e => e.id === refValue);
           if (refElement) {
             context.self[refName] = {
-              ...spatialContextFields(refElement),
               ...refElement.style,
+              ...spatialContextFields(refElement),
               id: refElement.id,
               type: refElement.modelElementId
             };

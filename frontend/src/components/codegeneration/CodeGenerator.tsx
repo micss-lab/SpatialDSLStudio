@@ -6,8 +6,9 @@ import { CodeGenerationTemplate, CodeGenerationResult, Metamodel, CodeGeneration
 import { codeGenerationService } from '../../services/codegeneration';
 import { metamodelService } from '../../services/metamodel';
 import { modelService } from '../../services/model';
+import { apiClient } from '../../services/core';
 import { ShareDialog } from '../common';
-import { useAuth } from '../../contexts/AuthContext';
+import { useProject } from '../../contexts/ProjectContext';
 import { CodeGeneratorProps } from './types';
 import { downloadFile, downloadAllFilesAsZip } from './utils/fileDownload';
 import { TabPanel } from './components/TabPanel';
@@ -20,7 +21,11 @@ import { useProjectManagement } from './hooks/useProjectManagement';
 import { useTemplateManagement } from './hooks/useTemplateManagement';
 
 const CodeGenerator: React.FC<CodeGeneratorProps> = ({ modelId }) => {
-  const { canCreate, canDelete, canShare } = useAuth();
+  const { can } = useProject();
+  const canCreate = can('codegen.author');
+  const canDelete = can('codegen.author');
+  const canGenerate = can('codegen.execute');
+  const canShare = false;
   
   // Use custom hooks for state management
   const projectManagement = useProjectManagement();
@@ -82,7 +87,7 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ modelId }) => {
         const allProjects = codeGenerationService.getAllProjects();
         
         // Check if we need to load example projects
-        if (allProjects.length === 0) {
+        if (allProjects.length === 0 && !apiClient.getProjectId()) {
           codeGenerationService.loadExampleProjects();
         }
         
@@ -118,8 +123,12 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ modelId }) => {
   }, [modelId]);
 
   const handleGenerateCode = () => {
+    if (!canGenerate) {
+      alert('Your project role does not allow code generation');
+      return;
+    }
     if (!projectManagement.selectedProject) {
-      alert('Please select a project first');
+      alert('Please select a generator configuration first');
       return;
     }
     
@@ -127,7 +136,7 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ modelId }) => {
       // Get the selected project
       const project = [...projectManagement.projects, ...projectManagement.exampleProjects].find(p => p.id === projectManagement.selectedProject);
       if (!project) {
-        throw new Error('Selected project not found');
+        throw new Error('Selected generator configuration not found');
       }
       
       // Find models that conform to the project's target metamodel
@@ -145,7 +154,7 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ modelId }) => {
           throw new Error(`Model with ID ${modelId} not found`);
         }
         if (!relatedModels.some(m => m.id === requestedModel.id)) {
-          throw new Error(`Selected project does not target the model's metamodel: ${requestedModel.conformsTo}`);
+          throw new Error(`Selected generator configuration does not target the model's metamodel: ${requestedModel.conformsTo}`);
         }
         selectedModel = requestedModel;
       } else {
@@ -236,13 +245,14 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ modelId }) => {
           }}
           onGenerate={handleGenerateCode}
           canCreate={canCreate}
+          canGenerate={canGenerate}
         />
       </Paper>
       
       <Paper sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={activeTab} onChange={handleTabChange}>
-            <Tab label="Projects" />
+            <Tab label="Configurations" />
             <Tab label="Example Templates" />
             <Tab label="Generated Files" />
           </Tabs>
@@ -314,7 +324,7 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ modelId }) => {
         fullWidth
       >
         <DialogTitle>
-          {projectManagement.selectedProjectForEditing ? 'Edit Project' : 'Create New Project'}
+          {projectManagement.selectedProjectForEditing ? 'Edit Generator Configuration' : 'Create Generator Configuration'}
         </DialogTitle>
         
         <DialogContent>
@@ -322,7 +332,7 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ modelId }) => {
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
               <Box sx={{ flex: 3 }}>
                 <TextField
-                  label="Project Name"
+                  label="Configuration Name"
                   fullWidth
                   value={projectManagement.projectName}
                   onChange={(e) => projectManagement.setProjectName(e.target.value)}
@@ -348,7 +358,7 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ modelId }) => {
             
             <Box>
               <TextField
-                label="Project Description"
+                label="Configuration Description"
                 fullWidth
                 multiline
                 rows={2}

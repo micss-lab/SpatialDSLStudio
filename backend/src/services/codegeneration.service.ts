@@ -17,7 +17,20 @@ class CodeGenerationService {
   /**
    * Get all projects accessible by a user (owned + shared)
    */
-  async getAllProjects(userId: string): Promise<CodegenProjectWithPermission[]> {
+  async getAllProjects(userId: string, projectId?: string): Promise<CodegenProjectWithPermission[]> {
+    if (projectId) {
+      const configurations = await prisma.codeGenerationProject.findMany({
+        where: { projectId },
+        orderBy: { name: 'asc' },
+        include: { user: { select: { email: true } } },
+      });
+      return configurations.map(configuration => ({
+        ...this.mapToProject(configuration),
+        isOwner: configuration.userId === userId,
+        permission: configuration.userId === userId ? undefined : 'EDITOR',
+        ownerEmail: configuration.userId === userId ? undefined : configuration.user.email,
+      }));
+    }
     // Platform admins see and can edit every project on the platform.
     if (await sharingService.isAdmin(userId)) {
       const all = await prisma.codeGenerationProject.findMany({
@@ -76,17 +89,17 @@ class CodeGenerationService {
   /**
    * Get projects by metamodel ID accessible by user
    */
-  async getProjectsByMetamodelId(metamodelId: string, userId: string): Promise<CodegenProjectWithPermission[]> {
-    const allProjects = await this.getAllProjects(userId);
+  async getProjectsByMetamodelId(metamodelId: string, userId: string, projectId?: string): Promise<CodegenProjectWithPermission[]> {
+    const allProjects = await this.getAllProjects(userId, projectId);
     return allProjects.filter(p => p.targetMetamodelId === metamodelId);
   }
 
   /**
    * Get a single project by ID (with access check)
    */
-  async getProjectById(id: string, userId: string): Promise<CodegenProjectWithPermission | null> {
+  async getProjectById(id: string, userId: string, projectId?: string): Promise<CodegenProjectWithPermission | null> {
     const project = await prisma.codeGenerationProject.findFirst({
-      where: { id },
+      where: { id, ...(projectId && { projectId }) },
     });
 
     if (!project) return null;
@@ -107,19 +120,23 @@ class CodeGenerationService {
   /**
    * Create a new project (requires ADMIN or DSL_DESIGNER role)
    */
-  async createProject(data: CreateProjectRequest, userId: string, userRole: UserRole): Promise<CodeGenerationProject> {
+  async createProject(data: CreateProjectRequest, userId: string, userRole: UserRole, projectId?: string): Promise<CodeGenerationProject> {
     if (!canPerformOperation(userRole, 'codegen', 'create')) {
       throw new ApiError(403, 'Your role does not allow creating code generation projects');
     }
 
-    // Only verify metamodel if targetMetamodelId is a valid UUID and not an example project
-    if (data.targetMetamodelId && !data.isExample) {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (uuidRegex.test(data.targetMetamodelId)) {
-        const access = await sharingService.checkAccess('METAMODEL', data.targetMetamodelId, userId);
-        if (!access.hasAccess) {
-          throw new ApiError(400, 'Target metamodel not found');
-        }
+    // Imported resources can preserve non-UUID external IDs, so validate every
+    // persisted project target rather than treating UUID syntax or an
+    // isExample flag as an access check. The flag only retains legacy flat-API
+    // fixture compatibility.
+    if (data.targetMetamodelId && (projectId || !data.isExample)) {
+      const access = await sharingService.checkAccess('METAMODEL', data.targetMetamodelId, userId);
+      if (!access.hasAccess) {
+        throw new ApiError(400, 'Target metamodel not found');
+      }
+      if (projectId) {
+        const metamodel = await prisma.metamodel.findFirst({ where: { id: data.targetMetamodelId, projectId } });
+        if (!metamodel) throw new ApiError(400, 'Target metamodel is not in this project');
       }
     }
 
@@ -132,6 +149,7 @@ class CodeGenerationService {
         targetMetamodelId: data.targetMetamodelId || null,
         templates: (data.templates || []) as any,
         userId,
+        projectId,
       },
     });
 
@@ -172,9 +190,12 @@ class CodeGenerationService {
   /**
    * Delete a project (owner only)
    */
-  async deleteProject(id: string, userId: string): Promise<void> {
+  async deleteProject(id: string, userId: string, userRole?: UserRole, projectId?: string): Promise<void> {
+    if (projectId && userRole && !canPerformOperation(userRole, 'codegen', 'create')) {
+      throw new ApiError(403, 'Your role does not allow deleting generator configurations');
+    }
     const existing = await prisma.codeGenerationProject.findFirst({
-      where: { id, userId },
+      where: projectId ? { id, projectId } : { id, userId },
     });
 
     if (!existing) {
@@ -319,6 +340,7 @@ class CodeGenerationService {
   private mapToProject(p: any): CodeGenerationProject {
     return {
       id: p.id,
+      projectId: p.projectId || undefined,
       name: p.name,
       description: p.description || undefined,
       targetMetamodelId: p.targetMetamodelId,

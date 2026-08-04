@@ -100,13 +100,84 @@ describe('example bundle id remapping', () => {
     }
   });
 
+  it('ships Smart Warehouse diagram, table, and tree examples with saved views', () => {
+    const warehouseMetamodel = metamodels.find(metamodel => metamodel.name === 'Smart Warehouse');
+    const warehouseModel = models.find(model => model.name === 'WarehouseModel');
+    const operationsViewpoint = viewpoints.find(viewpoint => (
+      viewpoint.name === 'Warehouse Operations'
+      && viewpoint.metamodelId === warehouseMetamodel?.id
+    ));
+
+    expect(warehouseMetamodel).toBeDefined();
+    expect(warehouseModel).toBeDefined();
+    expect(operationsViewpoint).toBeDefined();
+
+    const kindByDescriptionId = new Map(
+      operationsViewpoint!.representationDescriptions.map(description => [description.id, description.kind])
+    );
+    expect(new Set(kindByDescriptionId.values())).toEqual(new Set(['diagram', 'table', 'tree']));
+
+    const savedKinds = new Set(
+      views
+        .filter(view => view.modelId === warehouseModel!.id)
+        .map(view => kindByDescriptionId.get(view.representationDescriptionId || ''))
+        .filter(Boolean)
+    );
+    expect(savedKinds).toEqual(new Set(['diagram', 'table', 'tree']));
+  });
+
+  it('keeps the Smart Warehouse containment hierarchy usable by its tree view', () => {
+    const warehouseModel = models.find(model => model.name === 'WarehouseModel');
+    const root = warehouseModel?.elements.find(element => element.style?.name === 'WarehouseMAS');
+    const containedIds = Object.values(root?.references || {}).flatMap(value => (
+      Array.isArray(value) ? value : value ? [value] : []
+    ));
+
+    expect(root).toBeDefined();
+    expect(containedIds.length).toBeGreaterThan(0);
+    containedIds.forEach(id => expect(elementIds.has(id)).toBe(true));
+  });
+
+  it('keeps the aerial inspection fixture in the same remapped warehouse bundle', () => {
+    const warehouseModel = models.find(model => model.name === 'WarehouseModel')!;
+    const operations = viewpoints.find(viewpoint => viewpoint.name === 'Warehouse Operations')!;
+    const aerial = operations.representationDescriptions.find(description => description.name === 'Aerial Inspection')!;
+    const aerialView = views.find(view => view.representationDescriptionId === aerial.id)!;
+    const drones = warehouseModel.elements.filter(element => (
+      element.style?.name === 'Inspection Drone Alpha' || element.style?.name === 'Inspection Drone Beta'
+    ));
+
+    expect(aerialView.modelId).toBe(warehouseModel.id);
+    expect(drones).toHaveLength(2);
+    expect(drones.map(drone => drone.presentation?.position3D?.z).sort((a, b) => (a || 0) - (b || 0)))
+      .toEqual([0, 4500]);
+    drones.forEach(drone => expect(aerialView.includedElementIds).toContain(drone.id));
+  });
+
   it('keeps the codegen project targeting a remapped metamodel', () => {
+    expect(projects.map(project => project.name)).toEqual(expect.arrayContaining([
+      'Smart Warehouse Visual Components (Example)',
+      'Smart Warehouse Omniverse USD',
+    ]));
     for (const project of projects) {
       expect(metamodelIds.has(project.targetMetamodelId)).toBe(true);
       for (const template of project.templates || []) {
         expect(metamodelIds.has(template.targetMetamodelId)).toBe(true);
       }
     }
+  });
+
+  it('returns one connected Smart Warehouse starter bundle', () => {
+    const starter = exampleDataService.getSmartWarehouseBundle();
+    const metamodelId = starter.metamodels[0].id;
+    const modelIds = new Set(starter.models.map(model => model.id));
+
+    expect(starter.metamodels).toHaveLength(1);
+    expect(starter.models).toHaveLength(1);
+    expect(starter.projects).toHaveLength(2);
+    starter.viewpoints.forEach(viewpoint => expect(viewpoint.metamodelId).toBe(metamodelId));
+    starter.views.forEach(view => expect(modelIds.has(view.modelId)).toBe(true));
+    starter.projects.forEach(project => expect(project.targetMetamodelId).toBe(metamodelId));
   });
 
   it('still exposes the fixture viewpoints for legacy fixed-id accounts', () => {

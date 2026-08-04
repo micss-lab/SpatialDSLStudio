@@ -38,6 +38,7 @@ const mockTestCaseRow = {
   testValues: [],
   modelId: 'model-uuid-1',
   userId: 'user-uuid-1',
+  projectId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -131,6 +132,24 @@ describe('TestService', () => {
           'MODELER'
         )
       ).rejects.toThrow(ApiError);
+    });
+
+    it('requires a project-local Model or Metamodel target', async () => {
+      await expect(
+        testService.create(
+          {
+            name: 'ProjectTest',
+            type: 'attribute',
+            targetMetaClassId: 'cls-1',
+            targetMetaClassName: 'MyClass',
+          },
+          'user-uuid-1',
+          'DSL_DESIGNER',
+          'project-1'
+        )
+      ).rejects.toMatchObject({ statusCode: 400 });
+
+      expect(prismaMock.testCase.create).not.toHaveBeenCalled();
     });
   });
 

@@ -12,6 +12,7 @@ import { modelReferenceService } from './model-reference.service';
 import { modelValidationService } from './model-validation.service';
 import { modelMigrationService } from './model-migration.service';
 import { modelApiSyncService } from './model-api-sync.service';
+import { normalizeModelElementSpatial } from '../spatial';
 
 /**
  * Main service that orchestrates all model-related operations
@@ -75,14 +76,14 @@ class ModelService {
       style.position = element.presentation.position2D;
     }
 
-    return {
+    return normalizeModelElementSpatial({
       ...element,
       id: element.id || `imported-element-${index}`,
       modelElementId: element.modelElementId || element.metaClassId || element.typeId,
       style,
       references: element.references || {},
       ...(element.presentation && { presentation: element.presentation }),
-    };
+    });
   }
 
   // Model CRUD operations

@@ -93,6 +93,13 @@ jest.mock('../../contexts/AuthContext', () => ({
   }),
 }));
 
+jest.mock('../../contexts/ProjectContext', () => ({
+  useProject: () => ({
+    can: () => mockCanEditMetamodel,
+    project: { id: 'project-1' },
+  }),
+}));
+
 jest.mock('../../services/metamodel', () => ({
   metamodelService: {
     getMetamodelById: jest.fn(),
@@ -107,10 +114,13 @@ jest.mock('../../services/diagram', () => ({
 
 jest.mock('../../services/viewpoint.service', () => ({
   __esModule: true,
+  validateRepresentationVerticalPlacementPolicies: jest.requireActual('../../services/viewpoint.service')
+    .validateRepresentationVerticalPlacementPolicies,
   default: {
     getCachedViewpoints: jest.fn(),
     loadViewpoints: jest.fn(),
     getDefaultViewpoint: jest.fn(),
+    createDefaultViewpoint: jest.fn(),
     createViewpoint: jest.fn(),
     updateViewpoint: jest.fn(),
     deleteViewpoint: jest.fn(),
@@ -122,6 +132,7 @@ jest.mock('../../services/viewpoint.service', () => ({
     getCachedViewpoints: jest.fn(),
     loadViewpoints: jest.fn(),
     getDefaultViewpoint: jest.fn(),
+    createDefaultViewpoint: jest.fn(),
     createViewpoint: jest.fn(),
     updateViewpoint: jest.fn(),
     deleteViewpoint: jest.fn(),
@@ -160,6 +171,7 @@ beforeEach(() => {
   mockedViewpointService.getCachedViewpoints.mockReturnValue([mockViewpoint]);
   mockedViewpointService.loadViewpoints.mockResolvedValue([mockViewpoint]);
   mockedViewpointService.getDefaultViewpoint.mockResolvedValue(mockViewpoint);
+  mockedViewpointService.createDefaultViewpoint.mockResolvedValue(mockViewpoint);
   mockedViewpointService.createViewpoint.mockImplementation((payload: any) => Promise.resolve({
     ...mockViewpoint,
     id: 'created-viewpoint',
@@ -387,6 +399,41 @@ describe('ViewpointManager', () => {
         })
       );
     });
+  });
+
+  it('shows an inconsistent elevation-policy error and blocks representation save', async () => {
+    const elevationViewpoint: Viewpoint = {
+      ...mockViewpoint,
+      representationDescriptions: [{
+        ...mockViewpoint.representationDescriptions[0],
+        concreteSyntaxByMetaClassId: {
+          task: {
+            three_d: {
+              verticalPlacement: {
+                mode: 'adjustable',
+                defaultBaseZMm: 1000,
+                minBaseZMm: 0,
+                maxBaseZMm: 5000,
+                stepMm: 100,
+              },
+            },
+          },
+        },
+      }],
+    };
+    mockedViewpointService.getCachedViewpoints.mockReturnValue([elevationViewpoint]);
+    mockedViewpointService.loadViewpoints.mockResolvedValue([elevationViewpoint]);
+
+    renderManager();
+    fireEvent.click(await screen.findByRole('button', { name: /^edit$/i }));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Step' }), {
+      target: { value: '0' },
+    });
+
+    expect(await screen.findByText(/vertical placement\.stepMm must be greater than 0/i))
+      .toBeInTheDocument();
+    expect(screen.getByTestId('save-representation')).toBeDisabled();
+    expect(mockedViewpointService.updateRepresentationDescription).not.toHaveBeenCalled();
   });
 
   it('inspects and toggles imported Sirius layers, filters, and conditional styles', async () => {

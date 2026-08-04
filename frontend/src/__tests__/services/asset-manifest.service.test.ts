@@ -21,11 +21,17 @@ function loadManifest(filename: string): unknown {
 describe('asset-manifest.service', () => {
   describe('validateAssetManifest', () => {
     it('accepts the committed asset-manifest.json', () => {
-      const manifest = loadManifest('asset-manifest.json');
+      const manifest = loadManifest('asset-manifest.json') as AssetManifest;
       const result = validateAssetManifest(manifest);
 
       expect(result.valid).toBe(true);
       expect(result.errors).toEqual([]);
+      expect(manifest.defaults.InspectionDrone).toEqual(expect.objectContaining({
+        asset: 'warehouse-kit/inspection_drone.usda',
+        zOffsetM: 0,
+        bodyMode: 'kinematic',
+        upAxis: 'Z',
+      }));
     });
 
     it('rejects a manifest missing version', () => {

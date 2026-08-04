@@ -42,6 +42,7 @@ Out (later):
 - [x] Add `tableColumns?: string[]` to `RepresentationDescription` (shared + frontend types) and a column picker in the representation editor.
 - [x] Make `TableView` honor `tableColumns` and support inline edit + sort.
 - [x] Tests: `TreeView` render test; table column-selection and inline-edit tests.
+- [x] Add importable Smart Warehouse table/tree definitions and saved example Views.
 
 ## Verification
 
@@ -56,6 +57,8 @@ Completed verification:
 - Frontend and backend production builds pass.
 - Fixture-backed Smart Warehouse tests open a visible-metaclass tree and persist a
   typed inline table edit through the semantic model service.
+- The Smart Warehouse fixture exposes diagram, table, and tree descriptions from
+  one viewpoint and includes saved Views for each kind.
 - Backend tests confirm tree views persist through the compatibility view API and
   remain protected from diagram-only mutation endpoints.
 

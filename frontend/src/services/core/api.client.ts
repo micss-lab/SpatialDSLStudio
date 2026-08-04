@@ -35,9 +35,42 @@ interface RequestOptions {
 
 class ApiClient {
   private baseUrl: string;
+  private projectId: string | null = null;
 
   constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl;
+  }
+
+  setProjectId(projectId: string | null): void {
+    this.projectId = projectId;
+  }
+
+  getProjectId(): string | null {
+    return this.projectId;
+  }
+
+  private scopeEndpoint(endpoint: string): string {
+    if (!this.projectId || endpoint.startsWith('/projects/')) return endpoint;
+
+    const mappings: Array<[string, string]> = [
+      ['/epackages', 'epackages'],
+      ['/metamodels', 'metamodels'],
+      ['/viewpoints', 'viewpoints'],
+      ['/models', 'models'],
+      ['/diagrams', 'views'],
+      ['/transformations', 'transformations'],
+      ['/codegen', 'code-generation'],
+      ['/tests', 'tests'],
+      ['/files', 'files'],
+      ['/interoperability', 'interoperability'],
+    ];
+
+    for (const [legacyPrefix, projectFeature] of mappings) {
+      if (endpoint === legacyPrefix || endpoint.startsWith(`${legacyPrefix}/`) || endpoint.startsWith(`${legacyPrefix}?`)) {
+        return `/projects/${this.projectId}/${projectFeature}${endpoint.slice(legacyPrefix.length)}`;
+      }
+    }
+    return endpoint;
   }
 
   /**
@@ -72,7 +105,8 @@ class ApiClient {
    * Make an HTTP request to the API
    */
   private async request<T>(endpoint: string, options: RequestOptions): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+    const scopedEndpoint = this.scopeEndpoint(endpoint);
+    const url = `${this.baseUrl}${scopedEndpoint}`;
     let hadAuthToken = false;
     
     const headers: Record<string, string> = {
@@ -119,7 +153,7 @@ class ApiClient {
 
       return data.data as T;
     } catch (error) {
-      console.error(`API request failed: ${options.method} ${endpoint}`, error);
+      console.error(`API request failed: ${options.method} ${scopedEndpoint}`, error);
       throw error;
     }
   }
@@ -132,7 +166,8 @@ class ApiClient {
     file: File, 
     additionalData?: Record<string, any>
   ): Promise<any> {
-    const url = `${this.baseUrl}${endpoint}`;
+    const scopedEndpoint = this.scopeEndpoint(endpoint);
+    const url = `${this.baseUrl}${scopedEndpoint}`;
     let hadAuthToken = false;
     const formData = new FormData();
     formData.append('file', file);
@@ -179,7 +214,7 @@ class ApiClient {
 
       return data.data;
     } catch (error) {
-      console.error(`File upload failed: ${endpoint}`, error);
+      console.error(`File upload failed: ${scopedEndpoint}`, error);
       throw error;
     }
   }
@@ -188,7 +223,8 @@ class ApiClient {
    * Download a file
    */
   async downloadFile(endpoint: string): Promise<Blob> {
-    const url = `${this.baseUrl}${endpoint}`;
+    const scopedEndpoint = this.scopeEndpoint(endpoint);
+    const url = `${this.baseUrl}${scopedEndpoint}`;
     let hadAuthToken = false;
 
     try {

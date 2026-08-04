@@ -1,12 +1,19 @@
-import { boundsOf, overlaps, clearance } from '../../services/constraint/spatial.helpers';
+import {
+  boundsOf,
+  bounds3DOf,
+  overlaps,
+  overlaps3D,
+  clearance,
+  clearance3D,
+} from '../../services/constraint/spatial.helpers';
 import { prepareContextForJS } from '../../services/constraint/js/js.sandbox';
 import { evaluateJSConstraint } from '../../services/constraint/js/js.validation';
 import { prepareContextForOCL } from '../../services/constraint/ocl/ocl.context';
 import { Model, ModelElement, Metamodel, JSConstraint, MetaClass } from '../../models/types';
 
-// boundsOf/overlaps/clearance are pure AABB helpers built on top of the
+// The helpers are pure AABB operations built on top of the
 // coordinate contract in spatial.helpers.ts (position3D is the element's
-// center, size3D.widthMm/heightMm are its extents along X/Y). These tests
+// X/Y center and Z base, while size3D provides X/Y/Z extents). These tests
 // pin down the box math and confirm the helpers are reachable from both
 // the JS sandbox and the OCL context under a `spatial` namespace.
 
@@ -42,35 +49,44 @@ function makeElement(id: string, presentation: ModelElement['presentation']): Mo
 
 // Overlapping pair: centers 100mm apart on each axis, both 400mm square.
 const overlapA = makeElement('overlap-a', {
-  position3D: { x: 1000, y: 1000 },
+  position3D: { x: 1000, y: 1000, z: 0 },
   size3D: { widthMm: 400, heightMm: 400, depthMm: 200 },
 });
 const overlapB = makeElement('overlap-b', {
-  position3D: { x: 1100, y: 1100 },
+  position3D: { x: 1100, y: 1100, z: 50 },
   size3D: { widthMm: 400, heightMm: 400, depthMm: 200 },
 });
 
 // Separated pair: same y-range, 300mm gap along X.
 const separatedC = makeElement('separated-c', {
-  position3D: { x: 0, y: 0 },
+  position3D: { x: 0, y: 0, z: 0 },
   size3D: { widthMm: 200, heightMm: 200, depthMm: 100 },
 });
 const separatedD = makeElement('separated-d', {
-  position3D: { x: 500, y: 0 },
+  position3D: { x: 500, y: 0, z: 0 },
   size3D: { widthMm: 200, heightMm: 200, depthMm: 100 },
 });
 
 // Touching pair: right edge of E exactly meets left edge of F.
 const touchingE = makeElement('touching-e', {
-  position3D: { x: 0, y: 0 },
+  position3D: { x: 0, y: 0, z: 0 },
   size3D: { widthMm: 200, heightMm: 200, depthMm: 100 },
 });
 const touchingF = makeElement('touching-f', {
-  position3D: { x: 200, y: 0 },
+  position3D: { x: 200, y: 0, z: 0 },
   size3D: { widthMm: 200, heightMm: 200, depthMm: 100 },
 });
 
-const noSize = makeElement('no-size', { position3D: { x: 0, y: 0 } });
+const verticallySeparated = makeElement('vertically-separated', {
+  position3D: { x: 1000, y: 1000, z: 300 },
+  size3D: { widthMm: 400, heightMm: 400, depthMm: 100 },
+});
+const verticallyTouching = makeElement('vertically-touching', {
+  position3D: { x: 1000, y: 1000, z: 200 },
+  size3D: { widthMm: 400, heightMm: 400, depthMm: 100 },
+});
+
+const noSize = makeElement('no-size', { position3D: { x: 0, y: 0, z: 0 } });
 const noPresentation = makeElement('no-presentation', undefined);
 
 describe('boundsOf', () => {
@@ -89,6 +105,19 @@ describe('boundsOf', () => {
 
   it('returns undefined when presentation is missing entirely', () => {
     expect(boundsOf(noPresentation)).toBeUndefined();
+  });
+});
+
+describe('bounds3DOf', () => {
+  it('uses position3D.z as the base and depthMm as the vertical extent', () => {
+    expect(bounds3DOf(overlapB)).toEqual({
+      minX: 900,
+      minY: 900,
+      minZ: 50,
+      maxX: 1300,
+      maxY: 1300,
+      maxZ: 250,
+    });
   });
 });
 
@@ -111,6 +140,17 @@ describe('overlaps', () => {
   });
 });
 
+describe('overlaps3D', () => {
+  it('requires overlap on X, Y, and Z', () => {
+    expect(overlaps3D(overlapA, overlapB)).toBe(true);
+    expect(overlaps3D(overlapA, verticallySeparated)).toBe(false);
+  });
+
+  it('does not count touching horizontal faces as overlap', () => {
+    expect(overlaps3D(overlapA, verticallyTouching)).toBe(false);
+  });
+});
+
 describe('clearance', () => {
   it('is 0 when the boxes overlap', () => {
     expect(clearance(overlapA, overlapB)).toBe(0);
@@ -130,6 +170,17 @@ describe('clearance', () => {
   });
 });
 
+describe('clearance3D', () => {
+  it('includes the vertical gap and treats touching as zero clearance', () => {
+    expect(clearance3D(overlapA, verticallySeparated)).toBe(100);
+    expect(clearance3D(overlapA, verticallyTouching)).toBe(0);
+  });
+
+  it('is Infinity when either element has no volume', () => {
+    expect(clearance3D(overlapA, noSize)).toBe(Infinity);
+  });
+});
+
 describe('spatial namespace in constraint contexts', () => {
   const model: Model = {
     id: 'model-1',
@@ -142,8 +193,11 @@ describe('spatial namespace in constraint contexts', () => {
   it('is reachable from the JS sandbox context', () => {
     const context = prepareContextForJS(overlapA, model, metamodel);
     expect(typeof context.spatial.overlaps).toBe('function');
+    expect(typeof context.spatial.overlaps3D).toBe('function');
     expect(typeof context.spatial.boundsOf).toBe('function');
+    expect(typeof context.spatial.bounds3DOf).toBe('function');
     expect(typeof context.spatial.clearance).toBe('function');
+    expect(typeof context.spatial.clearance3D).toBe('function');
   });
 
   it('evaluates a JS constraint that calls spatial.overlaps on two real model elements', () => {
@@ -188,5 +242,7 @@ describe('spatial namespace in constraint contexts', () => {
     expect(context.spatial.overlaps(overlapA, overlapB)).toBe(true);
     expect(context.spatial.overlaps(separatedC, separatedD)).toBe(false);
     expect(context.spatial.clearance(separatedC, separatedD)).toBe(300);
+    expect(context.spatial.overlaps3D(overlapA, verticallySeparated)).toBe(false);
+    expect(context.spatial.clearance3D(overlapA, verticallySeparated)).toBe(100);
   });
 });

@@ -1,12 +1,19 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { body, param } from 'express-validator';
-import { validate, authenticate, AuthenticatedRequest } from '../middleware';
+import {
+  validate,
+  authenticate,
+  AuthenticatedRequest,
+  projectResourceParam,
+  projectArgs,
+} from '../middleware';
 import { transformationService } from '../services';
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
 // All routes require authentication
 router.use(authenticate);
+router.param('id', projectResourceParam('transformationRule'));
 
 // Async handler wrapper
 const asyncHandler = (fn: Function) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -20,7 +27,7 @@ const asyncHandler = (fn: Function) => (req: AuthenticatedRequest, res: Response
  * @desc    Get all rules (owned + shared)
  */
 router.get('/rules', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const rules = await transformationService.getAllRules(req.user!.userId);
+  const rules = await transformationService.getAllRules(req.user!.userId, ...projectArgs(req));
   res.json({ success: true, data: rules });
 }));
 
@@ -29,7 +36,7 @@ router.get('/rules', asyncHandler(async (req: AuthenticatedRequest, res: Respons
  * @desc    Get a single rule by ID
  */
 router.get('/rules/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const rule = await transformationService.getRuleById(req.params.id, req.user!.userId);
+  const rule = await transformationService.getRuleById(req.params.id, req.user!.userId, ...projectArgs(req));
   if (!rule) {
     return res.status(404).json({ success: false, error: 'Rule not found' });
   }
@@ -46,7 +53,12 @@ router.post(
     body('name').notEmpty().withMessage('Name is required'),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const rule = await transformationService.createRule(req.body, req.user!.userId, req.user!.role);
+    const rule = await transformationService.createRule(
+      req.body,
+      req.user!.userId,
+      req.user!.role,
+      ...projectArgs(req)
+    );
     res.status(201).json({ success: true, data: rule });
   })
 );
@@ -59,7 +71,13 @@ router.put(
   '/rules/:id',
   validate([param('id').isUUID().withMessage('Invalid ID format')]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const rule = await transformationService.updateRule(req.params.id, req.body, req.user!.userId, req.user!.role);
+    const rule = await transformationService.updateRule(
+      req.params.id,
+      req.body,
+      req.user!.userId,
+      req.user!.role,
+      ...projectArgs(req)
+    );
     res.json({ success: true, data: rule });
   })
 );
@@ -72,7 +90,16 @@ router.delete(
   '/rules/:id',
   validate([param('id').isUUID().withMessage('Invalid ID format')]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    await transformationService.deleteRule(req.params.id, req.user!.userId);
+    if (req.projectContext) {
+      await transformationService.deleteRule(
+        req.params.id,
+        req.user!.userId,
+        req.user!.role,
+        req.projectContext.projectId
+      );
+    } else {
+      await transformationService.deleteRule(req.params.id, req.user!.userId);
+    }
     res.json({ success: true, message: 'Rule deleted successfully' });
   })
 );

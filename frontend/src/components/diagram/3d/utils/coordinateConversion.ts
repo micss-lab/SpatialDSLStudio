@@ -3,6 +3,12 @@
  * Currently uses 1:1 scale for consistency
  */
 
+import {
+  domainExtentsToRender,
+  domainToRenderPosition,
+  renderToDomainPosition,
+} from '../../../../services/spatial';
+
 // Constants for unit conversion (now using 1:1 scale for consistency)
 export const PIXEL_TO_MM = 1; // 1 pixel = 1 mm (1:1 scale)
 export const MM_TO_PIXEL = 1; // 1 mm = 1 pixel (1:1 scale)
@@ -24,3 +30,11 @@ export const pixelToMm = (pixels: number): number => {
 export const mmToPixel = (mm: number): number => {
   return mm * MM_TO_PIXEL;
 };
+
+/** Domain X/Y/Z maps to Three.js X/Y/Z as X/Z/-Y. */
+export const domainToThreePosition = domainToRenderPosition;
+
+export const threeToDomainPosition = renderToDomainPosition;
+
+/** Persisted X/Y/Z extents mapped to Three.js X/Y/Z dimensions. */
+export const domainExtentsToThree = domainExtentsToRender;

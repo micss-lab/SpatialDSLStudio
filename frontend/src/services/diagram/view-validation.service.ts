@@ -1,5 +1,9 @@
 import { Diagram, DiagramElement, ValidationIssue, ValidationResult } from '../../models/types';
 import { modelService } from '../model';
+import { metamodelService } from '../metamodel';
+import viewpointService from '../viewpoint.service';
+import { normalizePosition3D } from '../spatial';
+import { concreteSyntaxResolver } from './concrete-syntax.resolver';
 
 export type ValidationSeverity = ValidationIssue['severity'];
 
@@ -17,6 +21,37 @@ class ViewValidationService {
       || issue.elementId === diagram.modelId
       || Boolean(this.findElementForIssue(diagram, issue))
     ));
+    const model = modelService.getModelById(diagram.modelId);
+    const metamodel = model ? metamodelService.getMetamodelById(model.conformsTo) : undefined;
+    const { viewpoint, representationDescription } = viewpointService.resolveRepresentationDescription(diagram);
+
+    if (model && metamodel) {
+      diagram.elements
+        .filter(element => element.type === 'node')
+        .forEach(element => {
+          const semanticId = element.style?.linkedModelElementId
+            || element.style?.modelElementRefId
+            || element.id;
+          const semanticElement = model.elements.find(candidate => candidate.id === semanticId);
+          if (!semanticElement) return;
+          const position = normalizePosition3D(semanticElement.presentation?.position3D);
+          if (!position || position.z === 0) return;
+          const appearance = concreteSyntaxResolver.resolve3D(
+            semanticElement,
+            metamodel,
+            representationDescription,
+            viewpoint
+          );
+          if (appearance.verticalPlacement.mode === 'grounded') {
+            issues.push({
+              severity: 'warning',
+              elementId: semanticElement.id,
+              location: 'presentation.position3D.z',
+              message: `Stored base elevation ${position.z} mm is preserved even though this representation is grounded.`,
+            });
+          }
+        });
+    }
 
     return {
       valid: issues.length === 0,

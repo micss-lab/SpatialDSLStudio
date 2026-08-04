@@ -118,6 +118,8 @@ describe('Smart Warehouse code generation project fixtures', () => {
     expect(JSON.parse(outputs['ChargingStationLocation.json'])).toHaveLength(2);
     expect(outputs['SimulationScript.py']).toContain('MobileRobotQuantity = 2');
     expect(outputs['SimulationScript.py']).toContain('ConveyorQuantity = 2');
+    expect(Object.values(outputs).join('\n')).not.toContain('Inspection Drone Alpha');
+    expect(Object.values(outputs).join('\n')).not.toContain('Inspection Drone Beta');
     expect(outputs['SimulationScript.py']).toContain('robot_prefix + "State"');
     expect(outputs['Config.java']).toContain('public static final class ControllerSpec');
     expect(outputs['Config.java']).toContain('public static final class TaskSpec');
@@ -198,7 +200,16 @@ describe('Smart Warehouse code generation project fixtures', () => {
         'warehouse_simulation.usda',
       ])
     );
-    expect(JSON.parse(outputs['warehouse_layout.json']).robots).toHaveLength(2);
+    const generatedLayout = JSON.parse(outputs['warehouse_layout.json']);
+    expect(generatedLayout.robots).toHaveLength(2);
+    expect(generatedLayout.drones).toEqual([
+      expect.objectContaining({ name: 'Inspection Drone Alpha', z: 4500, kinematic: true }),
+      expect.objectContaining({ name: 'Inspection Drone Beta', z: 0, kinematic: true }),
+    ]);
+    Object.values(generatedLayout)
+      .filter(Array.isArray)
+      .flat()
+      .forEach((record: any) => expect(Number.isFinite(record.z)).toBe(true));
     expect(outputs['generate_warehouse_usd.py']).toContain('Usd.Stage.CreateNew');
     expect(outputs['generate_warehouse_usd.py']).toContain('ASSET_MAP = {');
     expect(outputs['generate_warehouse_usd.py']).toContain(
@@ -207,16 +218,32 @@ describe('Smart Warehouse code generation project fixtures', () => {
     expect(outputs['generate_warehouse_usd.py']).toContain('GetReferences().AddReference');
     expect(outputs['generate_warehouse_usd.py']).toContain('Asset not found; using placeholder');
     expect(outputs['generate_warehouse_usd.py']).toContain('Referenced assets: ');
-    expect(outputs['generate_warehouse_usd.py'].match(/"class_name":/g)).toHaveLength(28);
+    expect(outputs['generate_warehouse_usd.py'].match(/"class_name":/g)).toHaveLength(30);
+    expect(outputs['generate_warehouse_usd.py']).toContain('"z_mm": 4500');
+    expect(outputs['generate_warehouse_usd.py']).toContain('"z_mm": 0');
+    expect(outputs['generate_warehouse_usd.py']).toContain('spatialDsl:baseElevationMm');
+    expect(outputs['generate_warehouse_usd.py']).toContain(
+      'Gf.Vec3d(x_m, y_m, z_m + height_m / 2.0)'
+    );
     expect(outputs['generate_warehouse_usd.py']).toContain(
       'print("Elements: " + str(len(ELEMENTS)))'
     );
     expect(outputs['warehouse_layout.usda']).toContain('def Xform "Mobile_Robot_Resource_0"');
+    expect(outputs['warehouse_layout.usda']).toContain('def Xform "InspectionDrone"');
+    expect(outputs['warehouse_layout.usda']).toContain('double3 xformOp:translate = (12, 6, 4.5)');
+    expect(outputs['warehouse_layout.usda']).toContain('double3 xformOp:translate = (18, 6, 0)');
     expect(outputs['warehouse_assets.usda']).toContain(
       'nvidia-f1tenth-amr/f1tenth_amr_collision.usda'
     );
+    expect(outputs['warehouse_assets.usda']).toContain(
+      'warehouse-kit/inspection_drone.usda'
+    );
     expect(outputs['warehouse_physics.usda']).toContain('def PhysicsScene "PhysicsScene"');
     expect(outputs['warehouse_physics.usda']).toContain('bool physics:kinematicEnabled = true');
+    expect(outputs['warehouse_physics.usda']).toContain('over "InspectionDrone"');
+    expect(outputs['warehouse_physics.usda']).toContain(
+      'custom string spatialDsl:bodyMode = "kinematic-aerial-placement"'
+    );
     expect(outputs['warehouse_physics.usda']).not.toContain('over "PathwayArea"');
     expect(outputs['warehouse_simulation.usda']).toContain('@./warehouse_layout.usda@');
     expect(outputs['warehouse_simulation.usda']).toContain('@./warehouse_assets.usda@');
@@ -314,6 +341,25 @@ describe('Smart Warehouse code generation project fixtures', () => {
     expect(sourceNotes).toContain('NVIDIA-Omniverse/sample-ackermann-amr');
     expect(sourceNotes).toContain('ccf6b3ee65a3df82160b217a4cd1b523b2f7c351');
     expect(sourceNotes).toContain('MIT');
+  });
+
+  it('includes the project-authored base-normalized inspection drone asset', () => {
+    const assetRoot = path.resolve(
+      process.cwd(),
+      '..',
+      'examples',
+      'omniverse-assets',
+      'warehouse-kit'
+    );
+    const droneAsset = fs.readFileSync(path.join(assetRoot, 'inspection_drone.usda'), 'utf8');
+    const sourceNotes = fs.readFileSync(path.join(assetRoot, 'SOURCE.md'), 'utf8');
+
+    expect(droneAsset).toContain('defaultPrim = "InspectionDrone"');
+    expect(droneAsset).toContain('metersPerUnit = 1');
+    expect(droneAsset).toContain('upAxis = "Z"');
+    expect(droneAsset).toContain('custom string spatialDsl:pivot = "base-center"');
+    expect(sourceNotes).toContain('inspection_drone.usda');
+    expect(sourceNotes).toContain('base Z=0');
   });
 
   it('uses template metadata accepted by the current project importer', () => {

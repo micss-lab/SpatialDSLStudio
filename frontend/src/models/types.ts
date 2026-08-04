@@ -173,6 +173,14 @@ export interface ConcreteSyntax2D {
   defaultSize?: { width: number; height: number };
 }
 
+export interface VerticalPlacement3D {
+  mode: 'grounded' | 'adjustable';
+  defaultBaseZMm?: number;
+  minBaseZMm?: number;
+  maxBaseZMm?: number;
+  stepMm?: number;
+}
+
 export interface ConcreteSyntax3D {
   modelFileId?: string;
   modelUrl?: string;
@@ -180,6 +188,7 @@ export interface ConcreteSyntax3D {
   fallbackShape?: 'box' | 'sphere' | 'cylinder';
   fallbackColor?: string;
   defaultSizeMm?: { widthMm: number; heightMm: number; depthMm: number };
+  verticalPlacement?: VerticalPlacement3D;
 }
 
 export interface ConcreteSyntaxEdge {
@@ -450,11 +459,23 @@ export interface ModelElement {
   presentation?: ModelElementPresentation;
 }
 
+export interface Position3D {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface Size3D {
+  widthMm: number;
+  heightMm: number;
+  depthMm: number;
+}
+
 export interface ModelElementPresentation {
   position2D?: { x: number; y: number };
-  position3D?: { x: number; y: number };
+  position3D?: Position3D;
   size2D?: { width: number; height: number };
-  size3D?: { widthMm: number; heightMm: number; depthMm: number };
+  size3D?: Size3D;
   rotationZ?: number;
   appearance?: Record<string, any>;
   attachedToElementId?: string;

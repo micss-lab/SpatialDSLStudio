@@ -16,7 +16,7 @@ function makeModel(): Model {
         references: {},
         presentation: {
           position2D: { x: 100, y: 200 },
-          position3D: { x: 1000, y: -500 },
+          position3D: { x: 1000, y: -500, z: 4500 },
           size3D: { widthMm: 3000, heightMm: 800, depthMm: 300 },
         },
       },
@@ -40,7 +40,7 @@ describe('ModelElementCrudService spatial presentation updates', () => {
 
     expect(updated).toBe(true);
     expect(model.elements[0].presentation?.position2D).toEqual({ x: 130, y: 175 });
-    expect(model.elements[0].presentation?.position3D).toEqual({ x: 1030, y: -525 });
+    expect(model.elements[0].presentation?.position3D).toEqual({ x: 1030, y: -525, z: 4500 });
     expect(saveCallback).toHaveBeenCalledWith('model-1');
   });
 
@@ -53,12 +53,12 @@ describe('ModelElementCrudService spatial presentation updates', () => {
       'conveyor-1',
       {
         position2D: { x: 130, y: 175 },
-        position3D: { x: 2500, y: 3000 },
+        position3D: { x: 2500, y: 3000, z: 3000 },
       },
       jest.fn()
     );
 
-    expect(model.elements[0].presentation?.position3D).toEqual({ x: 2500, y: 3000 });
+    expect(model.elements[0].presentation?.position3D).toEqual({ x: 2500, y: 3000, z: 3000 });
   });
 
   it('exposes the synced 3D position to code generation context', () => {
@@ -77,5 +77,7 @@ describe('ModelElementCrudService spatial presentation updates', () => {
 
     expect(context.X).toBe(975);
     expect(context.Y).toBe(-440);
+    expect(context.Z).toBe(4500);
+    expect(context.BaseElevationMm).toBe(4500);
   });
 });

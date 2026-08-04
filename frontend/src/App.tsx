@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Typography,
   Button,
@@ -56,7 +56,9 @@ import { AdminPanel } from './components/admin';
 import { ShareDialog, CreatedBy } from './components/common';
 import { Sidebar } from './components/layout';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { OwnerFilterProvider, useOwnerFilterMatcher } from './contexts/OwnerFilterContext';
+import { OwnerFilterProvider } from './contexts/OwnerFilterContext';
+import { LAST_PROJECT_KEY, ProjectProvider, useProject } from './contexts/ProjectContext';
+import { ProjectOverviewPage, ProjectPickerPage, ProjectSettingsPage } from './components/projects';
 import { metamodelService } from './services/metamodel';
 import { diagramService } from './services/diagram';
 import { modelService } from './services/model';
@@ -577,53 +579,102 @@ const AuthenticatedApp: React.FC = () => {
   }
 
   return (
-      <Router>
-        <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-          <Sidebar
-            user={user}
-            isAdmin={isAdmin}
-            onLogout={logout}
-            onRoleRequest={() => setRoleRequestDialogOpen(true)}
-          />
-
-          <Box sx={{ flexGrow: 1, overflow: 'auto', minWidth: 0 }}>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/metamodels" element={<MetamodelEditorPage />} />
-              <Route path="/viewpoints" element={<ViewpointsPage />} />
-              <Route path="/representations" element={<RepresentationsPage />} />
-              <Route path="/metamodels/:metamodelId/viewpoints" element={<ViewpointManager />} />
-              <Route path="/metamodels/:id" element={<MetamodelEditorPage />} />
-              <Route path="/models" element={<ModelsPage />} />
-              <Route path="/models/:id" element={<ModelEditorPage />} />
-              <Route path="/models/:id/code" element={<ModelCodeGenerationPage />} />
-              <Route path="/diagrams" element={<DiagramsPage />} />
-              <Route path="/diagrams/:id" element={<DiagramEditorPage />} />
-              <Route path="/diagrams/:id/code" element={<LegacyViewCodeGenerationRedirect />} />
-              <Route path="/views" element={<DiagramsPage />} />
-              <Route path="/views/:id" element={<DiagramEditorPage />} />
-              <Route path="/views/:id/code" element={<LegacyViewCodeGenerationRedirect />} />
-              <Route path="/code-generation" element={<StandaloneCodeGenerationPage />} />
-              <Route path="/transformations" element={<TransformationDashboard />} />
-              <Route path="/testing" element={<ModelBasedTestingDashboard />} />
-              <Route path="/testing/:metamodelId" element={<ModelBasedTestingDashboard />} />
-              <Route path="/test-details" element={<TestDetails />} />
-              <Route path="/admin" element={<AdminPanel />} />
-              <Route path="/help" element={<HelpPage />} />
-              <Route path="/about" element={<AboutPage />} />
-            </Routes>
-          </Box>
-        </Box>
-
-        <RoleRequestDialog
-          open={roleRequestDialogOpen}
-          onClose={() => setRoleRequestDialogOpen(false)}
+    <Router>
+      <Routes>
+        <Route path="/projects" element={<ProjectPickerPage />} />
+        <Route
+          path="/projects/:projectId/*"
+          element={(
+            <ProjectWorkspace
+              user={user}
+              isAdmin={isAdmin}
+              onLogout={logout}
+              onRoleRequest={() => setRoleRequestDialogOpen(true)}
+            />
+          )}
         />
-      </Router>
+        <Route path="/admin" element={<AdminPanel />} />
+        <Route path="*" element={<LegacyProjectRedirect />} />
+      </Routes>
+
+      <RoleRequestDialog
+        open={roleRequestDialogOpen}
+        onClose={() => setRoleRequestDialogOpen(false)}
+      />
+    </Router>
   );
 };
 
+interface ProjectWorkspaceProps {
+  user: ReturnType<typeof useAuth>['user'];
+  isAdmin: boolean;
+  onLogout: () => void;
+  onRoleRequest: () => void;
+}
+
+const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ user, isAdmin, onLogout, onRoleRequest }) => {
+  const { projectId } = useParams();
+  if (!projectId) return <Navigate to="/projects" replace />;
+
+  return (
+    <ProjectProvider projectId={projectId}>
+      <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+        <Sidebar
+          user={user}
+          isAdmin={isAdmin}
+          onLogout={onLogout}
+          onRoleRequest={onRoleRequest}
+        />
+        <Box sx={{ flexGrow: 1, overflow: 'auto', minWidth: 0 }}>
+          <Routes>
+            <Route index element={<ProjectOverviewPage />} />
+            <Route path="metamodels" element={<MetamodelEditorPage />} />
+            <Route path="viewpoints" element={<ViewpointsPage />} />
+            <Route path="representations" element={<Navigate to="../viewpoints" replace />} />
+            <Route path="metamodels/:metamodelId/viewpoints" element={<ViewpointManager />} />
+            <Route path="metamodels/:id" element={<MetamodelEditorPage />} />
+            <Route path="models" element={<ModelsPage />} />
+            <Route path="models/:id" element={<ModelEditorPage />} />
+            <Route path="models/:id/code" element={<ModelCodeGenerationPage />} />
+            <Route path="diagrams" element={<Navigate to="../views" replace />} />
+            <Route path="diagrams/:id" element={<DiagramEditorPage />} />
+            <Route path="diagrams/:id/code" element={<LegacyViewCodeGenerationRedirect />} />
+            <Route path="views" element={<DiagramsPage />} />
+            <Route path="views/:id" element={<DiagramEditorPage />} />
+            <Route path="views/:id/code" element={<LegacyViewCodeGenerationRedirect />} />
+            <Route path="code-generation" element={<StandaloneCodeGenerationPage />} />
+            <Route path="transformations" element={<TransformationDashboard />} />
+            <Route path="testing" element={<ModelBasedTestingDashboard />} />
+            <Route path="testing/:metamodelId" element={<ModelBasedTestingDashboard />} />
+            <Route path="test-details" element={<TestDetails />} />
+            <Route path="settings" element={<ProjectSettingsPage />} />
+            <Route path="help" element={<HelpPage />} />
+            <Route path="about" element={<AboutPage />} />
+            <Route path="*" element={<ProjectOverviewPage />} />
+          </Routes>
+        </Box>
+      </Box>
+    </ProjectProvider>
+  );
+};
+
+const LegacyProjectRedirect: React.FC = () => {
+  const location = useLocation();
+  const projectId = localStorage.getItem(LAST_PROJECT_KEY);
+  if (!projectId || location.pathname === '/') return <Navigate to="/projects" replace />;
+
+  let projectPath = location.pathname;
+  if (projectPath === '/representations' || projectPath.startsWith('/representations/')) {
+    projectPath = projectPath.replace('/representations', '/viewpoints');
+  } else if (projectPath === '/diagrams' || projectPath.startsWith('/diagrams/')) {
+    projectPath = projectPath.replace('/diagrams', '/views');
+  }
+  return <Navigate to={`/projects/${projectId}${projectPath}${location.search}`} replace />;
+};
+
 // Home Page
+// Kept temporarily for legacy content migration; project overview is the active landing page.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const HomePage: React.FC = () => {
   return (
     <Container sx={{ mt: 4, pb: 4, height: '100%', overflow: 'auto' }}>
@@ -889,6 +940,7 @@ const ModelEditorPage: React.FC = () => {
 
 const ViewpointsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { project } = useProject();
   const [metamodels] = useState<Metamodel[]>(metamodelService.getAllMetamodels());
   const [countsByMetamodelId, setCountsByMetamodelId] = useState<Record<string, { viewpoints: number; representations: number }>>(() => {
     const counts: Record<string, { viewpoints: number; representations: number }> = {};
@@ -1008,7 +1060,7 @@ const ViewpointsPage: React.FC = () => {
                 variant="outlined"
                 size="small"
                 startIcon={<AccountTreeIcon />}
-                onClick={() => navigate(`/metamodels/${metamodel.id}/viewpoints`)}
+                onClick={() => navigate(`/projects/${project.id}/metamodels/${metamodel.id}/viewpoints`)}
               >
                 Manage
               </Button>
@@ -1030,6 +1082,8 @@ const getRepresentationKindLabel = (kind: string): string => (
   kind === 'diagram' ? 'Visual view' : kind
 );
 
+// Compatibility implementation retained while old bookmarks redirect to Viewpoints.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const RepresentationsPage: React.FC = () => {
   const navigate = useNavigate();
   const [metamodels] = useState<Metamodel[]>(metamodelService.getAllMetamodels());
@@ -1221,41 +1275,43 @@ const RepresentationsPage: React.FC = () => {
 };
 
 const HelpPage: React.FC = () => {
+  const { project } = useProject();
+  const base = `/projects/${project.id}`;
   const concepts = [
     {
       term: 'Metamodel',
       scope: 'Abstract syntax',
       meaning: 'Defines the language concepts: metaclasses, attributes, references, inheritance, and constraints. Create this in Metamodels.',
       action: 'Manage Metamodels',
-      path: '/metamodels',
+      path: `${base}/metamodels`,
     },
     {
       term: 'Viewpoint',
       scope: 'Workbench perspective',
       meaning: 'Groups representation descriptions for one metamodel around a user role or task, such as operations, diagnostics, or analysis.',
       action: 'Manage Viewpoints',
-      path: '/viewpoints',
+      path: `${base}/viewpoints`,
     },
     {
       term: 'Representation Description',
       scope: 'Concrete syntax',
       meaning: 'Defines one visual/table/tree specification: visible metaclasses, creatable metaclasses, mappings, tools, and canonical notation for that representation.',
       action: 'Browse Representations',
-      path: '/representations',
+      path: `${base}/viewpoints`,
     },
     {
       term: 'Model',
       scope: 'Language instance',
       meaning: 'Stores instances of metaclasses and their attribute/reference values. This is the semantic data that views project.',
       action: 'Manage Models',
-      path: '/models',
+      path: `${base}/models`,
     },
     {
       term: 'View',
       scope: 'Saved projection',
       meaning: 'A concrete saved view over a model, using a selected viewpoint and representation description. Layout and membership live here.',
       action: 'Manage Views',
-      path: '/views',
+      path: `${base}/views`,
     },
   ];
 
@@ -1387,7 +1443,7 @@ const HelpPage: React.FC = () => {
           <Box>
             <Typography variant="subtitle2">Sirius Desktop</Typography>
             <Typography variant="body2" color="text.secondary">
-              `.odesign` maps to the supported viewpoint specification subset. `.aird` session and diagram resources are detected but remain deferred.
+              `.odesign` maps to the supported viewpoint specification subset, and the supported `.aird` diagram/session subset preserves model, representation, and layout references within this project.
             </Typography>
           </Box>
         </Box>
@@ -1399,8 +1455,10 @@ const HelpPage: React.FC = () => {
 // Views Page
 const DiagramsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { canCreate, canDelete, canShare } = useAuth();
-  const matchesOwner = useOwnerFilterMatcher();
+  const { can, project } = useProject();
+  const canCreate = can('view.create');
+  const canDelete = can('view.delete');
+  const canShare = false;
   const [diagrams, setDiagrams] = useState<Diagram[]>(diagramService.getAllDiagrams());
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [models, setModels] = useState<Model[]>(modelService.getAllModels());
@@ -1446,14 +1504,14 @@ const DiagramsPage: React.FC = () => {
 
   const groupedDiagrams = useMemo(() => (
     groupByParent(
-      diagrams.filter(matchesOwner),
+      diagrams,
       (diagram: Diagram) => {
         const model = models.find((candidate: Model) => candidate.id === diagram.modelId);
         return model?.conformsTo || model?.metamodelId;
       },
       (parentId: string) => getMetamodelName(parentId)
     )
-  ), [diagrams, models, getMetamodelName, matchesOwner]);
+  ), [diagrams, models, getMetamodelName]);
 
   const selectedViewpoint = useMemo(
     () => availableViewpoints.find(viewpoint => viewpoint.id === selectedViewpointId),
@@ -1703,7 +1761,7 @@ const DiagramsPage: React.FC = () => {
           <Button
             variant="outlined"
             component={Link}
-            to="/models"
+            to={`/projects/${project.id}/models`}
           >
             Create Model
           </Button>
@@ -1765,7 +1823,7 @@ const DiagramsPage: React.FC = () => {
                         borderLeftColor: group.color,
                         '&:hover': { boxShadow: 6 }
                       }}
-                      onClick={() => navigate(`/views/${diagram.id}`)}
+                      onClick={() => navigate(`/projects/${project.id}/views/${diagram.id}`)}
                     >
                       <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                         <Typography variant="h6" gutterBottom>
@@ -1836,7 +1894,7 @@ const DiagramsPage: React.FC = () => {
                           size="small"
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/views/${diagram.id}`);
+                            navigate(`/projects/${project.id}/views/${diagram.id}`);
                           }}
                         >
                           Edit
@@ -1847,7 +1905,7 @@ const DiagramsPage: React.FC = () => {
                           startIcon={<CodeIcon />}
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/models/${diagram.modelId}/code`);
+                            navigate(`/projects/${project.id}/models/${diagram.modelId}/code`);
                           }}
                         >
                           Generate Code
@@ -1996,6 +2054,8 @@ const DiagramsPage: React.FC = () => {
 // Diagram Editor Page
 const DiagramEditorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const { can } = useProject();
+  const canEditView = can('view.update') && can('model.update');
   const [mode, setMode] = useState<'2D' | '3D'>('2D');
   const [diagramVersion, setDiagramVersion] = useState(0);
   const diagramId = id || '';
@@ -2064,20 +2124,25 @@ const DiagramEditorPage: React.FC = () => {
         )}
       </Box>
 
-      <Box sx={{ flexGrow: 1 }}>
+      {!canEditView && (
+        <Alert severity="info" sx={{ mx: 2, mt: 1 }}>
+          This view is read-only for your project role.
+        </Alert>
+      )}
+      <Box sx={{ flexGrow: 1, minHeight: 0, pointerEvents: canEditView ? 'auto' : 'none' }}>
         {isTable ? (
-          <TableView diagramId={diagramId} />
-        ) : isTree ? (
-          <TreeView diagramId={diagramId} />
-        ) : mode === '2D' ? (
-          <DiagramEditor diagramId={diagramId} />
-        ) : (
-          <div style={{ height: '100%', width: '100%', position: 'relative' }} className="diagram3d-container">
-            <React.Suspense fallback={<Typography>Loading 3D editor...</Typography>}>
-              <Diagram3DEditor diagramId={diagramId} />
-            </React.Suspense>
-          </div>
-        )}
+            <TableView diagramId={diagramId} />
+          ) : isTree ? (
+            <TreeView diagramId={diagramId} />
+          ) : mode === '2D' ? (
+            <DiagramEditor diagramId={diagramId} />
+          ) : (
+            <div style={{ height: '100%', width: '100%', position: 'relative' }} className="diagram3d-container">
+              <React.Suspense fallback={<Typography>Loading 3D editor...</Typography>}>
+                <Diagram3DEditor diagramId={diagramId} />
+              </React.Suspense>
+            </div>
+          )}
       </Box>
     </Box>
   );
@@ -2097,13 +2162,14 @@ const ModelCodeGenerationPage: React.FC = () => {
 // Compatibility only: old links resolve the view first, then code generation runs from the model route.
 const LegacyViewCodeGenerationRedirect: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const { project } = useProject();
   const diagram = id ? diagramService.getDiagramById(id) : null;
 
   if (!diagram) {
     return <Typography>Invalid view ID</Typography>;
   }
 
-  return <Navigate to={`/models/${diagram.modelId}/code`} replace />;
+  return <Navigate to={`/projects/${project.id}/models/${diagram.modelId}/code`} replace />;
 };
 
 // Standalone Code Generation Page

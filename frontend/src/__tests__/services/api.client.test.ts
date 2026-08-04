@@ -91,6 +91,45 @@ describe('ApiClient', () => {
       const callArgs = mockFetch.mock.calls[0][1];
       expect(callArgs.headers.Authorization).toBeUndefined();
     });
+
+    it('scopes artifact endpoints to the active project', async () => {
+      client.setProjectId('project-1');
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true, data: [] }),
+      });
+
+      await client.get('/models?metamodelId=metamodel-1');
+      await client.get('/diagrams/view-1');
+
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        1,
+        'http://localhost:3001/api/projects/project-1/models?metamodelId=metamodel-1',
+        expect.objectContaining({ method: 'GET' })
+      );
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        2,
+        'http://localhost:3001/api/projects/project-1/views/view-1',
+        expect.objectContaining({ method: 'GET' })
+      );
+    });
+
+    it('does not rewrite project-management endpoints', async () => {
+      client.setProjectId('project-1');
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true, data: [] }),
+      });
+
+      await client.get('/projects?includeArchived=true');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3001/api/projects?includeArchived=true',
+        expect.objectContaining({ method: 'GET' })
+      );
+    });
   });
 
   describe('post', () => {

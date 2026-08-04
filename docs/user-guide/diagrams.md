@@ -85,7 +85,12 @@ Inside a diagram view you can switch modes using:
 - 2D Mode button
 - 3D Mode button
 
-Both modes edit the same view resource with different interaction styles.
+Both modes edit the same semantic presentation with different interaction
+styles. Spatial elements use a right-handed, Z-up pose in millimetres:
+`position3D = { x, y, z }`, where `z` is base elevation. An aligned 2D move
+updates X/Y while preserving Z; changing Z never changes 2D X/Y. Legacy views
+whose schematic 2D coordinates deliberately differ from physical X/Y remain
+independent.
 
 ## 2D editor workflow
 
@@ -197,16 +202,27 @@ Pin behavior:
 ### Place elements
 
 - Drag from palette and click on grid to place.
+- A representation's 3D notation controls vertical placement. `grounded`
+  elements are created at Z=0. `adjustable` elements use the configured default
+  base elevation and optional minimum, maximum, and step guidance.
 
 ### Select and move
 
 - Click element to select.
-- Drag selected element directly to move it.
+- Drag selected element directly across the ground plane to change X/Y without
+  losing elevation.
+- For adjustable notation, edit `Base elevation Z`, use the vertical handle, or
+  choose `Snap to ground`. Step snapping is applied by the editor; configured
+  limits are shown as feedback without overwriting an out-of-range stored pose.
+- Selected elevated elements show a drop line, ground projection, and base-Z
+  label. A grounded representation warns about, but preserves, an existing
+  non-zero elevation.
 
 ### Camera and scene
 
 - orbit controls are enabled for navigation
 - scene includes grid floor and status overlay
+- camera and clipping distance account for the highest element in the scene
 
 ### Grid behavior
 
@@ -241,7 +257,10 @@ the legacy 2D attribute panel; legacy 3D views keep their 3D-specific controls.
 
 Views use the active representation description when one is selected. Legacy views fall back to metaclass notation defined in the metamodel editor. A model element can override notation for exceptional cases, then reset back to the representation or metaclass default.
 
-Supported notation includes 2D shapes, colors, image assets, 3D model assets, default sizes, and reference edge styling.
+Supported notation includes 2D shapes, colors, image assets, 3D model assets,
+default sizes, grounded/adjustable vertical placement, and reference edge
+styling. Persisted 3D extents are `widthMm` on X, `heightMm` on Y, and
+`depthMm` on Z; the editor labels these `Length X`, `Width Y`, and `Height Z`.
 
 The palette uses the active representation description: existing elements are filtered by visible metaclasses. Authored creation tools supply the create-new-instance entries when present; otherwise those entries are filtered by creatable metaclasses.
 

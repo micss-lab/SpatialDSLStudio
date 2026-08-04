@@ -1,41 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef, useMemo } from 'react';
 import { apiClient, authApi, AuthUser, AuthResponse, UserRole } from '../services/core';
-import { metamodelService } from '../services/metamodel';
-import { modelService } from '../services/model';
-import { diagramService } from '../services/diagram';
-import { metaMetamodelService } from '../services/metametamodel';
-import { codeGenerationService } from '../services/codegeneration';
-import { transformationService } from '../services/transformation';
-import { testGenerationService } from '../services/testing';
-
-// Function to clear all service caches and reinitialize
-const clearAllServiceCaches = async () => {
-  console.log('Clearing all service caches...');
-  await metaMetamodelService.clearCacheAndReinitialize();
-  await metamodelService.clearCacheAndReinitialize();
-  await Promise.all([
-    modelService.clearCacheAndReinitialize(),
-    diagramService.clearCacheAndReinitialize(),
-    codeGenerationService.clearCacheAndReinitialize(),
-    transformationService.clearCacheAndReinitialize(),
-    testGenerationService.clearCacheAndReinitialize(),
-  ]);
-  console.log('All service caches cleared and reinitialized');
-};
-
-// Function to clear caches without making API calls (for logout)
-const clearAllServiceCachesLocal = () => {
-  console.log('Clearing all service caches locally (no API calls)...');
-  // These are synchronous local cache clears - no API calls
-  metamodelService.clearCacheLocal();
-  modelService.clearCacheLocal();
-  diagramService.clearCacheLocal();
-  metaMetamodelService.clearCacheLocal();
-  codeGenerationService.clearCacheLocal();
-  transformationService.clearCacheLocal();
-  testGenerationService.clearCacheLocal();
-  console.log('All service caches cleared locally');
-};
+import { clearProjectCachesLocal } from '../services/project-session.service';
 
 // Role hierarchy for permission checking (higher index = more permissions)
 const ROLE_HIERARCHY: UserRole[] = ['VIEWER', 'MODELER', 'DSL_DESIGNER', 'ADMIN'];
@@ -95,11 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           const result = await authApi.verifyToken(token);
           if (result.valid && result.user) {
-            try {
-              await clearAllServiceCaches();
-            } catch (error) {
-              console.warn('Failed to reinitialize service caches:', error);
-            }
+            clearProjectCachesLocal();
             setUser(result.user);
           } else {
             apiClient.removeToken();
@@ -137,8 +98,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response: AuthResponse = await authApi.login({ email, password });
       apiClient.setToken(response.token);
-      // Clear all service caches and reload data for new user
-      await clearAllServiceCaches();
+      // Artifact services are loaded only after the user opens a project.
+      clearProjectCachesLocal();
       setUser(response.user);
     } catch (err: any) {
       setError(err.message || 'Login failed');
@@ -171,7 +132,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response: AuthResponse = await authApi.verifyEmail({ email, code });
       apiClient.setToken(response.token);
-      await clearAllServiceCaches();
+      clearProjectCachesLocal();
       setUser(response.user);
       setRegistrationSuccess(false);
     } catch (err: any) {
@@ -199,10 +160,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Set flag to prevent "session expired" message
     isLoggingOutRef.current = true;
     apiClient.removeToken();
+    apiClient.setProjectId(null);
     setUser(null);
     setError(null);
     // Clear all service caches locally (no API calls to avoid 401)
-    clearAllServiceCachesLocal();
+    clearProjectCachesLocal();
     // Reset the flag after a short delay
     setTimeout(() => {
       isLoggingOutRef.current = false;

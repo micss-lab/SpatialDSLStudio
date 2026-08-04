@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Grid } from '@react-three/drei';
+import { OrbitControls, Grid, TransformControls } from '@react-three/drei';
 import { Box, Typography, Drawer, Button, TextField, Alert, Switch, FormControlLabel } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import GridOnIcon from '@mui/icons-material/GridOn';
 import * as THREE from 'three';
-import { Diagram, Metamodel, Model, ModelElement, ValidationIssue } from '../../models/types';
+import { Diagram, DiagramElement, Metamodel, Model, ModelElement, ValidationIssue } from '../../models/types';
 import { concreteSyntaxResolver, diagramService, diagramToolExecutionService, viewValidationService } from '../../services/diagram';
 import { metamodelService } from '../../services/metamodel';
 import viewpointService from '../../services/viewpoint.service';
@@ -16,16 +16,38 @@ import { modelInheritanceUtilsService, modelService } from '../../services/model
 import Node3D, { Element3D } from './Node3D';
 import { useElementSelection } from './shared/hooks';
 import { StatusOverlay3D, GridControls } from './3d/components';
+import { useProject } from '../../contexts/ProjectContext';
+import { normalizePosition3D, renderToDomainPosition } from '../../services/spatial';
 
 interface Diagram3DEditorProps {
   diagramId: string;
 }
 
+const canonicalElementPosition3D = (element: DiagramElement): { x: number; y: number; z: number } => (
+  normalizePosition3D(
+    element.style?.position3D || (element as Element3D).position3D || {
+      x: element.x ?? 0,
+      y: element.y ?? 0,
+    }
+  ) || { x: 0, y: 0, z: 0 }
+);
+
+const asElement3D = (element: DiagramElement): Element3D => ({
+  ...element,
+  rotationZ: element.style.rotationZ ?? 0,
+  position3D: canonicalElementPosition3D(element),
+  widthMm: element.style.widthMm,
+  heightMm: element.style.heightMm,
+  depthMm: element.style.depthMm,
+});
+
 // Controls and scene setup
-const SceneSetup = React.memo(({ onPlaneClick, gridSizeX, gridSizeY }: { 
+const SceneSetup = React.memo(({ onPlaneClick, gridSizeX, gridSizeY, controlsEnabled, sceneElevation }: {
   onPlaneClick: (position: THREE.Vector3) => void,
   gridSizeX: number,
-  gridSizeY: number
+  gridSizeY: number,
+  controlsEnabled: boolean,
+  sceneElevation: number,
 }) => {
   const { camera } = useThree();
   
@@ -33,14 +55,14 @@ const SceneSetup = React.memo(({ onPlaneClick, gridSizeX, gridSizeY }: {
   useEffect(() => {
     // Position camera like in a football stadium, high up in the stands at midfield
     // Looking down at the center of the pitch with a broadcast-style angle
-    const stadiumHeight = 8000; // Extremely high up (8000mm = 8m high - like helicopter view)
+    const stadiumHeight = Math.max(8000, sceneElevation * 1.5 + 4000);
     const midfield = 0; // At midfield (center of the field)
     const sidelineDistance = 12000; // Very far back from the sideline (12m back from field)
     
     camera.position.set(midfield, stadiumHeight, sidelineDistance);
     
     // Look down at the center of the field with a 35-degree downward angle
-    const targetPoint = new THREE.Vector3(0, 0, 0); // Center of the field
+    const targetPoint = new THREE.Vector3(0, sceneElevation / 2, 0);
     camera.lookAt(targetPoint);
     
     // Fine-tune the angle to achieve the broadcast perspective
@@ -56,7 +78,7 @@ const SceneSetup = React.memo(({ onPlaneClick, gridSizeX, gridSizeY }: {
     const adjustedY = camera.position.y + Math.tan(downwardAngle) * horizontalDistance;
     
     camera.lookAt(targetPoint.x, adjustedY, targetPoint.z);
-  }, [camera]);
+  }, [camera, sceneElevation]);
   
   // Handle clicks on the plane with camera-angle-aware detection
   const handlePlaneClick = (event: { stopPropagation: () => void; point: THREE.Vector3; intersections?: any[]; object?: any }) => {
@@ -87,9 +109,12 @@ const SceneSetup = React.memo(({ onPlaneClick, gridSizeX, gridSizeY }: {
     const intersectionPoint = new THREE.Vector3();
     intersectionPoint.copy(event.point);
     
-    // Fix coordinate system to match standard 3D applications (right-handed)
-    // Convert from Three.js coordinates to standard coordinates
-    const standardCoords = new THREE.Vector3(intersectionPoint.x, intersectionPoint.z, intersectionPoint.y);
+    const domainPosition = renderToDomainPosition(intersectionPoint);
+    const standardCoords = new THREE.Vector3(
+      domainPosition.x,
+      domainPosition.y,
+      domainPosition.z
+    );
     
     // Pass the position to the parent component
     onPlaneClick(standardCoords);
@@ -98,6 +123,7 @@ const SceneSetup = React.memo(({ onPlaneClick, gridSizeX, gridSizeY }: {
   return (
     <>
       <OrbitControls 
+        enabled={controlsEnabled}
         enableDamping 
         dampingFactor={0.25} 
         rotateSpeed={0.5}
@@ -105,7 +131,7 @@ const SceneSetup = React.memo(({ onPlaneClick, gridSizeX, gridSizeY }: {
       />
       {/* Use lower intensity lighting for better performance */}
       <ambientLight intensity={0.5} />
-      <directionalLight position={[10, 10, 10]} intensity={0.5} />
+      <directionalLight position={[10000, Math.max(10000, sceneElevation + 5000), 10000]} intensity={0.5} />
       
       {/* Enhanced grid floor - properly positioned on XZ plane (horizontal floor) */}
       <group>
@@ -133,13 +159,13 @@ const SceneSetup = React.memo(({ onPlaneClick, gridSizeX, gridSizeY }: {
       {/* Enhanced clickable plane with better separation from elements */}
       <group>
         {/* Primary clickable plane - positioned further below elements to reduce conflicts */}
-        <mesh position={[0, -1.0, 0]} onClick={handlePlaneClick}>
+        <mesh position={[0, -1.0, 0]} rotation={[-Math.PI / 2, 0, 0]} onClick={handlePlaneClick}>
           <planeGeometry args={[Math.max(gridSizeX, gridSizeY) * 4, Math.max(gridSizeX, gridSizeY) * 4]} /> {/* Larger clickable area */}
           <meshBasicMaterial visible={false} />
         </mesh>
         
         {/* Secondary clickable plane for better coverage - even further below */}
-        <mesh position={[0, -2.0, 0]} onClick={handlePlaneClick}>
+        <mesh position={[0, -2.0, 0]} rotation={[-Math.PI / 2, 0, 0]} onClick={handlePlaneClick}>
           <planeGeometry args={[Math.max(gridSizeX, gridSizeY) * 6, Math.max(gridSizeX, gridSizeY) * 6]} /> {/* Even larger backup plane */}
           <meshBasicMaterial visible={false} />
         </mesh>
@@ -152,7 +178,7 @@ const SceneSetup = React.memo(({ onPlaneClick, gridSizeX, gridSizeY }: {
 const useElementMovement = (diagramId: string, element: Element3D | null, onTransform: () => void) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartMousePos, setDragStartMousePos] = useState<{ x: number, y: number } | null>(null);
-  const [dragStartElementPosition, setDragStartElementPosition] = useState<{ x: number, y: number } | null>(null);
+  const [dragStartElementPosition, setDragStartElementPosition] = useState<{ x: number, y: number, z: number } | null>(null);
   const [movementMode, setMovementMode] = useState<'translate' | 'rotate'>('translate');
   const cameraRef = useRef<THREE.Camera | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -211,7 +237,8 @@ const useElementMovement = (diagramId: string, element: Element3D | null, onTran
     
     const newPosition = {
       x: dragStartElementPosition.x + deltaX,
-      y: dragStartElementPosition.y - deltaZ // Negate deltaZ to fix mirroring
+      y: dragStartElementPosition.y - deltaZ,
+      z: dragStartElementPosition.z,
     };
     
     console.log('Dragging element to:', newPosition, 'delta:', { deltaX, deltaZ });
@@ -271,7 +298,9 @@ const useElementMovement = (diagramId: string, element: Element3D | null, onTran
     setIsDragging(true);
     setDragStartMousePos({ x: mouseX, y: mouseY });
     
-    const currentPos = element.style.position3D || element.position3D || { x: element.x || 0, y: element.y || 0 };
+    const currentPos = normalizePosition3D(
+      element.style.position3D || element.position3D || { x: element.x || 0, y: element.y || 0 }
+    ) || { x: 0, y: 0, z: 0 };
     setDragStartElementPosition(currentPos);
     
     // Set cursor to indicate dragging
@@ -334,6 +363,7 @@ class WebGLErrorBoundary extends React.Component<
 
 // Main 3D diagram editor
 const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
+  const { project } = useProject();
   const [diagram, setDiagram] = useState<Diagram | null>(null);
   const [metamodel, setMetamodel] = useState<Metamodel | null>(null);
   const [model, setModel] = useState<Model | null>(null);
@@ -355,6 +385,8 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
   const [selectedAxes, setSelectedAxes] = useState({ x: true, y: true }); // Track which axes are selected
   const [elementZIndexes, setElementZIndexes] = useState<Record<string, number>>({});
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
+  const [isElevationDragging, setIsElevationDragging] = useState(false);
+  const [elevationFeedback, setElevationFeedback] = useState<string | null>(null);
   const nextZIndexRef = useRef<number>(1);
   // Simplified ref management - single ref for selected element
   const selectedElementRef = useRef<THREE.Group>(null);
@@ -416,21 +448,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
       // Update local state with the refreshed diagram
       if (updatedDiagram) {
         // Convert to 3D elements - use position3D from style if available
-        const elements3D = updatedDiagram.elements.map(element => {
-          return {
-            ...element,
-            rotationZ: element.style.rotationZ || 0,
-            // Get 3D positions from style, otherwise use regular x,y as initial values
-            position3D: element.style.position3D || { 
-              x: element.x || 0, 
-              y: element.y || 0 
-            },
-            // Load 3D dimensions from style
-            widthMm: element.style.widthMm,
-            heightMm: element.style.heightMm,
-            depthMm: element.style.depthMm
-          } as Element3D;
-        });
+        const elements3D = updatedDiagram.elements.map(asElement3D);
         
         setDiagram({
           ...updatedDiagram,
@@ -447,18 +465,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
         );
         
         if (updatedElement) {
-          setSelectedElement({
-            ...updatedElement,
-            rotationZ: updatedElement.style.rotationZ || 0,
-            position3D: updatedElement.style.position3D || { 
-              x: updatedElement.x || 0, 
-              y: updatedElement.y || 0 
-            },
-            // Load 3D dimensions from style
-            widthMm: updatedElement.style.widthMm,
-            heightMm: updatedElement.style.heightMm,
-            depthMm: updatedElement.style.depthMm
-          } as Element3D);
+          setSelectedElement(asElement3D(updatedElement));
         } else {
           setSelectedElement(null);
         }
@@ -476,10 +483,12 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
         // Store 3D position in style rather than affecting the actual x,y coordinates
         const updatedElement = diagram.elements.find(e => e.id === id);
         if (updatedElement) {
+          const currentPosition = canonicalElementPosition3D(updatedElement);
+          const nextPosition = { x, y, z: currentPosition.z };
           diagramService.updateElement(diagramId, id, { 
             style: {
               ...updatedElement.style,
-              position3D: { x, y }
+              position3D: nextPosition,
             }
           });
         
@@ -489,8 +498,9 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
               ...selectedElement,
               style: {
                 ...selectedElement.style,
-                position3D: { x, y }
-              }
+                position3D: nextPosition,
+              },
+              position3D: nextPosition,
             });
           }
         
@@ -522,21 +532,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
       
       if (diagramData) {
         // Convert the 2D diagram data to include 3D properties
-        const elements3D = diagramData.elements.map(element => {
-          return {
-            ...element,
-            rotationZ: element.style.rotationZ || 0,
-            // Use position3D from style if available, otherwise use x,y as starting point
-            position3D: element.style.position3D || { 
-              x: element.x || 0, 
-              y: element.y || 0 
-            },
-            // Load 3D dimensions from style
-            widthMm: element.style.widthMm,
-            heightMm: element.style.heightMm,
-            depthMm: element.style.depthMm
-          } as Element3D;
-        });
+        const elements3D = diagramData.elements.map(asElement3D);
         
         setDiagram({
           ...diagramData,
@@ -690,6 +686,32 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
     () => diagram ? viewpointService.resolveRepresentationDescription(diagram) : {},
     [diagram]
   );
+  const maxSceneElevation = React.useMemo(() => (
+    Math.max(0, ...(diagram?.elements || []).map(element => {
+      const position = canonicalElementPosition3D(element);
+      const height = element.style.depthMm ?? (element as Element3D).depthMm ?? 0;
+      return position.z + height;
+    }))
+  ), [diagram]);
+  const selectedSemanticElement = React.useMemo(() => {
+    if (!selectedElement || !model) return undefined;
+    const semanticId = selectedElement.style?.linkedModelElementId
+      || selectedElement.style?.modelElementRefId
+      || selectedElement.id;
+    return model.elements.find(candidate => candidate.id === semanticId);
+  }, [model, selectedElement]);
+  const selected3DAppearance = React.useMemo(() => (
+    selectedSemanticElement
+      ? concreteSyntaxResolver.resolve3D(
+        selectedSemanticElement,
+        metamodel,
+        viewContext.representationDescription,
+        viewContext.viewpoint
+      )
+      : undefined
+  ), [metamodel, selectedSemanticElement, viewContext.representationDescription, viewContext.viewpoint]);
+  const verticalPlacement = selected3DAppearance?.verticalPlacement || { mode: 'grounded' as const };
+  const selectedBaseZ = selectedElement ? canonicalElementPosition3D(selectedElement).z : 0;
   const validationContextKey = diagram
     ? `${diagram.id}:${diagram.modelId}:${diagram.representationDescriptionId || ''}`
     : '';
@@ -706,14 +728,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
     const element = viewValidationService.findElementForIssue(currentDiagram, issue);
     if (!element) return;
     bringToFront(element.id);
-    setSelectedElement({
-      ...element,
-      rotationZ: element.style.rotationZ || 0,
-      position3D: element.style.position3D || { x: element.x || 0, y: element.y || 0 },
-      widthMm: element.style.widthMm,
-      heightMm: element.style.heightMm,
-      depthMm: element.style.depthMm,
-    } as Element3D);
+    setSelectedElement(asElement3D(element));
   }, [bringToFront, diagramId, setSelectedElement]);
 
   // If we have a WebGL error, show fallback UI
@@ -733,7 +748,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
         <Button 
           variant="outlined"
           component="a"
-          href={`/diagrams/${diagramId}`}
+          href={`/projects/${project.id}/views/${diagramId}`}
         >
           Switch to 2D Mode
         </Button>
@@ -768,10 +783,21 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
         try {
           let newElement = null;
           let resolved3D = { widthMm: 500, heightMm: 800, depthMm: 200 };
+          let baseZ = 0;
 
           if (draggingPaletteItem.kind === 'existing-model-element') {
             const modelElement = draggingPaletteItem.modelElement;
-            resolved3D = concreteSyntaxResolver.resolve3D(modelElement, metamodel);
+            const resolvedAppearance = concreteSyntaxResolver.resolve3D(
+              modelElement,
+              metamodel,
+              viewContext.representationDescription,
+              viewContext.viewpoint
+            );
+            resolved3D = resolvedAppearance;
+            baseZ = normalizePosition3D(modelElement.presentation?.position3D)?.z
+              ?? (resolvedAppearance.verticalPlacement.mode === 'adjustable'
+                ? resolvedAppearance.verticalPlacement.defaultBaseZMm ?? 0
+                : 0);
             newElement = diagramService.addElement(
               diagramId,
               modelElement.id,
@@ -788,7 +814,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
                 widthMm: resolved3D.widthMm,
                 heightMm: resolved3D.heightMm,
                 depthMm: resolved3D.depthMm,
-                position3D: { x: position.x, y: position.y },
+                position3D: { x: position.x, y: position.y, z: baseZ },
               }
             );
           } else {
@@ -799,11 +825,20 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
               references: {},
             };
             const resolved2D = concreteSyntaxResolver.resolve2D(previewElement, metamodel);
-            resolved3D = concreteSyntaxResolver.resolve3D(previewElement, metamodel);
+            const resolvedAppearance = concreteSyntaxResolver.resolve3D(
+              previewElement,
+              metamodel,
+              viewContext.representationDescription,
+              viewContext.viewpoint
+            );
+            resolved3D = resolvedAppearance;
+            baseZ = resolvedAppearance.verticalPlacement.mode === 'adjustable'
+              ? resolvedAppearance.verticalPlacement.defaultBaseZMm ?? 0
+              : 0;
             const presentation = {
               position2D: { x: position.x, y: position.y },
               size2D: resolved2D.defaultSize || { width: 120, height: 80 },
-              position3D: { x: position.x, y: position.y },
+              position3D: { x: position.x, y: position.y, z: baseZ },
               size3D: {
                 widthMm: resolved3D.widthMm,
                 heightMm: resolved3D.heightMm,
@@ -835,7 +870,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
               widthMm: resolved3D.widthMm,
               heightMm: resolved3D.heightMm,
               depthMm: resolved3D.depthMm,
-              position3D: { x: position.x, y: position.y }
+              position3D: { x: position.x, y: position.y, z: baseZ },
             });
 
             checkAndExpandGrid(position.x, position.y);
@@ -897,19 +932,29 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
           rotationZ: value
         }
       });
-    } else if (propertyName === 'x' || propertyName === 'y') {
-      // Save 3D position in style to avoid affecting 2D view
-      const position3D = selectedElement.position3D || { x: 0, y: 0 };
+    } else if (propertyName === 'x' || propertyName === 'y' || propertyName === 'z') {
+      if (propertyName === 'z' && verticalPlacement.mode !== 'adjustable') return;
+      const position3D = canonicalElementPosition3D(selectedElement);
       const updatedPosition = {
         ...position3D,
         [propertyName]: value
       };
+
+      if (propertyName === 'z') {
+        if (verticalPlacement.minBaseZMm !== undefined && value < verticalPlacement.minBaseZMm) {
+          setElevationFeedback(`Base elevation is below the configured minimum of ${verticalPlacement.minBaseZMm} mm.`);
+        } else if (verticalPlacement.maxBaseZMm !== undefined && value > verticalPlacement.maxBaseZMm) {
+          setElevationFeedback(`Base elevation is above the configured maximum of ${verticalPlacement.maxBaseZMm} mm.`);
+        } else {
+          setElevationFeedback(null);
+        }
+      }
       
       diagramService.updateElement(diagramId, selectedElement.id, {
         style: {
           ...selectedElement.style,
           position3D: updatedPosition
-        }
+        },
       });
       
       // Update local state
@@ -918,14 +963,15 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
         style: {
           ...selectedElement.style,
           position3D: updatedPosition
-        }
+        },
+        position3D: updatedPosition,
       });
       
       // Check if grid needs to be expanded
       if (propertyName === 'x') {
-        checkAndExpandGrid(value, selectedElement.position3D?.y || 0);
-      } else {
-        checkAndExpandGrid(selectedElement.position3D?.x || 0, value);
+        checkAndExpandGrid(value, updatedPosition.y);
+      } else if (propertyName === 'y') {
+        checkAndExpandGrid(updatedPosition.x, value);
       }
     } else {
       // Handle regular properties
@@ -947,6 +993,23 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
     }
     
     saveChanges();
+  };
+
+  const handleSnapToGround = () => {
+    if (verticalPlacement.mode !== 'adjustable') return;
+    handlePropertyChange('z', 0);
+  };
+
+  const snapSelectedElevationToStep = () => {
+    if (verticalPlacement.mode !== 'adjustable') return;
+    const step = verticalPlacement.stepMm;
+    if (step === undefined || !Number.isFinite(step) || step <= 0) return;
+    handlePropertyChange('z', Math.round(selectedBaseZ / step) * step);
+  };
+
+  const handleElevationTransformChange = () => {
+    if (!selectedElementRef.current || verticalPlacement.mode !== 'adjustable') return;
+    handlePropertyChange('z', selectedElementRef.current.position.y);
   };
   
   const handleDeleteElement = () => {
@@ -1199,7 +1262,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
             camera={{ 
               position: [0, 8000, 12000], // Extremely zoomed out: midfield, helicopter-height, very far back
               fov: 50, // Broadcast-style field of view (reduced from 90 for more natural perspective)
-              far: Math.max(gridSizeX, gridSizeY) * 4,
+              far: Math.max(gridSizeX, gridSizeY, maxSceneElevation + 10000) * 4,
               near: 1 // Increased near plane to improve depth buffer precision
             }}
             // Enhanced raycaster configuration for better camera angle reliability
@@ -1258,7 +1321,13 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
               });
             }}
           >
-            <SceneSetup onPlaneClick={handlePlaneClick} gridSizeX={gridSizeX} gridSizeY={gridSizeY} />
+            <SceneSetup
+              onPlaneClick={handlePlaneClick}
+              gridSizeX={gridSizeX}
+              gridSizeY={gridSizeY}
+              controlsEnabled={!isDragging && !isElevationDragging}
+              sceneElevation={maxSceneElevation}
+            />
             
             {/* Add fog to prevent whitening at distance */}
             {/*<fog attach="fog" args={['#e6f0ff', gridSize/2, gridSize*2]} />*/}
@@ -1272,7 +1341,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
                 if (!metaClass) return null;
                 
                 // Prioritize position3D from style, then from element property, then fall back to x,y
-                const position3D = element.style.position3D || (element as Element3D).position3D || { x: element.x || 0, y: element.y || 0 };
+                const position3D = canonicalElementPosition3D(element);
                 
                 // Calculate render order based on index in the sorted array
                 // Later elements (higher in the array) should have higher render order
@@ -1294,7 +1363,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
                     viewpoint={viewContext.viewpoint}
                     onClick={() => handleElementClick(element as Element3D)}
                     onDragStart={(e) => {
-                      if (selectedElement?.id === element.id && !isDragging) {
+                      if (selectedElement?.id === element.id && !isDragging && !isElevationDragging) {
                         handleDragStart(e);
                       }
                     }}
@@ -1307,6 +1376,28 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
                   />
                 );
               })}
+            {selectedElement && verticalPlacement.mode === 'adjustable' && (
+              <TransformControls
+                object={selectedElementRef as unknown as React.RefObject<THREE.Object3D>}
+                mode="translate"
+                space="world"
+                showX={false}
+                showY
+                showZ={false}
+                size={0.8}
+                translationSnap={
+                  verticalPlacement.stepMm !== undefined && verticalPlacement.stepMm > 0
+                    ? verticalPlacement.stepMm
+                    : null
+                }
+                onMouseDown={() => setIsElevationDragging(true)}
+                onObjectChange={handleElevationTransformChange}
+                onMouseUp={() => {
+                  setIsElevationDragging(false);
+                  handleElevationTransformChange();
+                }}
+              />
+            )}
           </Canvas>
         </WebGLErrorBoundary>
         
@@ -1377,8 +1468,13 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
                 
                 {/* Explanatory note about 3D vs 2D coordinates */}
                 <Typography variant="caption" color="textSecondary" sx={{ mb: 1 }}>
-                  Note: 3D positions are separate from 2D view positions. Changes here will not affect the 2D view.
+                  X/Y placement is synchronized with an aligned 2D view. Base elevation Z is independent.
                 </Typography>
+                {verticalPlacement.mode === 'grounded' && selectedBaseZ !== 0 && (
+                  <Alert severity="warning">
+                    This representation is grounded, but the stored base elevation is {Math.round(selectedBaseZ)} mm. The value is preserved.
+                  </Alert>
+                )}
                 
                 {/* Transform Mode Controls */}
                 <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
@@ -1402,7 +1498,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
                   <TextField
                     label="X (3D)"
                     type="number"
-                    value={Math.round((selectedElement?.style.position3D?.x || selectedElement?.position3D?.x || selectedElement?.x || 0))}
+                    value={Math.round(canonicalElementPosition3D(selectedElement).x)}
                     onChange={(e) => {
                       const value = Number(e.target.value);
                       handlePropertyChange('x', value);
@@ -1416,7 +1512,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
                   <TextField
                     label="Y (3D)"
                     type="number"
-                    value={Math.round((selectedElement?.style.position3D?.y || selectedElement?.position3D?.y || selectedElement?.y || 0))}
+                    value={Math.round(canonicalElementPosition3D(selectedElement).y)}
                     onChange={(e) => {
                       const value = Number(e.target.value);
                       handlePropertyChange('y', value);
@@ -1427,11 +1523,43 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
                     }}
                   />
                 </Box>
+
+                <TextField
+                  label="Base elevation Z"
+                  type="number"
+                  value={Math.round(selectedBaseZ)}
+                  disabled={verticalPlacement.mode !== 'adjustable'}
+                  error={Boolean(elevationFeedback)}
+                  helperText={elevationFeedback || (
+                    verticalPlacement.mode === 'adjustable'
+                      ? 'Base elevation above the project datum.'
+                      : 'Grounded by this representation.'
+                  )}
+                  onChange={(e) => handlePropertyChange('z', Number(e.target.value))}
+                  onBlur={snapSelectedElevationToStep}
+                  fullWidth
+                  margin="dense"
+                  size="small"
+                  inputProps={{
+                    step: verticalPlacement.stepMm ?? 100,
+                  }}
+                  InputProps={{
+                    endAdornment: <Typography variant="caption">mm</Typography>
+                  }}
+                />
+                <Button
+                  size="small"
+                  variant="outlined"
+                  disabled={verticalPlacement.mode !== 'adjustable' || selectedBaseZ === 0}
+                  onClick={handleSnapToGround}
+                >
+                  Snap to ground
+                </Button>
                 
                 <TextField
                   label="Rotation Z (degrees)"
                   type="number"
-                  value={selectedElement.style.rotationZ || 0}
+                  value={selectedElement.style.rotationZ ?? 0}
                   onChange={(e) => handlePropertyChange('rotationZ', Number(e.target.value))}
                   fullWidth
                   margin="dense"
@@ -1456,28 +1584,9 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
                 <Typography variant="subtitle2" fontWeight="bold">Dimensions</Typography>
                 
                 <TextField
-                  label="Width (X-axis)"
+                  label="Length X"
                   type="number"
-                  value={selectedElement.style.heightMm || selectedElement.heightMm || 800}
-                  onChange={(e) => {
-                    const value = Number(e.target.value);
-                    if (value > 0) {
-                      handlePropertyChange('heightMm', value);
-                    }
-                  }}
-                  fullWidth
-                  margin="dense"
-                  size="small"
-                  inputProps={{ min: 1, step: 10 }}
-                  InputProps={{ 
-                    endAdornment: <Typography variant="caption">mm</Typography> 
-                  }}
-                />
-                
-                <TextField
-                  label="Length (Y-axis)"
-                  type="number"
-                  value={selectedElement.style.widthMm || selectedElement.widthMm || 500}
+                  value={selectedElement.style.widthMm ?? selectedElement.widthMm ?? 500}
                   onChange={(e) => {
                     const value = Number(e.target.value);
                     if (value > 0) {
@@ -1494,9 +1603,28 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
                 />
                 
                 <TextField
-                  label="Height"
+                  label="Width Y"
                   type="number"
-                  value={selectedElement.style.depthMm || selectedElement.depthMm || 200}
+                  value={selectedElement.style.heightMm ?? selectedElement.heightMm ?? 800}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    if (value > 0) {
+                      handlePropertyChange('heightMm', value);
+                    }
+                  }}
+                  fullWidth
+                  margin="dense"
+                  size="small"
+                  inputProps={{ min: 1, step: 10 }}
+                  InputProps={{ 
+                    endAdornment: <Typography variant="caption">mm</Typography> 
+                  }}
+                />
+                
+                <TextField
+                  label="Height Z"
+                  type="number"
+                  value={selectedElement.style.depthMm ?? selectedElement.depthMm ?? 200}
                   onChange={(e) => {
                     const value = Number(e.target.value);
                     if (value > 0) {

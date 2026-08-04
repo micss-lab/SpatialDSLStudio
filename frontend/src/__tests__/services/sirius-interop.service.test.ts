@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import { apiClient } from '../../services/core';
 import { siriusInteropService } from '../../services/interoperability';
+import { modelService } from '../../services/model';
 
 jest.mock('../../services/core', () => ({
   apiClient: {
@@ -16,10 +17,20 @@ jest.mock('../../services/core', () => ({
   },
 }));
 
+jest.mock('../../services/model', () => ({
+  modelService: {
+    getAllModels: jest.fn(),
+    importModel: jest.fn(),
+  },
+}));
+
 const mockedApiClient = apiClient as any;
+const mockedModelService = modelService as jest.Mocked<typeof modelService>;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockedModelService.getAllModels.mockReturnValue([]);
+  mockedModelService.importModel.mockImplementation(async model => model);
 });
 
 describe('siriusInteropService', () => {
@@ -69,6 +80,141 @@ describe('siriusInteropService', () => {
     expect(result.report.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: 'SIRIUS_DEFERRED_AIRD' }),
       expect.objectContaining({ code: 'SIRIUS_PROJECT_ZIP_ODSIGN_IMPORTED' }),
+      expect.objectContaining({ code: 'SPATIALDSL_PRESENTATION_SIDECAR_MISSING' }),
+    ]));
+  });
+
+  it('restores canonical 3D presentation from a project ZIP sidecar', async () => {
+    mockedApiClient.post.mockResolvedValue({
+      viewpoints: [{ id: 'viewpoint-1' }],
+      report: {
+        sourceFormat: 'odesign',
+        targetFormat: 'spatialdsl',
+        supported: true,
+        warnings: [],
+        droppedFeatures: [],
+        unresolvedReferences: [],
+      },
+    });
+    mockedModelService.getAllModels.mockReturnValue([{
+      id: 'model-1',
+      name: 'WarehouseModel',
+      metamodelId: 'metamodel-1',
+      conformsTo: 'metamodel-1',
+      elements: [{
+        id: 'drone-1',
+        modelElementId: 'InspectionDrone',
+        style: { name: 'Drone' },
+        references: {},
+        presentation: { position2D: { x: 10, y: 20 } },
+      }],
+    }]);
+
+    const zip = new JSZip();
+    zip.file('description/warehouse.odesign', '<description:Group name="Warehouse"/>');
+    zip.file('spatialdsl-presentation.json', JSON.stringify({
+      schemaVersion: 1,
+      model: { id: 'model-1', name: 'WarehouseModel', metamodelId: 'metamodel-1' },
+      elements: {
+        'drone-1': {
+          position3D: { x: 12000, y: 6000, z: 4500 },
+          size3D: { widthMm: 1200, heightMm: 1200, depthMm: 400 },
+          rotationZ: 15,
+        },
+      },
+    }));
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const result = await siriusInteropService.importFile(
+      new File([blob], 'warehouse.zip', { type: 'application/zip' }),
+      'metamodel-1'
+    );
+
+    expect(mockedModelService.importModel).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'model-1',
+      elements: [expect.objectContaining({
+        id: 'drone-1',
+        presentation: {
+          position2D: { x: 10, y: 20 },
+          position3D: { x: 12000, y: 6000, z: 4500 },
+          size3D: { widthMm: 1200, heightMm: 1200, depthMm: 400 },
+          rotationZ: 15,
+        },
+      })],
+    }));
+    expect(result.report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'SPATIALDSL_PRESENTATION_SIDECAR_RECOGNIZED' }),
+      expect.objectContaining({ code: 'SPATIALDSL_PRESENTATION_SIDECAR_RESTORED' }),
+    ]));
+  });
+
+  it('reports a malformed presentation sidecar instead of restoring partial 3D data', async () => {
+    mockedApiClient.post.mockResolvedValue({
+      viewpoints: [],
+      report: {
+        sourceFormat: 'odesign',
+        targetFormat: 'spatialdsl',
+        supported: true,
+        warnings: [],
+        droppedFeatures: [],
+        unresolvedReferences: [],
+      },
+    });
+
+    const zip = new JSZip();
+    zip.file('description/warehouse.odesign', '<description:Group name="Warehouse"/>');
+    zip.file('spatialdsl-presentation.json', JSON.stringify({
+      schemaVersion: 1,
+      model: { id: 'model-1', name: 'WarehouseModel' },
+      elements: {
+        'drone-1': {
+          position3D: { x: 12000, y: 6000, z: 4500 },
+          size3D: { widthMm: 1200, heightMm: 1200, depthMm: '400' },
+        },
+      },
+    }));
+
+    const result = await siriusInteropService.importFile(
+      new File([await zip.generateAsync({ type: 'blob' })], 'warehouse.zip'),
+      'metamodel-1'
+    );
+
+    expect(mockedModelService.importModel).not.toHaveBeenCalled();
+    expect(result.report.unresolvedReferences).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'SPATIALDSL_PRESENTATION_SIDECAR_INVALID' }),
+    ]));
+  });
+
+  it('reports ambiguous presentation sidecars instead of choosing one by path order', async () => {
+    mockedApiClient.post.mockResolvedValue({
+      viewpoints: [],
+      report: {
+        sourceFormat: 'odesign',
+        targetFormat: 'spatialdsl',
+        supported: true,
+        warnings: [],
+        droppedFeatures: [],
+        unresolvedReferences: [],
+      },
+    });
+
+    const sidecar = JSON.stringify({
+      schemaVersion: 1,
+      model: { id: 'model-1' },
+      elements: {},
+    });
+    const zip = new JSZip();
+    zip.file('description/warehouse.odesign', '<description:Group name="Warehouse"/>');
+    zip.file('spatialdsl-presentation.json', sidecar);
+    zip.file('nested/spatialdsl-presentation.json', sidecar);
+
+    const result = await siriusInteropService.importFile(
+      new File([await zip.generateAsync({ type: 'blob' })], 'warehouse.zip'),
+      'metamodel-1'
+    );
+
+    expect(mockedModelService.importModel).not.toHaveBeenCalled();
+    expect(result.report.unresolvedReferences).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'SPATIALDSL_PRESENTATION_SIDECAR_AMBIGUOUS' }),
     ]));
   });
 

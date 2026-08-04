@@ -26,6 +26,7 @@ from layout import load_layout, scene_bounds
 
 ROBOT_ASSET = "nvidia-f1tenth-amr/f1tenth_amr_collision.usda"
 ROBOT_ARTICULATION_ASSET = "nvidia-f1tenth-amr/f1tenth_amr_articulation.usda"
+DRONE_ASSET = "warehouse-kit/inspection_drone.usda"
 ROBOT_MAX_SPEED = 1.4
 ROBOT_MASS_KG = 3.1
 WHEEL_RADIUS_M = 0.057
@@ -91,6 +92,20 @@ def load_robot_asset_config(asset_root):
     return defaults
 
 
+def load_drone_asset_config(asset_root):
+    defaults = {"asset": DRONE_ASSET, "massKg": 1.5, "bodyMode": "kinematic"}
+    manifest_path = os.path.join(asset_root, "asset-manifest.json")
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as handle:
+            manifest = json.load(handle)
+        configured = manifest.get("defaults", {}).get("InspectionDrone", {})
+        if isinstance(configured, dict):
+            defaults.update(configured)
+    except (OSError, ValueError) as exc:
+        print("[sim] asset manifest unavailable; using embedded drone defaults: " + str(exc))
+    return defaults
+
+
 def wrap_degrees(value):
     return (value + 180.0) % 360.0 - 180.0
 
@@ -135,6 +150,7 @@ def main():
         stage.SetDefaultPrim(world.GetPrim())
 
     robot_asset_config = load_robot_asset_config(asset_root)
+    drone_asset_config = load_drone_asset_config(asset_root)
 
     def add_collider(prim):
         try:
@@ -153,6 +169,17 @@ def main():
         )
         return body
 
+    def configure_drone_body(prim):
+        body = UsdPhysics.RigidBodyAPI.Apply(prim)
+        body.CreateRigidBodyEnabledAttr(True)
+        body.CreateKinematicEnabledAttr(True)
+        mass = UsdPhysics.MassAPI.Apply(prim)
+        mass.CreateMassAttr(float(drone_asset_config.get("massKg", 1.5)))
+        prim.CreateAttribute("spatialDsl:bodyMode", Sdf.ValueTypeNames.String).Set(
+            "kinematic-aerial-placement"
+        )
+        return body
+
     def add_prop(group, record):
         prim = stage.DefinePrim("/World/" + group + "/" + safe_name(record["name"]), "Xform")
         asset = os.path.join(asset_root, record.get("asset", ""))
@@ -162,7 +189,9 @@ def main():
         width = max(record.get("width", 1.0), 0.01)
         height = max(record.get("height", 1.0), 0.01)
         xf = UsdGeom.Xformable(prim)
-        xf.AddTranslateOp().Set(Gf.Vec3d(record["x"], record["y"], height / 2.0))
+        xf.AddTranslateOp().Set(Gf.Vec3d(
+            record["x"], record["y"], record.get("z", 0.0) + height / 2.0
+        ))
         xf.AddScaleOp().Set(Gf.Vec3f(length, width, height))
         proxy = UsdGeom.Cube.Define(stage, prim.GetPath().AppendChild("PhysicsProxy"))
         proxy.CreateSizeAttr(1.0)
@@ -182,9 +211,19 @@ def main():
         gxf.AddScaleOp().Set(Gf.Vec3f(max_x - min_x, max_y - min_y, 0.1))
         add_collider(ground.GetPrim())
 
+        max_scene_z = max(
+            (
+                rec.get("z", 0.0) + rec.get("height", 0.0)
+                for group in ("robots", "obstacles", "pickups", "dropoffs", "chargers", "drones")
+                for rec in layout.get(group, [])
+            ),
+            default=0.0,
+        )
         sun = UsdLux.DistantLight.Define(stage, "/World/Sun")
         sun.CreateIntensityAttr(1500.0)
-        UsdGeom.Xformable(sun.GetPrim()).AddRotateXYZOp().Set(Gf.Vec3f(-55.0, 0.0, 35.0))
+        sun_xf = UsdGeom.Xformable(sun.GetPrim())
+        sun_xf.AddTranslateOp().Set(Gf.Vec3d(0.0, 0.0, max_scene_z + 10.0))
+        sun_xf.AddRotateXYZOp().Set(Gf.Vec3f(-55.0, 0.0, 35.0))
 
     try:
         physics = UsdPhysics.Scene.Define(stage, "/World/PhysicsScene")
@@ -202,6 +241,48 @@ def main():
             add_prop("Dropoffs", record)
         for record in layout.get("chargers", []):
             add_prop("Chargers", record)
+
+    # Drones are positioned exactly as authored and held kinematically. They
+    # deliberately do not enter the ground robot list or OPC UA control loop.
+    for index, record in enumerate(layout.get("drones", [])):
+        if args.scene:
+            prim_path = "/World/InspectionDrone/%s_%d" % (safe_name(record["name"]), index)
+            prim = stage.GetPrimAtPath(prim_path)
+            if not prim.IsValid():
+                raise RuntimeError("Layered scene is missing modeled drone prim " + prim_path)
+        else:
+            prim_path = "/World/Drones/" + safe_name(record["name"])
+            prim = stage.DefinePrim(prim_path, "Xform")
+            drone_asset = os.path.join(asset_root, record.get("asset", drone_asset_config["asset"]))
+            if os.path.isfile(drone_asset):
+                prim.GetReferences().AddReference(drone_asset)
+            else:
+                print("[sim] drone asset missing; retaining physics proxy: " + drone_asset)
+
+            proxy = UsdGeom.Cube.Define(stage, prim.GetPath().AppendChild("PhysicsProxy"))
+            proxy.CreateSizeAttr(1.0)
+            proxy.CreateVisibilityAttr(UsdGeom.Tokens.invisible)
+            proxy.CreatePurposeAttr(UsdGeom.Tokens.guide)
+            proxy_xf = UsdGeom.Xformable(proxy.GetPrim())
+            height = max(record.get("height", 0.4), 0.01)
+            proxy_xf.AddTranslateOp().Set(Gf.Vec3d(0.0, 0.0, height / 2.0))
+            proxy_xf.AddScaleOp().Set(Gf.Vec3f(
+                max(record.get("length", 1.2), 0.01),
+                max(record.get("width", 1.2), 0.01),
+                height,
+            ))
+            add_collider(proxy.GetPrim())
+
+        drone_xf = UsdGeom.Xformable(prim)
+        drone_translate = prim.GetAttribute("xformOp:translate")
+        if not drone_translate.IsValid():
+            drone_translate = drone_xf.AddTranslateOp().GetAttr()
+        drone_rotate = prim.GetAttribute("xformOp:rotateZ")
+        if not drone_rotate.IsValid():
+            drone_rotate = drone_xf.AddRotateZOp().GetAttr()
+        drone_translate.Set(Gf.Vec3d(record["x"], record["y"], record.get("z", 0.0)))
+        drone_rotate.Set(float(record.get("yaw", 0.0)))
+        configure_drone_body(prim)
 
     robots = []
     for index, record in enumerate(layout["robots"]):
@@ -229,7 +310,7 @@ def main():
         rz_attr = prim.GetAttribute("xformOp:rotateZ")
         if not rz_attr.IsValid():
             rz_attr = xf.AddRotateZOp().GetAttr()
-        t_attr.Set(Gf.Vec3d(record["x"], record["y"], 0.0))
+        t_attr.Set(Gf.Vec3d(record["x"], record["y"], record.get("z", 0.0)))
         body = configure_robot_body(prim)
         left_joint = stage.GetPrimAtPath(
             prim.GetPath().AppendPath(

@@ -5,6 +5,7 @@
       "name": "Mobile Robot Resource",
       "x": 4527.32751114,
       "y": 16706.0891961,
+      "z": 0,
       "batteryLevel": 100,
       "lowBattery": 1,
       "chargeRate": 10
@@ -13,6 +14,7 @@
       "name": "Mobile Robot Resource #2",
       "x": 3804.86905984,
       "y": -15858.3726788,
+      "z": 0,
       "batteryLevel": 100,
       "lowBattery": 1,
       "chargeRate": 10
@@ -24,6 +26,7 @@
       "asset": "warehouse-kit/storage_rack.usda",
       "x": 10000,
       "y": 12000,
+      "z": 0,
       "length": 2000,
       "width": 1000,
       "height": 2500
@@ -33,6 +36,7 @@
       "asset": "warehouse-kit/storage_rack.usda",
       "x": 14000,
       "y": 12000,
+      "z": 0,
       "length": 2000,
       "width": 1000,
       "height": 2500
@@ -42,6 +46,7 @@
       "asset": "warehouse-kit/dock.usda",
       "x": -18000,
       "y": 15000,
+      "z": 0,
       "length": 5000,
       "width": 3000,
       "height": 500
@@ -53,6 +58,7 @@
       "asset": "warehouse-kit/conveyor.usda",
       "x": -22140.676,
       "y": -9669.243,
+      "z": 0,
       "length": 6000,
       "width": 2000,
       "height": 3000
@@ -62,6 +68,7 @@
       "asset": "warehouse-kit/conveyor.usda",
       "x": -21906.9869673,
       "y": 10129.7838605,
+      "z": 0,
       "length": 6000,
       "width": 2000,
       "height": 3000
@@ -73,6 +80,7 @@
       "asset": "warehouse-kit/output_location.usda",
       "x": 32090.567,
       "y": 577,
+      "z": 0,
       "length": 6000,
       "width": 3000,
       "height": 3000
@@ -84,6 +92,7 @@
       "asset": "warehouse-kit/charging_station.usda",
       "x": 3897.20166951,
       "y": 18420.7445771,
+      "z": 0,
       "length": 2000,
       "width": 2000,
       "height": 6000
@@ -93,9 +102,36 @@
       "asset": "warehouse-kit/charging_station.usda",
       "x": 3673.28218994,
       "y": -18004.326837,
+      "z": 0,
       "length": 2000,
       "width": 2000,
       "height": 6000
+    }
+  ],
+  "drones": [
+    {
+      "name": "Inspection Drone Alpha",
+      "asset": "warehouse-kit/inspection_drone.usda",
+      "x": 12000,
+      "y": 6000,
+      "z": 4500,
+      "yaw": 15,
+      "length": 1200,
+      "width": 1200,
+      "height": 400,
+      "kinematic": true
+    },
+    {
+      "name": "Inspection Drone Beta",
+      "asset": "warehouse-kit/inspection_drone.usda",
+      "x": 18000,
+      "y": 6000,
+      "z": 0,
+      "yaw": 0,
+      "length": 1200,
+      "width": 1200,
+      "height": 400,
+      "kinematic": true
     }
   ]
 }

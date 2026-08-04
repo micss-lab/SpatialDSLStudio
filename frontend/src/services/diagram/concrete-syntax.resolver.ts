@@ -9,6 +9,7 @@ import {
   ModelConnection,
   ModelElement,
   RepresentationDescription,
+  VerticalPlacement3D,
   Viewpoint,
 } from '../../models/types';
 
@@ -34,6 +35,7 @@ export interface ResolvedAppearance3D extends ConcreteSyntax3D {
   depthMm: number;
   fallbackShape: NonNullable<ConcreteSyntax3D['fallbackShape']>;
   fallbackColor: string;
+  verticalPlacement: VerticalPlacement3D;
 }
 
 const DEFAULT_2D: ResolvedAppearance2D = {
@@ -54,7 +56,8 @@ const DEFAULT_3D: ResolvedAppearance3D = {
   widthMm: 500,
   heightMm: 800,
   depthMm: 200,
-  defaultSizeMm: { widthMm: 500, heightMm: 800, depthMm: 200 }
+  defaultSizeMm: { widthMm: 500, heightMm: 800, depthMm: 200 },
+  verticalPlacement: { mode: 'grounded' },
 };
 
 const DEFAULT_EDGE: ConcreteSyntaxEdge = {
@@ -105,6 +108,11 @@ class ConcreteSyntaxResolver {
       || viewpointSyntax.defaultSizeMm
       || inherited?.defaultSizeMm
       || DEFAULT_3D.defaultSizeMm!;
+    const verticalPlacement = instance.verticalPlacement
+      || representationSyntax.verticalPlacement
+      || viewpointSyntax.verticalPlacement
+      || inherited?.verticalPlacement
+      || DEFAULT_3D.verticalPlacement;
 
     return {
       ...DEFAULT_3D,
@@ -112,9 +120,22 @@ class ConcreteSyntaxResolver {
       ...viewpointSyntax,
       ...representationSyntax,
       ...instance,
-      widthMm: instance.widthMm || defaultSizeMm.widthMm,
-      heightMm: instance.heightMm || defaultSizeMm.heightMm,
-      depthMm: instance.depthMm || defaultSizeMm.depthMm,
+      widthMm: instance.widthMm ?? defaultSizeMm.widthMm,
+      heightMm: instance.heightMm ?? defaultSizeMm.heightMm,
+      depthMm: instance.depthMm ?? defaultSizeMm.depthMm,
+      verticalPlacement: {
+        mode: verticalPlacement.mode === 'adjustable' ? 'adjustable' : 'grounded',
+        ...(verticalPlacement.defaultBaseZMm !== undefined && {
+          defaultBaseZMm: verticalPlacement.defaultBaseZMm,
+        }),
+        ...(verticalPlacement.minBaseZMm !== undefined && {
+          minBaseZMm: verticalPlacement.minBaseZMm,
+        }),
+        ...(verticalPlacement.maxBaseZMm !== undefined && {
+          maxBaseZMm: verticalPlacement.maxBaseZMm,
+        }),
+        ...(verticalPlacement.stepMm !== undefined && { stepMm: verticalPlacement.stepMm }),
+      },
       fallbackColor: instance.fallbackColor
         || instance.fillColor
         || instance.color

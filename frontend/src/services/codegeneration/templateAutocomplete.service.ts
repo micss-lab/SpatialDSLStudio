@@ -409,6 +409,7 @@ function getHelperInfo(helperName: string): HelperInfo {
     'get3DProperty': { signature: '(get3DProperty obj "prop")', description: 'Gets 3D property. Ex: {{get3DProperty this "x"}}' },
     'has3DProperty': { signature: '(has3DProperty obj "prop")', description: 'Returns true if has 3D property. Use in {{#if}}' },
     'debug3DProperties': { signature: '(debug3DProperties obj)', description: 'Debug: shows all 3D properties as JSON' },
+    'baseCenterMeters': { signature: '(baseCenterMeters baseElevationMm verticalExtentMm)', description: 'Converts base elevation plus half the vertical extent from millimetres to metres' },
     
     // List formatting (for clean array generation)
     'resetListComma': { signature: '(resetListComma "listName")', description: 'Resets comma state before iterating' },

@@ -8,6 +8,7 @@ import {
 import { metamodelService } from '../metamodel';
 import { modelService } from '../model';
 import { codegenInheritanceUtilsService } from './codegen-inheritance-utils.service';
+import { normalizePosition3D } from '../spatial';
 
 /**
  * Service for building template contexts from diagram and model elements
@@ -53,6 +54,18 @@ export class CodegenContextBuilderService {
       name: element.style?.name || element.name || element.id,
       type: element.modelElementId || element.type,
       metaClassId: element.modelElementId || element.type,
+    };
+
+    const applyPosition3D = (rawPosition: unknown, override: boolean): void => {
+      if (!rawPosition || typeof rawPosition !== 'object') return;
+      const position = normalizePosition3D(rawPosition as { x: number; y: number; z?: number });
+      if (!position) return;
+      if (!override && context.position3D !== undefined) return;
+      context.position3D = position;
+      context.X = position.x;
+      context.Y = position.y;
+      context.Z = position.z;
+      context.BaseElevationMm = position.z;
     };
 
     // Try to resolve the corresponding model element to merge attribute values
@@ -106,11 +119,9 @@ export class CodegenContextBuilderService {
         
         // Handle special 3D properties
         if (key === 'position3D') {
-          // Extract position3D coordinates
-          if (element.style.position3D) {
-            context.X = element.style.position3D.x;
-            context.Y = element.style.position3D.y;
-          }
+          // Diagram-local placement overrides the model presentation. Legacy
+          // two-coordinate values are accepted at this boundary as z = 0.
+          applyPosition3D(element.style.position3D, true);
         } else if (key === 'rotationZ') {
           // Extract rotation
           context.RZ = element.style.rotationZ;
@@ -138,9 +149,8 @@ export class CodegenContextBuilderService {
       context.presentation = element.presentation;
 
       if (element.presentation.position3D) {
-        context.position3D = element.presentation.position3D;
-        if (context.X === undefined) context.X = element.presentation.position3D.x;
-        if (context.Y === undefined) context.Y = element.presentation.position3D.y;
+        // Model presentation is authoritative over legacy model style fields.
+        applyPosition3D(element.presentation.position3D, true);
       } else if (element.presentation.position2D) {
         context.position2D = element.presentation.position2D;
         if (context.X === undefined) context.X = element.presentation.position2D.x;
@@ -167,6 +177,28 @@ export class CodegenContextBuilderService {
       }
     }
 
+    // Diagram elements can omit a local spatial override. In that case, use
+    // the linked model element's canonical presentation as the deterministic
+    // generation fallback.
+    if (resolvedModelElement?.presentation) {
+      const modelPresentation = resolvedModelElement.presentation;
+      context.presentation = context.presentation ?? modelPresentation;
+      applyPosition3D(modelPresentation.position3D, false);
+
+      if (context.RZ === undefined && modelPresentation.rotationZ !== undefined) {
+        context.RZ = modelPresentation.rotationZ;
+      }
+      if (context.size3D === undefined && modelPresentation.size3D) {
+        context.size3D = modelPresentation.size3D;
+        context.widthMm = context.widthMm ?? modelPresentation.size3D.widthMm;
+        context.heightMm = context.heightMm ?? modelPresentation.size3D.heightMm;
+        context.depthMm = context.depthMm ?? modelPresentation.size3D.depthMm;
+        context.Length = context.Length ?? modelPresentation.size3D.widthMm;
+        context.Width = context.Width ?? modelPresentation.size3D.heightMm;
+        context.Height = context.Height ?? modelPresentation.size3D.depthMm;
+      }
+    }
+
     // If we resolved a model element, merge its style (attribute values) so inherited attributes are accessible
     if (resolvedModelElement && resolvedModelElement.style) {
       Object.keys(resolvedModelElement.style).forEach(attrName => {
@@ -178,17 +210,17 @@ export class CodegenContextBuilderService {
 
     // Add properties from appearance if not already set
     if (appearance) {
-      // Width (X-axis, from heightMm)
+      // Width alias is the domain Y extent (heightMm).
       if (context.Width === undefined && appearance.heightMm !== undefined) {
         context.Width = appearance.heightMm;
       }
       
-      // Height (Y-axis, from depthMm)
+      // Height alias is the vertical Z extent (depthMm).
       if (context.Height === undefined && appearance.depthMm !== undefined) {
         context.Height = appearance.depthMm;
       }
       
-      // Length (Z-axis, from widthMm)
+      // Length alias is the domain X extent (widthMm).
       if (context.Length === undefined && appearance.widthMm !== undefined) {
         context.Length = appearance.widthMm;
       }
