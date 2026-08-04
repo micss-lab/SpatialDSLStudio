@@ -4,7 +4,8 @@ import {
   ResourceType,
   SharePermission,
   SharedResource as SharedResourceType,
-  UserRole
+  UserRole,
+  ProjectRole
 } from '../../../shared/types';
 import { ResourceType as PrismaResourceType, SharePermission as PrismaSharePermission } from '@prisma/client';
 import { sendShareNotificationEmail } from './email.service';
@@ -25,6 +26,7 @@ export interface AccessCheckResult {
   isOwner: boolean;
   permission?: SharePermission;
   ownerEmail?: string;
+  projectRole?: ProjectRole;
 }
 
 class SharingService {
@@ -487,7 +489,8 @@ class SharingService {
   ): Promise<AccessCheckResult> {
     // Resolve the owner once and reuse it for the ownership check, the missing-
     // resource short-circuit, and the admin bypass below.
-    const ownerId = await this.getResourceOwnerId(resourceType, resourceId);
+    const identity = await this.getResourceIdentity(resourceType, resourceId);
+    const ownerId = identity?.userId ?? null;
 
     if (ownerId === null) {
       return { hasAccess: false, isOwner: false };
@@ -497,7 +500,46 @@ class SharingService {
       return { hasAccess: true, isOwner: true };
     }
 
-    // Check if resource is shared with user
+    // Platform administration and project membership supersede legacy
+    // per-resource shares. In particular, an old VIEWER share must not weaken
+    // a user's newer MODELER or DSL_DESIGNER project role.
+    if (await this.isAdmin(userId)) {
+      const owner = await prisma.user.findUnique({
+        where: { id: ownerId },
+        select: { email: true },
+      });
+      return {
+        hasAccess: true,
+        isOwner: false,
+        permission: 'EDITOR',
+        ownerEmail: owner?.email,
+      };
+    }
+
+    // A project membership grants access to every top-level artifact in that
+    // project. Per-resource shares remain as a legacy compatibility path.
+    if (identity?.projectId) {
+      const membership = await prisma.projectMembership.findUnique({
+        where: {
+          projectId_userId: {
+            projectId: identity.projectId,
+            userId,
+          },
+        },
+        select: { role: true },
+      });
+      if (membership) {
+        return {
+          hasAccess: true,
+          isOwner: false,
+          permission: membership.role === 'VIEWER' ? 'VIEWER' : 'EDITOR',
+          projectRole: membership.role as ProjectRole,
+        };
+      }
+    }
+
+    // Per-resource shares remain available only as a flat-API compatibility
+    // path while access management moves to the project boundary.
     const share = await prisma.sharedResource.findUnique({
       where: {
         resourceType_resourceId_sharedWithId: {
@@ -517,22 +559,6 @@ class SharingService {
         isOwner: false,
         permission: share.permission as SharePermission,
         ownerEmail: share.owner.email,
-      };
-    }
-
-    // Platform admins can view and edit every resource, even ones not owned by
-    // or shared with them (EDITOR-equivalent). Delete and share stay
-    // owner-restricted, since those paths gate on ownership directly.
-    if (await this.isAdmin(userId)) {
-      const owner = await prisma.user.findUnique({
-        where: { id: ownerId },
-        select: { email: true },
-      });
-      return {
-        hasAccess: true,
-        isOwner: false,
-        permission: 'EDITOR',
-        ownerEmail: owner?.email,
       };
     }
 
@@ -572,48 +598,55 @@ class SharingService {
     resourceType: ResourceType,
     resourceId: string
   ): Promise<string | null> {
-    let resource: { userId: string } | null = null;
+    return (await this.getResourceIdentity(resourceType, resourceId))?.userId ?? null;
+  }
+
+  private async getResourceIdentity(
+    resourceType: ResourceType,
+    resourceId: string
+  ): Promise<{ userId: string; projectId: string | null } | null> {
+    let resource: { userId: string; projectId: string | null } | null = null;
 
     switch (resourceType) {
       case 'METAMODEL':
         resource = await prisma.metamodel.findFirst({
           where: { id: resourceId },
-          select: { userId: true },
+          select: { userId: true, projectId: true },
         });
         break;
       case 'MODEL':
         resource = await prisma.model.findFirst({
           where: { id: resourceId },
-          select: { userId: true },
+          select: { userId: true, projectId: true },
         });
         break;
       case 'DIAGRAM':
         resource = await prisma.diagram.findFirst({
           where: { id: resourceId },
-          select: { userId: true },
+          select: { userId: true, projectId: true },
         });
         break;
       case 'TRANSFORMATION_RULE':
         resource = await prisma.transformationRule.findFirst({
           where: { id: resourceId },
-          select: { userId: true },
+          select: { userId: true, projectId: true },
         });
         break;
       case 'CODEGEN_PROJECT':
         resource = await prisma.codeGenerationProject.findFirst({
           where: { id: resourceId },
-          select: { userId: true },
+          select: { userId: true, projectId: true },
         });
         break;
       case 'TEST_CASE':
         resource = await prisma.testCase.findFirst({
           where: { id: resourceId },
-          select: { userId: true },
+          select: { userId: true, projectId: true },
         });
         break;
     }
 
-    return resource?.userId ?? null;
+    return resource;
   }
 
   /**

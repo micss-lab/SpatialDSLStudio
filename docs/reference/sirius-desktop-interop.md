@@ -44,9 +44,16 @@ Goal: take a model built in SpatialDSL and open its diagram in Sirius Desktop.
 The preferred path is Viewpoint manager -> `Export Zip`. SpatialDSL chooses the
 primary model and produces an Eclipse modeling project containing `.project`,
 `model/<metamodel>.ecore`, `model/<model>.xmi`,
-`description/<metamodel>.odesign`, `representations.aird`, and the compatibility
-report. Extract the ZIP, then use `File > Import > Existing Projects into
+`description/<metamodel>.odesign`, `representations.aird`,
+`spatialdsl-presentation.json`, and the compatibility report. Extract the ZIP,
+then use `File > Import > Existing Projects into
 Workspace` in Eclipse and select the extracted directory.
+
+The JSON sidecar is SpatialDSL-specific and does not affect whether Eclipse
+Sirius can open the project. It records canonical 3D position (including base
+elevation Z), 3D extents, and yaw by stable semantic element ID. Re-importing
+the complete ZIP consumes the sidecar after the semantic model is present and
+restores those values losslessly.
 
 The individual-file workflow remains useful for diagnosis:
 
@@ -103,7 +110,8 @@ two nodes, one edge).
 | SpatialDSL -> Sirius -> open | Diagram opens in Sirius Desktop with matching layout. |
 | Sirius -> SpatialDSL -> view | View opens in SpatialDSL with matching layout. |
 | SpatialDSL -> export `.aird` -> re-import | Same nodes, edges, and layout (in-app round-trip; covered by automated tests). |
-| SpatialDSL -> export project ZIP | ZIP contains all four resources; every `.aird` semantic/viewpoint/description reference resolves within the bundle. |
+| SpatialDSL -> export project ZIP | ZIP contains the four Sirius resources plus `spatialdsl-presentation.json`; every `.aird` semantic/viewpoint/description reference resolves within the bundle. |
+| SpatialDSL project ZIP 3D pose | `spatialdsl-presentation.json` restores X/Y/Z, extents, and yaw by semantic element ID. |
 
 ## Known gaps (expected to not round-trip yet)
 
@@ -116,6 +124,10 @@ These are reported, never silently dropped. Track them in
 - Container nesting, tool operations, and model operation language.
 - Table and tree representations.
 - Multi-resource sessions and lazy `.srm` representation files.
+- Sirius `.aird` stores the supported 2D GMF layout, not SpatialDSL's Z-up 3D
+  pose. Standalone `.aird` export and project ZIP import without the sidecar
+  report that elevation and 3D extents are not lossless and default missing Z
+  to ground; they do not claim a lossless 3D round-trip.
 
 When a parity check fails on something outside this list, capture the input
 files and the in-app compatibility report and file it against the roadmap.

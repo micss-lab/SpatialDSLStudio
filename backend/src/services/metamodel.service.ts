@@ -12,15 +12,45 @@ import {
 } from '../../../shared/types';
 import { sharingService } from './sharing.service';
 import { canPerformOperation } from '../middleware/permissions';
+import { validateConcreteSyntaxVerticalPlacement } from '../../../shared/spatial';
 
 // Extended metamodel type with permission info
 export interface MetamodelWithPermission extends Metamodel, ResourceWithPermission {}
 
 class MetamodelService {
+  private assertValidClassVerticalPlacement(metaClass: unknown, path: string): void {
+    if (!metaClass || typeof metaClass !== 'object' || Array.isArray(metaClass)) return;
+    const concreteSyntax = (metaClass as Record<string, unknown>).concreteSyntax;
+    if (concreteSyntax === undefined) return;
+
+    const errors = validateConcreteSyntaxVerticalPlacement(concreteSyntax, `${path}.concreteSyntax`);
+    if (errors.length > 0) throw new ApiError(400, errors[0]);
+  }
+
+  private assertValidClassesVerticalPlacement(classes: unknown, path = 'classes'): void {
+    if (!Array.isArray(classes)) return;
+    classes.forEach((metaClass, index) => (
+      this.assertValidClassVerticalPlacement(metaClass, `${path}[${index}]`)
+    ));
+  }
+
   /**
    * Get all metamodels accessible by a user (owned + shared)
    */
-  async getAll(userId: string): Promise<MetamodelWithPermission[]> {
+  async getAll(userId: string, projectId?: string): Promise<MetamodelWithPermission[]> {
+    if (projectId) {
+      const projectMetamodels = await prisma.metamodel.findMany({
+        where: { projectId },
+        orderBy: { name: 'asc' },
+        include: { user: { select: { email: true } } },
+      });
+      return projectMetamodels.map(mm => ({
+        ...this.mapToMetamodel(mm),
+        isOwner: mm.userId === userId,
+        permission: mm.userId === userId ? undefined : 'EDITOR',
+        ownerEmail: mm.userId === userId ? undefined : mm.user.email,
+      }));
+    }
     // Platform admins see and can edit every metamodel on the platform.
     if (await sharingService.isAdmin(userId)) {
       const all = await prisma.metamodel.findMany({
@@ -83,9 +113,9 @@ class MetamodelService {
   /**
    * Get a single metamodel by ID (with access check)
    */
-  async getById(id: string, userId: string): Promise<MetamodelWithPermission | null> {
+  async getById(id: string, userId: string, projectId?: string): Promise<MetamodelWithPermission | null> {
     const metamodel = await prisma.metamodel.findFirst({
-      where: { id },
+      where: { id, ...(projectId && { projectId }) },
     });
 
     if (!metamodel) return null;
@@ -107,7 +137,7 @@ class MetamodelService {
   /**
    * Create a new metamodel (requires ADMIN or DSL_DESIGNER role)
    */
-  async create(data: CreateMetamodelRequest, userId: string, userRole: UserRole): Promise<Metamodel> {
+  async create(data: CreateMetamodelRequest, userId: string, userRole: UserRole, projectId?: string): Promise<Metamodel> {
     // Check role permission
     if (!canPerformOperation(userRole, 'metamodel', 'create')) {
       throw new ApiError(403, 'Your role does not allow creating metamodels');
@@ -115,12 +145,14 @@ class MetamodelService {
 
     // Verify the meta-metamodel exists (allow any user's ePackage as reference)
     const ePackage = await prisma.ePackage.findFirst({
-      where: { id: data.conformsTo },
+      where: { id: data.conformsTo, ...(projectId && { projectId }) },
     });
 
     if (!ePackage) {
       throw new ApiError(400, 'Referenced meta-metamodel (conformsTo) not found');
     }
+
+    this.assertValidClassesVerticalPlacement(data.classes || []);
 
     const metamodel = await prisma.metamodel.create({
       data: {
@@ -135,6 +167,7 @@ class MetamodelService {
         constraints: (data.constraints || []) as any,
         conformsToId: data.conformsTo,
         userId,
+        projectId,
       },
     });
 
@@ -145,6 +178,9 @@ class MetamodelService {
    * Update an existing metamodel (with permission check)
    */
   async update(id: string, data: UpdateMetamodelRequest, userId: string, userRole: UserRole): Promise<Metamodel> {
+    if (!canPerformOperation(userRole, 'metamodel', 'editClass')) {
+      throw new ApiError(403, 'Your role does not allow editing metamodels');
+    }
     const access = await sharingService.checkAccess('METAMODEL', id, userId);
     
     if (!access.hasAccess) {
@@ -158,6 +194,10 @@ class MetamodelService {
 
     if (!canEdit) {
       throw new ApiError(403, 'You do not have permission to edit this metamodel');
+    }
+
+    if (data.classes !== undefined) {
+      this.assertValidClassesVerticalPlacement(data.classes);
     }
 
     const metamodel = await prisma.metamodel.update({
@@ -179,9 +219,14 @@ class MetamodelService {
   /**
    * Delete a metamodel (owner or platform admin)
    */
-  async delete(id: string, userId: string, userRole: UserRole): Promise<void> {
+  async delete(id: string, userId: string, userRole: UserRole, projectId?: string): Promise<void> {
+    if (projectId && !canPerformOperation(userRole, 'metamodel', 'deleteClass')) {
+      throw new ApiError(403, 'Your role does not allow deleting metamodels');
+    }
     const existing = await prisma.metamodel.findFirst({
-      where: userRole === 'ADMIN' ? { id } : { id, userId },
+      where: projectId
+        ? { id, projectId }
+        : userRole === 'ADMIN' ? { id } : { id, userId },
     });
 
     if (!existing) {
@@ -247,6 +292,8 @@ class MetamodelService {
       throw new ApiError(400, 'Class with this ID already exists');
     }
 
+    this.assertValidClassVerticalPlacement(metaClass, 'class');
+
     classes.push(metaClass);
 
     const updated = await prisma.metamodel.update({
@@ -290,7 +337,9 @@ class MetamodelService {
       throw new ApiError(404, 'Class not found in metamodel');
     }
 
-    classes[classIndex] = { ...classes[classIndex], ...updates };
+    const updatedClass = { ...classes[classIndex], ...updates };
+    this.assertValidClassVerticalPlacement(updatedClass, 'class');
+    classes[classIndex] = updatedClass;
 
     const updated = await prisma.metamodel.update({
       where: { id: metamodelId },
@@ -403,6 +452,7 @@ class MetamodelService {
   private mapToMetamodel(mm: any): Metamodel {
     return {
       id: mm.id,
+      projectId: mm.projectId || undefined,
       name: mm.name,
       description: mm.description || undefined,
       eClass: mm.eClass || '',

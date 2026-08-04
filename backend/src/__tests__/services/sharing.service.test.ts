@@ -61,6 +61,7 @@ describe('SharingService', () => {
         constraints: [],
         conformsToId: 'pkg-1',
         userId: 'owner-uuid',
+        projectId: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -84,6 +85,7 @@ describe('SharingService', () => {
         constraints: [],
         conformsToId: 'pkg-1',
         userId: 'other-owner',
+        projectId: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -109,6 +111,29 @@ describe('SharingService', () => {
       const result = await sharingService.checkAccess('METAMODEL', 'mm-uuid-1', 'stranger-uuid');
 
       expect(result.hasAccess).toBe(false);
+    });
+
+    it('lets project membership supersede a weaker legacy resource share', async () => {
+      prismaMock.metamodel.findFirst.mockResolvedValue({
+        id: 'mm-uuid-1',
+        userId: 'other-owner',
+        projectId: 'project-uuid-1',
+      } as any);
+      prismaMock.user.findUnique.mockResolvedValue({ role: 'MODELER' } as any);
+      prismaMock.projectMembership.findUnique.mockResolvedValue({ role: 'MODELER' } as any);
+      prismaMock.sharedResource.findUnique.mockResolvedValue({
+        ...mockShare,
+        permission: 'VIEWER',
+      } as any);
+
+      const result = await sharingService.checkAccess('METAMODEL', 'mm-uuid-1', 'target-uuid');
+
+      expect(result).toEqual(expect.objectContaining({
+        hasAccess: true,
+        permission: 'EDITOR',
+        projectRole: 'MODELER',
+      }));
+      expect(prismaMock.sharedResource.findUnique).not.toHaveBeenCalled();
     });
 
     it('grants EDITOR access to a platform ADMIN for any resource', async () => {

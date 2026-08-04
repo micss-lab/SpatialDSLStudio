@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Box, Tabs, Tab, Paper } from '@mui/material';
+import { Alert, Box, Tabs, Tab, Paper } from '@mui/material';
 import TransformationRuleEditor from './TransformationRuleEditor';
 import TransformationExecutionPanel from './TransformationExecutionPanel';
+import { useProject } from '../../contexts/ProjectContext';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -38,7 +39,10 @@ function a11yProps(index: number) {
 }
 
 const TransformationDashboard: React.FC = () => {
-  const [tabValue, setTabValue] = useState(0);
+  const { can } = useProject();
+  const canAuthor = can('transformation.author');
+  const canExecute = can('transformation.execute');
+  const [tabValue, setTabValue] = useState(canAuthor ? 0 : 1);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedModelId, setSelectedModelId] = useState<string>('');
   const [selectedRuleId, setSelectedRuleId] = useState<string>('');
@@ -65,26 +69,34 @@ const TransformationDashboard: React.FC = () => {
             onChange={handleTabChange} 
             aria-label="transformation tabs"
           >
-            <Tab label="Rule Editor" {...a11yProps(0)} />
-            <Tab label="Execution" {...a11yProps(1)} />
+            <Tab label="Rule Editor" disabled={!canAuthor} {...a11yProps(0)} />
+            <Tab label="Execution" disabled={!canExecute} {...a11yProps(1)} />
           </Tabs>
         </Box>
         
         <TabPanel value={tabValue} index={0}>
-          <TransformationRuleEditor 
-            selectedRuleId={selectedRuleId}
-            onRuleSelect={handleRuleSelect}
-          />
+          {canAuthor ? (
+            <TransformationRuleEditor
+              selectedRuleId={selectedRuleId}
+              onRuleSelect={handleRuleSelect}
+            />
+          ) : (
+            <Alert severity="info">Your project role cannot author transformation rules.</Alert>
+          )}
         </TabPanel>
         
         <TabPanel value={tabValue} index={1}>
-          <TransformationExecutionPanel 
-            onShowModel={handleShowModel}
-          />
+          {canExecute ? (
+            <TransformationExecutionPanel
+              onShowModel={handleShowModel}
+            />
+          ) : (
+            <Alert severity="info">Transformation execution is read-only for your project role.</Alert>
+          )}
         </TabPanel>
       </Paper>
     </Box>
   );
 };
 
-export default TransformationDashboard; 
+export default TransformationDashboard;

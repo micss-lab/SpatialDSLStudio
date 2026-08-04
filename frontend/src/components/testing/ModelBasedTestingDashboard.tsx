@@ -5,7 +5,7 @@ import BugReportIcon from '@mui/icons-material/BugReport';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useProject } from '../../contexts/ProjectContext';
 import { metamodelService } from '../../services/metamodel';
 import { testGenerationService, TestCase, TestGenerationOptions, testRunnerService, testCoverageService, CoverageReport } from '../../services/testing';
 import TestCaseTable from './TestCaseTable';
@@ -42,8 +42,10 @@ const ModelBasedTestingDashboard: React.FC = () => {
   const { metamodelId } = useParams<{ metamodelId: string }>();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const navigate = useNavigate();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { canCreate, canDelete } = useAuth();
+  const { can } = useProject();
+  const canAuthor = can('test.author');
+  const canExecute = can('test.execute');
+  const canDelete = canAuthor;
   const [metamodels, setMetamodels] = useState<Metamodel[]>([]);
   const [metamodel, setMetamodel] = useState<Metamodel | null>(null);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
@@ -146,7 +148,7 @@ const ModelBasedTestingDashboard: React.FC = () => {
   };
 
   const handleGenerateTests = async () => {
-    if (!metamodel) return;
+    if (!metamodel || !canAuthor) return;
     
     setIsGenerating(true);
     try {
@@ -183,7 +185,7 @@ const ModelBasedTestingDashboard: React.FC = () => {
   };
 
   const handleRunTests = async () => {
-    if (!metamodel || testCases.length === 0) return;
+    if (!metamodel || testCases.length === 0 || !canExecute) return;
     
     setIsRunning(true);
     try {
@@ -221,7 +223,7 @@ const ModelBasedTestingDashboard: React.FC = () => {
   };
 
   const handleRunAllMetamodelTests = async () => {
-    if (metamodels.length === 0) return;
+    if (metamodels.length === 0 || !canExecute) return;
     
     setIsRunning(true);
     let totalPassed = 0;
@@ -284,6 +286,13 @@ const ModelBasedTestingDashboard: React.FC = () => {
         <Typography variant="h4" component="h1" gutterBottom>
           Metamodel-Based Testing
         </Typography>
+        {!canAuthor && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            {canExecute
+              ? 'Your project role can run existing tests but cannot author or delete test cases.'
+              : 'Testing is read-only for your project role.'}
+          </Alert>
+        )}
         
         <Box sx={{ display: 'flex', mt: 2 }}>
           {/* Model Selection Panel */}
@@ -351,7 +360,7 @@ const ModelBasedTestingDashboard: React.FC = () => {
               fullWidth
               onClick={handleRunAllMetamodelTests}
               startIcon={isRunning ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
-              disabled={isRunning || !Object.values(allTestCases).some(tests => tests.length > 0)}
+              disabled={!canExecute || isRunning || !Object.values(allTestCases).some(tests => tests.length > 0)}
             >
               {isRunning ? 'Running...' : 'Run All Metamodel Tests'}
             </Button>
@@ -397,7 +406,7 @@ const ModelBasedTestingDashboard: React.FC = () => {
                         color="primary"
                         startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : <BugReportIcon />}
                         onClick={handleGenerateTests}
-                        disabled={isGenerating || !metamodel}
+                        disabled={!canAuthor || isGenerating || !metamodel}
                         sx={{ mr: 2 }}
                       >
                         {isGenerating ? 'Generating...' : 'Generate Comprehensive Test Suite'}
@@ -409,7 +418,7 @@ const ModelBasedTestingDashboard: React.FC = () => {
                           color="secondary"
                           startIcon={isRunning ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
                           onClick={handleRunTests}
-                          disabled={isRunning || !metamodel}
+                          disabled={!canExecute || isRunning || !metamodel}
                         >
                           {isRunning ? 'Running...' : 'Run Tests'}
                         </Button>
@@ -446,7 +455,7 @@ const ModelBasedTestingDashboard: React.FC = () => {
                         color="secondary"
                         startIcon={isRunning ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
                         onClick={handleRunTests}
-                        disabled={isRunning || testCases.length === 0}
+                        disabled={!canExecute || isRunning || testCases.length === 0}
                       >
                         {isRunning ? 'Running...' : 'Run All Tests'}
                       </Button>
@@ -491,4 +500,4 @@ const ModelBasedTestingDashboard: React.FC = () => {
   );
 };
 
-export default ModelBasedTestingDashboard; 
+export default ModelBasedTestingDashboard;

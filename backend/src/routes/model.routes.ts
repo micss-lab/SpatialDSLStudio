@@ -1,12 +1,15 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { body, param, query } from 'express-validator';
-import { validate, authenticate, AuthenticatedRequest } from '../middleware';
+import { validate, authenticate, AuthenticatedRequest, projectResourceParam, projectArgs } from '../middleware';
 import { modelService } from '../services';
+import { validatePresentation } from '../../../shared/spatial';
+import { requireNoSpatialErrors, spatialElementErrors } from '../middleware/presentationValidation';
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
 // All routes require authentication
 router.use(authenticate);
+router.param('id', projectResourceParam('model'));
 
 // Async handler wrapper
 const asyncHandler = (fn: Function) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -21,11 +24,11 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
   const { metamodelId } = req.query;
   
   if (metamodelId && typeof metamodelId === 'string') {
-    const models = await modelService.getByMetamodelId(metamodelId, req.user!.userId);
+    const models = await modelService.getByMetamodelId(metamodelId, req.user!.userId, ...projectArgs(req));
     return res.json({ success: true, data: models });
   }
   
-  const models = await modelService.getAll(req.user!.userId);
+  const models = await modelService.getAll(req.user!.userId, ...projectArgs(req));
   res.json({ success: true, data: models });
 }));
 
@@ -34,7 +37,7 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
  * @desc    Get a single model by ID
  */
 router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const model = await modelService.getById(req.params.id, req.user!.userId);
+  const model = await modelService.getById(req.params.id, req.user!.userId, ...projectArgs(req));
   if (!model) {
     return res.status(404).json({ success: false, error: 'Model not found' });
   }
@@ -51,9 +54,13 @@ router.post(
     body('name').notEmpty().withMessage('Name is required'),
     body('metamodelId').notEmpty().withMessage('metamodelId is required'),
     body('conformsTo').notEmpty().withMessage('conformsTo is required'),
+    body('elements').optional().isArray().withMessage('elements must be an array'),
+    body('elements').optional().custom((elements: unknown[]) => requireNoSpatialErrors(
+      elements.flatMap((element, index) => spatialElementErrors(element, `elements[${index}]`))
+    )),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const model = await modelService.create(req.body, req.user!.userId, req.user!.role);
+    const model = await modelService.create(req.body, req.user!.userId, req.user!.role, ...projectArgs(req));
     res.status(201).json({ success: true, data: model });
   })
 );
@@ -64,7 +71,13 @@ router.post(
  */
 router.put(
   '/:id',
-  validate([param('id').isUUID().withMessage('Invalid ID format')]),
+  validate([
+    param('id').isUUID().withMessage('Invalid ID format'),
+    body('elements').optional().isArray().withMessage('elements must be an array'),
+    body('elements').optional().custom((elements: unknown[]) => requireNoSpatialErrors(
+      elements.flatMap((element, index) => spatialElementErrors(element, `elements[${index}]`))
+    )),
+  ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const model = await modelService.update(req.params.id, req.body, req.user!.userId, req.user!.role);
     res.json({ success: true, data: model });
@@ -79,7 +92,7 @@ router.delete(
   '/:id',
   validate([param('id').isUUID().withMessage('Invalid ID format')]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    await modelService.delete(req.params.id, req.user!.userId, req.user!.role);
+    await modelService.delete(req.params.id, req.user!.userId, req.user!.role, ...projectArgs(req));
     res.json({ success: true, message: 'Model deleted successfully' });
   })
 );
@@ -94,6 +107,7 @@ router.post(
     param('id').isUUID().withMessage('Invalid model ID format'),
     body('id').notEmpty().withMessage('Element ID is required'),
     body('modelElementId').notEmpty().withMessage('modelElementId (metaclass ID) is required'),
+    body().custom(value => requireNoSpatialErrors(spatialElementErrors(value))),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const model = await modelService.addElement(req.params.id, req.body, req.user!.userId, req.user!.role);
@@ -110,6 +124,7 @@ router.put(
   validate([
     param('id').isUUID().withMessage('Invalid model ID format'),
     param('elementId').notEmpty().withMessage('Element ID is required'),
+    body().custom(value => requireNoSpatialErrors(spatialElementErrors(value))),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const model = await modelService.updateElement(req.params.id, req.params.elementId, req.body, req.user!.userId, req.user!.role);
@@ -126,6 +141,7 @@ router.put(
   validate([
     param('id').isUUID().withMessage('Invalid model ID format'),
     param('elementId').notEmpty().withMessage('Element ID is required'),
+    body().custom(value => requireNoSpatialErrors(validatePresentation(value))),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const model = await modelService.updateElementPresentation(

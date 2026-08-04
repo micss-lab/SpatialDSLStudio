@@ -1,5 +1,19 @@
 import { Metamodel } from '../../models/types';
 import { metaMetamodelService } from '../metametamodel';
+import { validateConcreteSyntaxVerticalPlacement } from '../spatial';
+
+export function validateMetamodelVerticalPlacementPolicies(
+  metamodel: Pick<Metamodel, 'classes'>
+): string[] {
+  return (metamodel.classes || []).flatMap((metaClass, index) => (
+    metaClass.concreteSyntax === undefined
+      ? []
+      : validateConcreteSyntaxVerticalPlacement(
+        metaClass.concreteSyntax,
+        `classes[${index}].concreteSyntax`
+      )
+  ));
+}
 
 /**
  * Validates a metamodel for conformance to its meta-metamodel and internal consistency.
@@ -9,6 +23,7 @@ import { metaMetamodelService } from '../metametamodel';
  */
 export function validateMetamodel(metamodel: Metamodel): { valid: boolean; issues: string[] } {
   const issues: string[] = [];
+  issues.push(...validateMetamodelVerticalPlacementPolicies(metamodel));
   
   // Check if the conformsTo refers to a valid meta-metamodel package
   const metaPackage = metaMetamodelService.getEPackageById(metamodel.conformsTo);

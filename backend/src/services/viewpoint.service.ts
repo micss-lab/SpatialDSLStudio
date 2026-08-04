@@ -20,6 +20,10 @@ import {
 } from '../../../shared/types';
 import { sharingService } from './sharing.service';
 import { canPerformOperation } from '../middleware/permissions';
+import {
+  validateConcreteSyntaxMapVerticalPlacements,
+  validateConcreteSyntaxVerticalPlacement,
+} from '../../../shared/spatial';
 
 const REPRESENTATION_KINDS = new Set(['diagram', 'table', 'tree']);
 const ATTACHMENT_SIDES = new Set(['top', 'right', 'bottom', 'left']);
@@ -30,6 +34,16 @@ const FILTER_RULE_KINDS = new Set(['mapping', 'variable']);
 const FILTER_KINDS = new Set(['hide', 'collapse']);
 
 class ViewpointService {
+  private assertValidConcreteSyntax(value: unknown, path: string): void {
+    const errors = validateConcreteSyntaxVerticalPlacement(value, path);
+    if (errors.length > 0) throw new ApiError(400, errors[0]);
+  }
+
+  private assertValidConcreteSyntaxMap(value: unknown, path: string): void {
+    const errors = validateConcreteSyntaxMapVerticalPlacements(value, path);
+    if (errors.length > 0) throw new ApiError(400, errors[0]);
+  }
+
   private mapToMetamodel(row: any): Metamodel {
     return {
       id: row.id,
@@ -47,6 +61,7 @@ class ViewpointService {
   private mapToViewpoint(row: any): Viewpoint {
     return {
       id: row.id,
+      projectId: row.projectId || undefined,
       name: row.name,
       description: row.description || undefined,
       metamodelId: row.metamodelId,
@@ -75,6 +90,11 @@ class ViewpointService {
         }
       }
     }
+
+    this.assertValidConcreteSyntaxMap(
+      concreteSyntaxByMetaClassId,
+      'representationDescriptions[0].concreteSyntaxByMetaClassId'
+    );
 
     return {
       id: uuidv4(),
@@ -268,6 +288,12 @@ class ViewpointService {
       ) {
         throw new ApiError(400, `containerMappings[${index}].concreteSyntax must be an object`);
       }
+      if (candidate.concreteSyntax !== undefined) {
+        this.assertValidConcreteSyntax(
+          candidate.concreteSyntax,
+          `containerMappings[${index}].concreteSyntax`
+        );
+      }
 
       return {
         id,
@@ -355,6 +381,12 @@ class ViewpointService {
           throw new ApiError(400, `conditionalStyles[${index}].${key} must be an object`);
         }
       }
+      if (candidate.concreteSyntax !== undefined) {
+        this.assertValidConcreteSyntax(
+          candidate.concreteSyntax,
+          `conditionalStyles[${index}].concreteSyntax`
+        );
+      }
       return {
         id,
         mappingId: candidate.mappingId.trim(),
@@ -415,6 +447,12 @@ class ViewpointService {
           if (mappingCandidate[key] !== undefined && (!mappingCandidate[key] || typeof mappingCandidate[key] !== 'object' || Array.isArray(mappingCandidate[key]))) {
             throw new ApiError(400, `layers[${layerIndex}].mappings[${mappingIndex}].${key} must be an object`);
           }
+        }
+        if (mappingCandidate.concreteSyntax !== undefined) {
+          this.assertValidConcreteSyntax(
+            mappingCandidate.concreteSyntax,
+            `layers[${layerIndex}].mappings[${mappingIndex}].concreteSyntax`
+          );
         }
         const optionalString = (key: string) => (
           typeof mappingCandidate[key] === 'string' && mappingCandidate[key].trim()
@@ -686,6 +724,12 @@ class ViewpointService {
       ) {
         throw new ApiError(400, 'layers, filters, and conditionalStyles are only supported on diagram representations');
       }
+      if (candidate.concreteSyntaxByMetaClassId !== undefined) {
+        this.assertValidConcreteSyntaxMap(
+          candidate.concreteSyntaxByMetaClassId,
+          `representationDescriptions[${index}].concreteSyntaxByMetaClassId`
+        );
+      }
 
       return {
         id,
@@ -765,9 +809,21 @@ class ViewpointService {
     return `Default ${suffix}`;
   }
 
-  async getAll(userId: string, metamodelId?: string): Promise<Viewpoint[]> {
+  async getAll(userId: string, metamodelId?: string, projectId?: string): Promise<Viewpoint[]> {
     if (metamodelId) {
       await this.assertCanReadMetamodel(metamodelId, userId);
+    }
+
+    if (projectId) {
+      if (metamodelId) {
+        const metamodel = await prisma.metamodel.findFirst({ where: { id: metamodelId, projectId } });
+        if (!metamodel) throw new ApiError(404, 'Metamodel not found in this project');
+      }
+      const projectViewpoints = await prisma.viewpoint.findMany({
+        where: { projectId, ...(metamodelId && { metamodelId }) },
+        orderBy: [{ metamodelId: 'asc' }, { isDefault: 'desc' }, { name: 'asc' }],
+      });
+      return projectViewpoints.map(row => this.mapToViewpoint(row));
     }
 
     // Platform admins see and can edit every viewpoint on the platform.
@@ -812,8 +868,8 @@ class ViewpointService {
     return viewpoints.map(row => this.mapToViewpoint(row));
   }
 
-  async getById(id: string, userId: string): Promise<Viewpoint | null> {
-    const viewpoint = await prisma.viewpoint.findFirst({ where: { id } });
+  async getById(id: string, userId: string, projectId?: string): Promise<Viewpoint | null> {
+    const viewpoint = await prisma.viewpoint.findFirst({ where: { id, ...(projectId && { projectId }) } });
     if (!viewpoint) return null;
 
     const access = await sharingService.checkAccess('METAMODEL', viewpoint.metamodelId, userId);
@@ -822,11 +878,11 @@ class ViewpointService {
     return this.mapToViewpoint(viewpoint);
   }
 
-  async getDefaultForMetamodel(metamodelId: string, userId: string): Promise<Viewpoint> {
+  async getDefaultForMetamodel(metamodelId: string, userId: string, projectId?: string): Promise<Viewpoint> {
     await this.assertCanReadMetamodel(metamodelId, userId);
 
     const existing = await prisma.viewpoint.findFirst({
-      where: { metamodelId, isDefault: true },
+      where: { metamodelId, isDefault: true, ...(projectId && { projectId }) },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -834,7 +890,16 @@ class ViewpointService {
       return this.mapToViewpoint(existing);
     }
 
-    const metamodelRow = await prisma.metamodel.findFirst({ where: { id: metamodelId } });
+    // Project-scoped reads must never create language definitions. A DSL
+    // Designer can explicitly create the generated default through the POST
+    // endpoint; Modelers then consume it when creating Views.
+    if (projectId) {
+      throw new ApiError(404, 'No default viewpoint exists for this metamodel');
+    }
+
+    const metamodelRow = await prisma.metamodel.findFirst({
+      where: { id: metamodelId },
+    });
     if (!metamodelRow) {
       throw new ApiError(404, 'Metamodel not found');
     }
@@ -860,8 +925,49 @@ class ViewpointService {
     return this.mapToViewpoint(created);
   }
 
-  async create(data: CreateViewpointRequest, userId: string, userRole: UserRole): Promise<Viewpoint> {
+  async createDefaultForMetamodel(
+    metamodelId: string,
+    userId: string,
+    userRole: UserRole,
+    projectId?: string
+  ): Promise<Viewpoint> {
+    const metamodelRow = await this.assertCanEditMetamodel(metamodelId, userId, userRole);
+    if (projectId && metamodelRow.projectId !== projectId) {
+      throw new ApiError(404, 'Metamodel not found in this project');
+    }
+
+    const existing = await prisma.viewpoint.findFirst({
+      where: { metamodelId, isDefault: true, ...(projectId && { projectId }) },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (existing) return this.mapToViewpoint(existing);
+
+    const metamodel = this.mapToMetamodel(metamodelRow);
+    const viewpointId = uuidv4();
+    const representationDescription = this.buildDefaultRepresentationDescription(viewpointId, metamodel);
+    const defaultName = await this.generateUniqueDefaultName(metamodelId);
+    const created = await prisma.viewpoint.create({
+      data: {
+        id: viewpointId,
+        name: defaultName,
+        description: 'Default modeling perspective generated from the metamodel.',
+        metamodelId,
+        representationDescriptions: [representationDescription] as any,
+        sharedConcreteSyntax: {} as any,
+        isDefault: true,
+        userId,
+        projectId,
+      },
+    });
+
+    return this.mapToViewpoint(created);
+  }
+
+  async create(data: CreateViewpointRequest, userId: string, userRole: UserRole, projectId?: string): Promise<Viewpoint> {
     const metamodelRow = await this.assertCanEditMetamodel(data.metamodelId, userId, userRole);
+    if (projectId && metamodelRow.projectId !== projectId) {
+      throw new ApiError(400, 'Referenced metamodel is not in this project');
+    }
 
     const viewpointId = data.id || uuidv4();
     const name = this.normalizeName(data.name, 'Name');
@@ -869,6 +975,11 @@ class ViewpointService {
     const representationDescriptions = this.normalizeRepresentationDescriptions(
       viewpointId,
       data.representationDescriptions || []
+    );
+    const sharedConcreteSyntax = data.sharedConcreteSyntaxByMetaClassId || {};
+    this.assertValidConcreteSyntaxMap(
+      sharedConcreteSyntax,
+      'sharedConcreteSyntaxByMetaClassId'
     );
     const isDefault = data.isDefault === true;
 
@@ -879,9 +990,10 @@ class ViewpointService {
         description: data.description,
         metamodelId: data.metamodelId,
         representationDescriptions: representationDescriptions as any,
-        sharedConcreteSyntax: (data.sharedConcreteSyntaxByMetaClassId || {}) as any,
+        sharedConcreteSyntax: sharedConcreteSyntax as any,
         isDefault,
-        userId: metamodelRow.userId,
+        userId: projectId ? userId : metamodelRow.userId,
+        projectId,
       },
     });
 
@@ -898,8 +1010,8 @@ class ViewpointService {
     return this.mapToViewpoint(created);
   }
 
-  async update(id: string, data: UpdateViewpointRequest, userId: string, userRole: UserRole): Promise<Viewpoint> {
-    const existing = await prisma.viewpoint.findFirst({ where: { id } });
+  async update(id: string, data: UpdateViewpointRequest, userId: string, userRole: UserRole, projectId?: string): Promise<Viewpoint> {
+    const existing = await prisma.viewpoint.findFirst({ where: { id, ...(projectId && { projectId }) } });
     if (!existing) {
       throw new ApiError(404, 'Viewpoint not found');
     }
@@ -914,6 +1026,12 @@ class ViewpointService {
     const representationDescriptions = data.representationDescriptions !== undefined
       ? this.normalizeRepresentationDescriptions(id, data.representationDescriptions)
       : undefined;
+    if (data.sharedConcreteSyntaxByMetaClassId !== undefined) {
+      this.assertValidConcreteSyntaxMap(
+        data.sharedConcreteSyntaxByMetaClassId,
+        'sharedConcreteSyntaxByMetaClassId'
+      );
+    }
 
     const updateOperation = prisma.viewpoint.update({
       where: { id },
@@ -941,8 +1059,8 @@ class ViewpointService {
     return this.mapToViewpoint(updated);
   }
 
-  async delete(id: string, userId: string, userRole: UserRole): Promise<void> {
-    const existing = await prisma.viewpoint.findFirst({ where: { id } });
+  async delete(id: string, userId: string, userRole: UserRole, projectId?: string): Promise<void> {
+    const existing = await prisma.viewpoint.findFirst({ where: { id, ...(projectId && { projectId }) } });
     if (!existing) {
       throw new ApiError(404, 'Viewpoint not found');
     }
@@ -966,16 +1084,17 @@ class ViewpointService {
     modelId: string,
     userId: string,
     viewpointId?: string,
-    representationDescriptionId?: string
+    representationDescriptionId?: string,
+    projectId?: string
   ): Promise<{ viewpoint: Viewpoint; representationDescription: RepresentationDescription }> {
-    const model = await prisma.model.findFirst({ where: { id: modelId } });
+    const model = await prisma.model.findFirst({ where: { id: modelId, ...(projectId && { projectId }) } });
     if (!model) {
       throw new ApiError(404, 'Model not found');
     }
 
     let viewpoint = viewpointId
-      ? await this.getById(viewpointId, userId)
-      : await this.getDefaultForMetamodel(model.conformsToId, userId);
+      ? await this.getById(viewpointId, userId, projectId)
+      : await this.getDefaultForMetamodel(model.conformsToId, userId, projectId);
 
     if (!viewpoint) {
       throw new ApiError(400, 'Selected viewpoint not found');

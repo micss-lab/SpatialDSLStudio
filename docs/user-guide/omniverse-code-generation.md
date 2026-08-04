@@ -9,15 +9,18 @@ scene running on a cloud GPU, see
 This guide is the deeper reference for the code generation and local-run parts of
 that path.
 
-The current project is intentionally an importable example, not app-seeded
-example data. That keeps the code generation feature generic: any team can
-import a project JSON for a different target platform, DSL, or runtime without
-changing the app bundle.
+When creating a Studio Project, enable `Include Smart Warehouse starter` to
+install the metamodel, model, viewpoints, saved views, and both generator
+configurations into that one project. The standalone project JSON remains
+importable for existing projects and for teams that want only the Omniverse
+target.
 
 ## Files
 
 - Importable codegen project:
   `examples/codegen-projects/smart-warehouse-omniverse-project.json`
+- Project-starter copy:
+  `frontend/src/examples/data/smart-warehouse-omniverse-project.json`
 - Versioned asset manifest and schema:
   `examples/omniverse-assets/asset-manifest.json`,
   `examples/omniverse-assets/asset-manifest.schema.json`
@@ -63,6 +66,7 @@ The generated Python script creates a `.usda` USD stage with:
   - `MobileRobot`
   - `StorageRack`
   - `Dock`
+  - `InspectionDrone`
 - a referenced USD asset for each physical class the manifest maps, when the
   asset root is available: reviewed `warehouse-kit` props for conveyors,
   charging stations, output locations, pathway areas, storage racks, and docks,
@@ -82,9 +86,16 @@ The Smart Warehouse model already stores useful 3D scene data:
 
 - model class, through `modelElementId`
 - element name, through `style.name`
-- 3D position, through `presentation.position3D`
+- 3D position, through `presentation.position3D = { x, y, z }`; Z is base
+  elevation above the project datum
 - Z rotation, through `presentation.rotationZ`
 - size in millimeters, through `presentation.size3D`
+
+SpatialDSL coordinates are right-handed, Z-up millimetres. OpenUSD translations
+are `[x/1000, y/1000, z/1000]` metres and `rotationZ` remains yaw about Z.
+Persisted extents map X=`widthMm`, Y=`heightMm`, Z=`depthMm`. Fitted/fallback
+geometry is centered at `(baseZMm + depthMm / 2) / 1000`; a base-normalized
+referenced asset is translated to `baseZMm / 1000`.
 
 The template maps those values into OpenUSD transforms. Which asset each element
 references is resolved through a versioned asset manifest rather than a hard-coded
@@ -137,6 +148,17 @@ map, so you can retarget assets without editing the template.
   - `uniform` (the default, used by the normalized AMR) applies `uniformScale` and
     `rotateXDeg` to a pre-sized asset without stretching it.
 - `asset-manifest.schema.json` is the draft-07 JSON Schema for the manifest.
+- `zOffsetM` corrects an asset's authored pivot after modeled base elevation is
+  applied. It is not instance elevation and must not be used to make a grounded
+  model appear airborne.
+
+The project-authored `warehouse-kit/inspection_drone.usda` is metre-scale,
+Z-up, and base-normalized. Generated layout, asset, and physics layers place
+both sample drones under `/World/InspectionDrone`; the airborne instance is at
+4.5 m and the landed instance at 0 m. Their rigid bodies are kinematic and use
+separate proxy colliders, so gravity does not drop them when Play starts.
+This preserves modeled aerial placement only: it does not simulate rotors,
+flight dynamics, sensors, autonomous navigation, or a drone control loop.
 
 The frontend exposes `validateAssetManifest` and `resolveAssetForElement` in
 `frontend/src/services/codegeneration/asset-manifest.service.ts` for validating a
@@ -394,8 +416,9 @@ frame the selection.
 
 ### Generated element count is lower than model element count
 
-Cause: the template skips the root `WarehouseSystem` instance and only emits
-physical warehouse assets.
+Cause: the template skips semantic-only controller, task, product, and root
+instances and emits the 30 physical warehouse assets, including two inspection
+drones.
 
 Fix: this is expected for the current scene template.
 

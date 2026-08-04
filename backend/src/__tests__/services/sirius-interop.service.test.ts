@@ -787,6 +787,28 @@ describe('SiriusInteropService .aird export', () => {
     expect(xml).toContain('<points x="180" y="140"/>');
   });
 
+  it('warns that standalone .aird cannot losslessly preserve 3D elevation', async () => {
+    modelServiceMock.getById.mockResolvedValue({
+      ...mockModel,
+      elements: [{
+        ...mockModel.elements[0],
+        presentation: {
+          position3D: { x: 12000, y: 6000, z: 4500 },
+          size3D: { widthMm: 1200, heightMm: 1200, depthMm: 400 },
+        },
+      }, mockModel.elements[1]],
+    });
+
+    const result = await siriusInteropService.exportAird(
+      { modelId: 'model-1', options: { includeAird: true } },
+      'user-1'
+    );
+
+    expect(result.report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'SPATIALDSL_AIRD_3D_PRESENTATION_NOT_LOSSLESS' }),
+    ]));
+  });
+
   it('derives nested GMF nodes from native view membership and semantic containment', async () => {
     modelServiceMock.getById.mockResolvedValue({
       ...mockModel,
@@ -855,6 +877,18 @@ describe('SiriusInteropService .aird export', () => {
   });
 
   it('exports a complete Sirius project ZIP with consistent cross-resource references', async () => {
+    modelServiceMock.getById.mockResolvedValue({
+      ...mockModel,
+      elements: [{
+        ...mockModel.elements[0],
+        presentation: {
+          position2D: { x: 100, y: 50 },
+          position3D: { x: 12000, y: 6000, z: 4500 },
+          size3D: { widthMm: 1200, heightMm: 1200, depthMm: 400 },
+          rotationZ: 15,
+        },
+      }, mockModel.elements[1]],
+    });
     const result = await siriusInteropService.exportProject(
       { metamodelId: 'metamodel-1', modelId: 'model-1' },
       'user-1'
@@ -873,14 +907,16 @@ describe('SiriusInteropService .aird export', () => {
       'model/demo-model.xmi',
       'description/minimal.odesign',
       'representations.aird',
+      'spatialdsl-presentation.json',
       'compatibility-report.json',
     ]));
-    const [ecore, xmi, odesign, aird, eclipseProject] = await Promise.all([
+    const [ecore, xmi, odesign, aird, eclipseProject, sidecarContent] = await Promise.all([
       zip.file('model/minimal.ecore')!.async('text'),
       zip.file('model/demo-model.xmi')!.async('text'),
       zip.file('description/minimal.odesign')!.async('text'),
       zip.file('representations.aird')!.async('text'),
       zip.file('.project')!.async('text'),
+      zip.file('spatialdsl-presentation.json')!.async('text'),
     ]);
     expect(ecore).toContain('nsURI="http://example.com/minimal"');
     expect(ecore).toContain('nsPrefix="minimal"');
@@ -893,5 +929,25 @@ describe('SiriusInteropService .aird export', () => {
     expect(aird).toContain('viewpoint="description/minimal.odesign#viewpoint-1"');
     expect(aird).toContain('description="description/minimal.odesign#sirius-diag-main"');
     expect(eclipseProject).toContain('org.eclipse.sirius.nature.modelingproject');
+    const sidecar = JSON.parse(sidecarContent);
+    expect(sidecar.schemaVersion).toBe(1);
+    expect(sidecar.coordinateContract.position3D.z).toContain('base elevation');
+    expect(sidecar.elements['component-api']).toEqual(expect.objectContaining({
+      position3D: { x: 12000, y: 6000, z: 4500 },
+      size3D: { widthMm: 1200, heightMm: 1200, depthMm: 400 },
+      rotationZ: 15,
+    }));
+    expect(result.entries).toContain('spatialdsl-presentation.json');
+    expect(result.report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'SPATIALDSL_PRESENTATION_SIDECAR_EXPORTED' }),
+    ]));
+
+    const preview = await siriusInteropService.validate(
+      { content: result.content, sourceFormat: 'project-zip', metamodelId: 'metamodel-1' },
+      'user-1'
+    );
+    expect(preview.report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'SPATIALDSL_PRESENTATION_SIDECAR_RECOGNIZED' }),
+    ]));
   });
 });

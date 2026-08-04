@@ -103,6 +103,38 @@ describe('validateMetamodel', () => {
     expect(result.issues.some((i: string) => i.includes('must have a name'))).toBe(true);
   });
 
+  it('reports inconsistent vertical-placement policies on metaclasses', () => {
+    const mm = makeMetamodel({
+      classes: [{
+        id: 'drone',
+        name: 'Drone',
+        abstract: false,
+        superTypes: [],
+        attributes: [],
+        references: [],
+        concreteSyntax: {
+          three_d: {
+            verticalPlacement: {
+              mode: 'adjustable',
+              defaultBaseZMm: 500,
+              minBaseZMm: 1000,
+              maxBaseZMm: 5000,
+              stepMm: -10,
+            },
+          },
+        },
+      }],
+    });
+
+    const result = validateMetamodel(mm as any);
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toEqual(expect.arrayContaining([
+      expect.stringContaining('stepMm must be greater than 0'),
+      expect.stringContaining('defaultBaseZMm must be greater than or equal to'),
+    ]));
+  });
+
   it('reports issue when attribute has no name', () => {
     const mm = makeMetamodel({
       classes: [

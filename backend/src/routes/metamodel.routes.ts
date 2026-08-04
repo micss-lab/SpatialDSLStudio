@@ -1,12 +1,21 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { body, param } from 'express-validator';
-import { validate, authenticate, AuthenticatedRequest } from '../middleware';
-import { metamodelService } from '../services';
+import {
+  validate,
+  authenticate,
+  AuthenticatedRequest,
+  projectResourceParam,
+  projectArgs,
+  requireProjectCapability,
+  ApiError,
+} from '../middleware';
+import { metamodelEvolutionService, metamodelService } from '../services';
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
 // All routes require authentication
 router.use(authenticate);
+router.param('id', projectResourceParam('metamodel'));
 
 // Async handler wrapper
 const asyncHandler = (fn: Function) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -18,16 +27,70 @@ const asyncHandler = (fn: Function) => (req: AuthenticatedRequest, res: Response
  * @desc    Get all metamodels (owned + shared)
  */
 router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const metamodels = await metamodelService.getAll(req.user!.userId);
+  const metamodels = await metamodelService.getAll(req.user!.userId, ...projectArgs(req));
   res.json({ success: true, data: metamodels });
 }));
+
+router.post(
+  '/:id/evolution/preview',
+  requireProjectCapability('metamodel.evolve'),
+  validate([
+    param('id').isUUID().withMessage('Invalid metamodel ID format'),
+    body('nextMetamodel').isObject().withMessage('nextMetamodel is required'),
+    body('rules').optional().isArray(),
+  ]),
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    if (!req.projectContext) throw new ApiError(400, 'Metamodel evolution requires a project-scoped route');
+    const report = await metamodelEvolutionService.preview(
+      req.projectContext.projectId,
+      req.params.id,
+      req.body.nextMetamodel,
+      req.body.rules || []
+    );
+    res.json({ success: true, data: report });
+  })
+);
+
+router.post(
+  '/:id/evolution/apply',
+  requireProjectCapability('metamodel.evolve'),
+  validate([
+    param('id').isUUID().withMessage('Invalid metamodel ID format'),
+    body('nextMetamodel').isObject().withMessage('nextMetamodel is required'),
+    body('expectedSourceHash').isString().notEmpty(),
+    body('rules').optional().isArray(),
+    body('checkpointTag').optional().isString().trim().isLength({ min: 1, max: 100 }),
+    body('message').optional().isString().trim().isLength({ max: 1000 }),
+  ]),
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    if (!req.projectContext) throw new ApiError(400, 'Metamodel evolution requires a project-scoped route');
+    const result = await metamodelEvolutionService.apply(
+      req.projectContext.projectId,
+      req.params.id,
+      req.body,
+      req.user!.userId
+    );
+    res.json({ success: true, data: result });
+  })
+);
+
+router.get(
+  '/:id/evolution/migrations',
+  requireProjectCapability('project.read'),
+  validate([param('id').isUUID().withMessage('Invalid metamodel ID format')]),
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    if (!req.projectContext) throw new ApiError(400, 'Metamodel evolution requires a project-scoped route');
+    const migrations = await metamodelEvolutionService.list(req.projectContext.projectId, req.params.id);
+    res.json({ success: true, data: migrations });
+  })
+);
 
 /**
  * @route   GET /api/metamodels/:id
  * @desc    Get a single metamodel by ID
  */
 router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const metamodel = await metamodelService.getById(req.params.id, req.user!.userId);
+  const metamodel = await metamodelService.getById(req.params.id, req.user!.userId, ...projectArgs(req));
   if (!metamodel) {
     return res.status(404).json({ success: false, error: 'Metamodel not found' });
   }
@@ -47,7 +110,7 @@ router.post(
     body('conformsTo').notEmpty().withMessage('conformsTo (meta-metamodel ID) is required'),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const metamodel = await metamodelService.create(req.body, req.user!.userId, req.user!.role);
+    const metamodel = await metamodelService.create(req.body, req.user!.userId, req.user!.role, ...projectArgs(req));
     res.status(201).json({ success: true, data: metamodel });
   })
 );
@@ -73,7 +136,7 @@ router.delete(
   '/:id',
   validate([param('id').isUUID().withMessage('Invalid ID format')]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    await metamodelService.delete(req.params.id, req.user!.userId, req.user!.role);
+    await metamodelService.delete(req.params.id, req.user!.userId, req.user!.role, ...projectArgs(req));
     res.json({ success: true, message: 'Metamodel deleted successfully' });
   })
 );

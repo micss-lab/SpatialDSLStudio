@@ -1,9 +1,10 @@
 import { Router, Response, NextFunction } from 'express';
 import { body, param, query } from 'express-validator';
-import { validate, AuthenticatedRequest } from '../middleware';
+import { validate, AuthenticatedRequest, projectResourceParam, projectArgs } from '../middleware';
 import { viewpointService } from '../services';
 
-const router = Router();
+const router = Router({ mergeParams: true });
+router.param('id', projectResourceParam('viewpoint'));
 
 const asyncHandler = (fn: Function) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   Promise.resolve(fn(req, res, next)).catch(next);
@@ -16,7 +17,7 @@ router.get(
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const metamodelId = typeof req.query.metamodelId === 'string' ? req.query.metamodelId : undefined;
-    const viewpoints = await viewpointService.getAll(req.user!.userId, metamodelId);
+    const viewpoints = await viewpointService.getAll(req.user!.userId, metamodelId, ...projectArgs(req));
     res.json({ success: true, data: viewpoints });
   })
 );
@@ -29,14 +30,31 @@ router.get(
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const viewpoint = await viewpointService.getDefaultForMetamodel(
       req.query.metamodelId as string,
-      req.user!.userId
+      req.user!.userId,
+      ...projectArgs(req)
     );
     res.json({ success: true, data: viewpoint });
   })
 );
 
+router.post(
+  '/default',
+  validate([
+    body('metamodelId').notEmpty().withMessage('metamodelId is required'),
+  ]),
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const viewpoint = await viewpointService.createDefaultForMetamodel(
+      req.body.metamodelId,
+      req.user!.userId,
+      req.user!.role,
+      ...projectArgs(req)
+    );
+    res.status(201).json({ success: true, data: viewpoint });
+  })
+);
+
 router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const viewpoint = await viewpointService.getById(req.params.id, req.user!.userId);
+  const viewpoint = await viewpointService.getById(req.params.id, req.user!.userId, ...projectArgs(req));
   if (!viewpoint) {
     return res.status(404).json({ success: false, error: 'Viewpoint not found' });
   }
@@ -53,7 +71,7 @@ router.post(
     body('representationDescriptions').optional().isArray().withMessage('representationDescriptions must be an array'),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const viewpoint = await viewpointService.create(req.body, req.user!.userId, req.user!.role);
+    const viewpoint = await viewpointService.create(req.body, req.user!.userId, req.user!.role, ...projectArgs(req));
     res.status(201).json({ success: true, data: viewpoint });
   })
 );
@@ -67,7 +85,13 @@ router.put(
     body('representationDescriptions').optional().isArray().withMessage('representationDescriptions must be an array'),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const viewpoint = await viewpointService.update(req.params.id, req.body, req.user!.userId, req.user!.role);
+    const viewpoint = await viewpointService.update(
+      req.params.id,
+      req.body,
+      req.user!.userId,
+      req.user!.role,
+      ...projectArgs(req)
+    );
     res.json({ success: true, data: viewpoint });
   })
 );
@@ -76,7 +100,7 @@ router.delete(
   '/:id',
   validate([param('id').notEmpty().withMessage('id is required')]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    await viewpointService.delete(req.params.id, req.user!.userId, req.user!.role);
+    await viewpointService.delete(req.params.id, req.user!.userId, req.user!.role, ...projectArgs(req));
     res.json({ success: true, message: 'Viewpoint deleted successfully' });
   })
 );
@@ -84,7 +108,7 @@ router.delete(
 router.get(
   '/:id/representation-descriptions',
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const viewpoint = await viewpointService.getById(req.params.id, req.user!.userId);
+    const viewpoint = await viewpointService.getById(req.params.id, req.user!.userId, ...projectArgs(req));
     if (!viewpoint) {
       return res.status(404).json({ success: false, error: 'Viewpoint not found' });
     }

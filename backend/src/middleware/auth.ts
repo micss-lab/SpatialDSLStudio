@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import config from '../config';
-import { UserRole } from '../../../shared/types';
+import { ProjectCapability, ProjectRole, ProjectStatus, UserRole } from '../../../shared/types';
 import prisma from '../config/database';
 
 export interface JwtPayload {
@@ -10,9 +10,27 @@ export interface JwtPayload {
   role: UserRole;
 }
 
+export interface ProjectRequestContext {
+  projectId: string;
+  role: ProjectRole;
+  capabilities: ProjectCapability[];
+  isOwner: boolean;
+  isPlatformAdmin: boolean;
+  status: ProjectStatus;
+}
+
 export interface AuthenticatedRequest extends Request {
   user?: JwtPayload;
+  platformRole?: UserRole;
+  projectContext?: ProjectRequestContext;
 }
+
+const getEffectiveRole = (platformRole: UserRole, projectContext?: ProjectRequestContext): UserRole => {
+  if (!projectContext) return platformRole;
+  if (projectContext.isPlatformAdmin) return 'ADMIN';
+  if (projectContext.role === 'OWNER' || projectContext.role === 'DSL_DESIGNER') return 'DSL_DESIGNER';
+  return projectContext.role;
+};
 
 /**
  * Middleware to authenticate JWT tokens
@@ -56,9 +74,10 @@ export const authenticate = async (
       }
       
       // Use the current role from database, not the one from JWT
+      req.platformRole = user.role as UserRole;
       req.user = {
         ...decoded,
-        role: user.role as UserRole,
+        role: getEffectiveRole(user.role as UserRole, req.projectContext),
       };
       next();
     } catch (err) {
@@ -107,9 +126,10 @@ export const optionalAuth = async (
         });
         
         if (user) {
+          req.platformRole = user.role as UserRole;
           req.user = {
             ...decoded,
-            role: user.role as UserRole,
+            role: getEffectiveRole(user.role as UserRole, req.projectContext),
           };
         }
       } catch {

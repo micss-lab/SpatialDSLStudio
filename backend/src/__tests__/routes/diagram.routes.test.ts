@@ -15,6 +15,7 @@ const diagramServiceMock = {
   delete: jest.fn(),
   addElement: jest.fn(),
   createModelElementInView: jest.fn(),
+  updateModelPresentation: jest.fn(),
   updateElement: jest.fn(),
   deleteElement: jest.fn(),
   updateGridSettings: jest.fn(),
@@ -155,6 +156,25 @@ describe('POST /api/diagrams', () => {
 
     expect(res.status).toBe(400);
   });
+
+  it('returns 400 when a bulk diagram element contains malformed elevation', async () => {
+    const res = await request(buildApp())
+      .post('/api/diagrams')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({
+        name: 'Test Diagram',
+        modelId: 'model-uuid-1',
+        elements: [{
+          id: 'elem-1',
+          type: 'node',
+          modelElementId: 'cls-1',
+          style: { position3D: { x: 1, y: 2, z: '4500' } },
+        }],
+      });
+
+    expect(res.status).toBe(400);
+    expect(diagramServiceMock.create).not.toHaveBeenCalled();
+  });
 });
 
 describe('PUT /api/diagrams/:id', () => {
@@ -177,6 +197,23 @@ describe('PUT /api/diagrams/:id', () => {
       .send({ name: 'Updated' });
 
     expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when a bulk view update contains malformed 3D extents', async () => {
+    const res = await request(buildApp())
+      .put('/api/diagrams/f47ac10b-58cc-4372-a567-0e02b2c3d479')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({
+        elements: [{
+          id: 'elem-1',
+          type: 'node',
+          modelElementId: 'cls-1',
+          style: { widthMm: 1200, heightMm: null, depthMm: 400 },
+        }],
+      });
+
+    expect(res.status).toBe(400);
+    expect(diagramServiceMock.update).not.toHaveBeenCalled();
   });
 });
 
@@ -280,6 +317,42 @@ describe('POST /api/diagrams/:id/model-elements/create', () => {
 
     expect(res.status).toBe(400);
     expect(diagramServiceMock.createModelElementInView).not.toHaveBeenCalled();
+  });
+});
+
+describe('PUT /api/diagrams/:id/model-elements/:elementId/presentation', () => {
+  const diagramId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+
+  it('round-trips a valid elevated pose through the view endpoint', async () => {
+    diagramServiceMock.updateModelPresentation.mockResolvedValue(mockDiagram);
+
+    const res = await request(buildApp())
+      .put(`/api/diagrams/${diagramId}/model-elements/elem-1/presentation`)
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({ position3D: { x: 1200, y: 800, z: 4500 } });
+
+    expect(res.status).toBe(200);
+    expect(diagramServiceMock.updateModelPresentation).toHaveBeenCalledWith(
+      diagramId,
+      'elem-1',
+      { position3D: { x: 1200, y: 800, z: 4500 } },
+      'user-uuid-1',
+      'DSL_DESIGNER'
+    );
+  });
+
+  it.each([
+    { position3D: { x: 1200, y: '800', z: 4500 } },
+    { position2D: { x: 1 } },
+    { size3D: { widthMm: 1200, heightMm: null, depthMm: 400 } },
+  ])('returns 400 for malformed view presentation data: %j', async presentation => {
+    const res = await request(buildApp())
+      .put(`/api/diagrams/${diagramId}/model-elements/elem-1/presentation`)
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send(presentation);
+
+    expect(res.status).toBe(400);
+    expect(diagramServiceMock.updateModelPresentation).not.toHaveBeenCalled();
   });
 });
 

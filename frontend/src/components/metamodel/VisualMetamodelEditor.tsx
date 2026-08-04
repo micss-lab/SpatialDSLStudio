@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Stage, Layer, Circle } from 'react-konva';
 import { Box, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useProject } from '../../contexts/ProjectContext';
 import { Metamodel, MetaClass, MetaAttribute, MetaReference } from '../../models/types';
 import { metamodelService } from '../../services/metamodel';
 import { parseBendPoints, setupMetamodelExport } from './utils';
@@ -120,6 +121,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
   // Get location for URL query params
   const location = useLocation();
   const navigate = useNavigate();
+  const { project } = useProject();
   
   // Dialog states
   const [isClassDialogOpen, setIsClassDialogOpen] = useState(false);
@@ -1011,7 +1013,7 @@ const VisualMetamodelEditor: React.FC<VisualMetamodelEditorProps> = ({ metamodel
   
   // Navigate to testing dashboard with the current metamodel
   const handleTestMetamodel = () => {
-    navigate(`/testing/${metamodelId}`);
+    navigate(`/projects/${project.id}/testing/${metamodelId}`);
   };
   
   // Handle stage click - add bend points for references

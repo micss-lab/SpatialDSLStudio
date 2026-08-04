@@ -13,7 +13,7 @@ def load_layout(path):
         data = json.load(handle)
 
     scale = 0.001 if data.get("units", "mm") == "mm" else 1.0
-    size_keys = ("x", "y", "length", "width", "height")
+    size_keys = ("x", "y", "z", "length", "width", "height")
 
     def conv(rec):
         out = dict(rec)
@@ -28,12 +28,13 @@ def load_layout(path):
         "pickups": [conv(p) for p in data.get("pickups", [])],
         "dropoffs": [conv(d) for d in data.get("dropoffs", [])],
         "chargers": [conv(c) for c in data.get("chargers", [])],
+        "drones": [conv(d) for d in data.get("drones", [])],
     }
 
 
 def scene_bounds(layout, margin=5.0):
     pts = []
-    for group in ("robots", "obstacles", "pickups", "dropoffs", "chargers"):
+    for group in ("robots", "obstacles", "pickups", "dropoffs", "chargers", "drones"):
         pts += [(rec["x"], rec["y"]) for rec in layout.get(group, [])]
     if not pts:
         return (-10.0, -10.0, 10.0, 10.0)

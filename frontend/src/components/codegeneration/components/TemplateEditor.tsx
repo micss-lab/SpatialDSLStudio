@@ -254,7 +254,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
           </>
         ) : (
           <Typography variant="caption" sx={{ color: '#9e9e9e' }}>
-            Select a target metamodel for the project to browse its classes here.
+            Select a target metamodel for the generator configuration to browse its classes here.
           </Typography>
         )}
       </Box>

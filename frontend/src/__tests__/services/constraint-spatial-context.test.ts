@@ -38,13 +38,14 @@ function makeElement(id: string, presentation: ModelElement['presentation']): Mo
 }
 
 const conveyorA = makeElement('conveyor-a', {
-  position3D: { x: 1200, y: 400 },
+  position3D: { x: 1200, y: 400, z: 250 },
   size3D: { widthMm: 500, heightMm: 800, depthMm: 200 },
   rotationZ: 90,
 });
 
 const conveyorB = makeElement('conveyor-b', {
-  position3D: { x: 3000, y: 400 },
+  // Legacy persisted values are normalized at the constraint boundary.
+  position3D: { x: 3000, y: 400 } as any,
 });
 
 const model: Model = {
@@ -59,7 +60,7 @@ describe('spatial presentation data in constraint contexts', () => {
   it('exposes position, size, and rotation on self for JS constraints', () => {
     const context = prepareContextForJS(conveyorA, model, metamodel);
 
-    expect(context.self.position3D).toEqual({ x: 1200, y: 400 });
+    expect(context.self.position3D).toEqual({ x: 1200, y: 400, z: 250 });
     expect(context.self.size3D).toEqual({ widthMm: 500, heightMm: 800, depthMm: 200 });
     expect(context.self.rotationZ).toBe(90);
   });
@@ -68,7 +69,7 @@ describe('spatial presentation data in constraint contexts', () => {
     const context = prepareContextForJS(conveyorA, model, metamodel);
     const other = context.model.elements.find((e: any) => e.id === 'conveyor-b');
 
-    expect(other.position3D).toEqual({ x: 3000, y: 400 });
+    expect(other.position3D).toEqual({ x: 3000, y: 400, z: 0 });
   });
 
   it('evaluates a JS constraint that reads spatial placement', () => {
@@ -108,7 +109,7 @@ describe('spatial presentation data in constraint contexts', () => {
   it('exposes spatial fields in the OCL evaluation context', () => {
     const context = prepareContextForOCL(conveyorA, model, metamodel);
 
-    expect(context.position3D).toEqual({ x: 1200, y: 400 });
+    expect(context.position3D).toEqual({ x: 1200, y: 400, z: 250 });
     expect(context.size3D).toEqual({ widthMm: 500, heightMm: 800, depthMm: 200 });
     expect(context.rotationZ).toBe(90);
   });

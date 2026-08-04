@@ -21,6 +21,7 @@ Use this page to find the right documentation based on your goal.
 - [Visual Components Code Generation](user-guide/visual-components-code-generation.md)
 - [Omniverse Code Generation](user-guide/omniverse-code-generation.md)
 - [End-to-End: Smart Warehouse to Isaac Sim on NVIDIA Brev](user-guide/end-to-end-omniverse.md)
+- [Project Lifecycle: checkpoints, evolution, and pipelines](user-guide/project-lifecycle.md)
 - [Roles and Sharing](user-guide/roles-and-sharing.md)
 
 ### I want technical internals
@@ -53,6 +54,7 @@ Recommended reading path for first-time onboarding:
 8. user-guide/visual-components-code-generation.md
 9. user-guide/omniverse-code-generation.md
 10. user-guide/end-to-end-omniverse.md
-11. reference/sirius-compatibility.md
-12. reference/sirius-file-compatibility.md
-13. reference/architecture.md
+11. user-guide/project-lifecycle.md
+12. reference/sirius-compatibility.md
+13. reference/sirius-file-compatibility.md
+14. reference/architecture.md

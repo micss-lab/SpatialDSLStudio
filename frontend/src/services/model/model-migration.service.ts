@@ -3,6 +3,7 @@ import { Model } from '../../models/types';
 import { metamodelService } from '../metamodel';
 import { modelInheritanceUtilsService } from './model-inheritance-utils.service';
 import { modelReferenceService } from './model-reference.service';
+import { normalizeModelElementSpatial } from '../spatial';
 
 /**
  * Service for model migration and cleanup operations
@@ -13,7 +14,7 @@ export class ModelMigrationService {
    */
   migrateModels(models: Model[]): void {
     models.forEach(model => {
-      model.elements.forEach(element => {
+      model.elements.forEach((element, index) => {
         if ((element as any).metaClassId && !element.modelElementId) {
           element.modelElementId = (element as any).metaClassId;
           delete (element as any).metaClassId;
@@ -22,6 +23,7 @@ export class ModelMigrationService {
           element.style = (element as any).properties;
           delete (element as any).properties;
         }
+        model.elements[index] = normalizeModelElementSpatial(element);
       });
     });
   }

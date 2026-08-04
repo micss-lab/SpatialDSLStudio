@@ -39,6 +39,7 @@ import { metamodelService } from './metamodel.service';
 import { viewpointService } from './viewpoint.service';
 import { modelService } from './model.service';
 import { diagramService } from './diagram.service';
+import { normalizePosition3D } from '../../../shared/spatial';
 
 interface XmlNode {
   name: string;
@@ -144,11 +145,13 @@ const UNSUPPORTED_TAG_CODES: Record<string, string> = {
   validationSet: 'SIRIUS_VALIDATION_UNSUPPORTED',
 };
 
+const optionalProjectArgs = (projectId?: string): [] | [string] => projectId ? [projectId] : [];
+
 class SiriusInteropService {
-  async validate(input: ValidateInput, userId: string): Promise<SiriusOdesignPreview> {
+  async validate(input: ValidateInput, userId: string, projectId?: string): Promise<SiriusOdesignPreview> {
     const sourceFormat = input.sourceFormat || 'odesign';
     const metamodel = input.metamodelId
-      ? await this.getReadableMetamodel(input.metamodelId, userId)
+      ? await this.getReadableMetamodel(input.metamodelId, userId, projectId)
       : undefined;
 
     const options = {
@@ -168,22 +171,27 @@ class SiriusInteropService {
   }
 
   /** Validate a Sirius `.aird` session against an already-imported model and viewpoint. */
-  async validateAirdView(input: ValidateInput, userId: string): Promise<SiriusAirdPreview> {
+  async validateAirdView(input: ValidateInput, userId: string, projectId?: string): Promise<SiriusAirdPreview> {
     const options = { ...DEFAULT_IMPORT_OPTIONS, importAird: true, ...input.options };
-    const model = input.modelId ? await this.getReadableModel(input.modelId, userId) : undefined;
+    const model = input.modelId ? await this.getReadableModel(input.modelId, userId, projectId) : undefined;
     const viewpoint = input.viewpointId
-      ? await this.getViewpointForModel(input.viewpointId, model, userId)
+      ? await this.getViewpointForModel(input.viewpointId, model, userId, projectId)
       : undefined;
     return this.parseAird(input.content, model, viewpoint, options);
   }
 
-  async importOdesign(input: ImportOdesignInput, userId: string, userRole: UserRole): Promise<SiriusImportResult> {
+  async importOdesign(
+    input: ImportOdesignInput,
+    userId: string,
+    userRole: UserRole,
+    projectId?: string
+  ): Promise<SiriusImportResult> {
     const options = { ...DEFAULT_IMPORT_OPTIONS, ...input.options };
     if (!options.importOdesign) {
       throw new ApiError(400, 'importOdesign must be enabled to import .odesign content');
     }
 
-    const metamodel = await this.getReadableMetamodel(input.metamodelId, userId);
+    const metamodel = await this.getReadableMetamodel(input.metamodelId, userId, projectId);
     const preview = this.parseOdesign(input.content, metamodel, options);
 
     if (!preview.report.supported) {
@@ -196,7 +204,7 @@ class SiriusInteropService {
 
     const created: Viewpoint[] = [];
     for (const viewpoint of preview.viewpoints) {
-      created.push(await viewpointService.create(viewpoint, userId, userRole));
+      created.push(await viewpointService.create(viewpoint, userId, userRole, ...optionalProjectArgs(projectId)));
     }
 
     return {
@@ -205,15 +213,20 @@ class SiriusInteropService {
     };
   }
 
-  async importAird(input: ImportAirdInput, userId: string, userRole: UserRole): Promise<SiriusAirdImportResult> {
+  async importAird(
+    input: ImportAirdInput,
+    userId: string,
+    userRole: UserRole,
+    projectId?: string
+  ): Promise<SiriusAirdImportResult> {
     const options = { ...DEFAULT_IMPORT_OPTIONS, importAird: true, ...input.options };
     if (!options.importAird) {
       throw new ApiError(400, 'importAird must be enabled to import .aird content');
     }
 
-    const model = await this.getReadableModel(input.modelId, userId);
+    const model = await this.getReadableModel(input.modelId, userId, projectId);
     const viewpoint = input.viewpointId
-      ? await this.getViewpointForModel(input.viewpointId, model, userId)
+      ? await this.getViewpointForModel(input.viewpointId, model, userId, projectId)
       : undefined;
 
     const preview = this.parseAird(input.content, model, viewpoint, options);
@@ -236,20 +249,20 @@ class SiriusInteropService {
         representationDescriptionId: diagram.representationDescriptionId,
         elements: diagram.elements,
         includedElementIds: diagram.elements.map(element => element.modelElementId),
-      }, userId, userRole));
+      }, userId, userRole, ...optionalProjectArgs(projectId)));
     }
 
     return { diagrams: created, report: preview.report };
   }
 
-  async exportOdesign(input: ExportInput, userId: string): Promise<SiriusExportResult> {
+  async exportOdesign(input: ExportInput, userId: string, projectId?: string): Promise<SiriusExportResult> {
     const options = { ...DEFAULT_EXPORT_OPTIONS, ...input.options };
     if (!options.includeOdesign) {
       throw new ApiError(400, 'includeOdesign must be enabled to export .odesign content');
     }
 
-    const metamodel = await this.getReadableMetamodel(input.metamodelId, userId);
-    const allViewpoints = await viewpointService.getAll(userId, input.metamodelId);
+    const metamodel = await this.getReadableMetamodel(input.metamodelId, userId, projectId);
+    const allViewpoints = await viewpointService.getAll(userId, input.metamodelId, projectId);
     if (input.viewpointIds?.length) {
       const availableIds = new Set(allViewpoints.map(viewpoint => viewpoint.id));
       const missingIds = input.viewpointIds.filter(viewpointId => !availableIds.has(viewpointId));
@@ -280,17 +293,17 @@ class SiriusInteropService {
   }
 
   /** Export SpatialDSL views of a model as a Sirius `.aird` session (inverse of importAird). */
-  async exportAird(input: ExportAirdInput, userId: string): Promise<SiriusExportResult> {
+  async exportAird(input: ExportAirdInput, userId: string, projectId?: string): Promise<SiriusExportResult> {
     const options = { ...DEFAULT_EXPORT_OPTIONS, ...input.options };
     if (!options.includeAird) {
       throw new ApiError(400, 'includeAird must be enabled to export .aird content');
     }
 
-    const model = await this.getReadableModel(input.modelId, userId);
+    const model = await this.getReadableModel(input.modelId, userId, projectId);
     const [allDiagrams, metamodel, viewpoints] = await Promise.all([
-      diagramService.getByModelId(input.modelId, userId),
-      this.getReadableMetamodel(model.metamodelId || model.conformsTo, userId),
-      viewpointService.getAll(userId, model.metamodelId || model.conformsTo),
+      diagramService.getByModelId(input.modelId, userId, projectId),
+      this.getReadableMetamodel(model.metamodelId || model.conformsTo, userId, projectId),
+      viewpointService.getAll(userId, model.metamodelId || model.conformsTo, projectId),
     ]);
     if (input.diagramIds?.length) {
       const availableIds = new Set(allDiagrams.map(diagram => diagram.id));
@@ -315,6 +328,14 @@ class SiriusInteropService {
       viewpoints.find(viewpoint => viewpoint.id === diagram.viewpointId)
     ));
     const content = this.buildAirdXml(model, preparedDiagrams, report);
+    if (model.elements.some(element => element.presentation?.position3D)) {
+      this.addWarning(report, 'warnings', {
+        severity: 'warning',
+        code: 'SPATIALDSL_AIRD_3D_PRESENTATION_NOT_LOSSLESS',
+        message: 'A standalone .aird preserves supported 2D GMF layout but cannot losslessly carry SpatialDSL base elevation or 3D extents. Export the full Sirius project ZIP to include spatialdsl-presentation.json.',
+        spatialElementId: model.id,
+      });
+    }
     if (options.failOnUnsupportedFeatures && report.droppedFeatures.length > 0) {
       throw new ApiError(400, 'SpatialDSL views contain data unsupported by Sirius .aird export');
     }
@@ -328,11 +349,11 @@ class SiriusInteropService {
   }
 
   /** Build one importable Eclipse Sirius modeling-project ZIP around a primary model. */
-  async exportProject(input: ExportProjectInput, userId: string): Promise<SiriusProjectExportResult> {
-    const metamodel = await this.getReadableMetamodel(input.metamodelId, userId);
+  async exportProject(input: ExportProjectInput, userId: string, projectId?: string): Promise<SiriusProjectExportResult> {
+    const metamodel = await this.getReadableMetamodel(input.metamodelId, userId, projectId);
     const model = input.modelId
-      ? await this.getReadableModel(input.modelId, userId)
-      : (await modelService.getByMetamodelId(input.metamodelId, userId))[0];
+      ? await this.getReadableModel(input.modelId, userId, projectId)
+      : (await modelService.getByMetamodelId(input.metamodelId, userId, projectId))[0];
     if (!model) {
       throw new ApiError(404, 'No model found for Sirius project export');
     }
@@ -341,8 +362,8 @@ class SiriusInteropService {
     }
 
     const [allViewpoints, allDiagrams] = await Promise.all([
-      viewpointService.getAll(userId, metamodel.id),
-      diagramService.getByModelId(model.id, userId),
+      viewpointService.getAll(userId, metamodel.id, projectId),
+      diagramService.getByModelId(model.id, userId, projectId),
     ]);
     const selectedViewpoints = this.selectByRequestedIds(
       allViewpoints,
@@ -377,6 +398,7 @@ class SiriusInteropService {
     const xmiPath = `model/${modelFilename}`;
     const odesignPath = `description/${odesignFilename}`;
     const airdPath = 'representations.aird';
+    const presentationSidecarPath = 'spatialdsl-presentation.json';
     const report = this.createReport('project-zip', 'sirius-project');
 
     const odesign = this.buildOdesignXml(metamodel, selectedViewpoints, report);
@@ -389,6 +411,13 @@ class SiriusInteropService {
       selectedViewpoints.find(viewpoint => viewpoint.id === diagram.viewpointId)
     ));
     const aird = this.buildAirdXml(model, preparedDiagrams, report, xmiPath, odesignPath);
+    const presentationSidecar = this.buildSpatialDslPresentationSidecar(model, selectedDiagrams);
+    this.addWarning(report, 'warnings', {
+      severity: 'info',
+      code: 'SPATIALDSL_PRESENTATION_SIDECAR_EXPORTED',
+      message: `Full SpatialDSL placement data is preserved in ${presentationSidecarPath}; Sirius GMF notation remains the 2D interoperability projection.`,
+      sourcePath: presentationSidecarPath,
+    });
     this.finalizeReport(report);
 
     const zip = new JSZip();
@@ -397,15 +426,66 @@ class SiriusInteropService {
     zip.file(xmiPath, xmi);
     zip.file(odesignPath, odesign);
     zip.file(airdPath, aird);
+    zip.file(presentationSidecarPath, presentationSidecar);
     zip.file('compatibility-report.json', JSON.stringify(report, null, 2));
     const content = await zip.generateAsync({ type: 'base64', compression: 'DEFLATE' });
-    const entries = ['.project', ecorePath, xmiPath, odesignPath, airdPath, 'compatibility-report.json'];
+    const entries = ['.project', ecorePath, xmiPath, odesignPath, airdPath, presentationSidecarPath, 'compatibility-report.json'];
     return {
       filename: `${projectSlug}.sirius-project.zip`,
       content,
       entries,
       report,
     };
+  }
+
+  private buildSpatialDslPresentationSidecar(model: Model, diagrams: Diagram[]): string {
+    const elements = Object.fromEntries(model.elements.flatMap(element => {
+      const presentation = element.presentation;
+      if (!presentation) return [];
+      const position3D = normalizePosition3D(presentation.position3D);
+      const spatialPresentation = {
+        ...(presentation.position2D && { position2D: presentation.position2D }),
+        ...(position3D && { position3D }),
+        ...(presentation.size2D && { size2D: presentation.size2D }),
+        ...(presentation.size3D && { size3D: presentation.size3D }),
+        ...(typeof presentation.rotationZ === 'number' && { rotationZ: presentation.rotationZ }),
+      };
+      return Object.keys(spatialPresentation).length > 0
+        ? [[element.id, spatialPresentation] as const]
+        : [];
+    }));
+
+    return JSON.stringify({
+      schema: 'https://spatialdsl.dev/schemas/presentation-sidecar/v1',
+      schemaVersion: 1,
+      coordinateContract: {
+        units: 'mm',
+        position3D: {
+          x: 'domain X center',
+          y: 'domain Y center',
+          z: 'base elevation above project datum',
+        },
+        size3D: {
+          widthMm: 'X extent',
+          heightMm: 'Y extent',
+          depthMm: 'Z extent',
+        },
+        rotationZ: 'degrees about +Z',
+      },
+      model: {
+        id: model.id,
+        name: model.name,
+        metamodelId: model.metamodelId || model.conformsTo,
+      },
+      elements,
+      views: diagrams.map(diagram => ({
+        id: diagram.id,
+        name: diagram.name,
+        viewpointId: diagram.viewpointId,
+        representationDescriptionId: diagram.representationDescriptionId,
+        includedElementIds: diagram.includedElementIds || [],
+      })),
+    }, null, 2);
   }
 
   private selectByRequestedIds<T extends { id: string }>(
@@ -768,7 +848,7 @@ class SiriusInteropService {
       this.addWarning(report, 'warnings', {
         severity: 'info',
         code: 'SPATIALDSL_XMI_PRESENTATION_IN_AIRD',
-        message: 'Semantic XMI excludes presentation metadata; bundled .aird GMF notation carries view layout.',
+        message: 'Semantic XMI excludes presentation metadata; bundled .aird GMF notation carries the 2D layout and spatialdsl-presentation.json carries the lossless SpatialDSL pose.',
         spatialElementId: model.id,
       });
     }
@@ -1088,16 +1168,16 @@ class SiriusInteropService {
     gmfBlocks.push('  </notation:Diagram>');
   }
 
-  private async getReadableMetamodel(metamodelId: string, userId: string): Promise<Metamodel> {
-    const metamodel = await metamodelService.getById(metamodelId, userId);
+  private async getReadableMetamodel(metamodelId: string, userId: string, projectId?: string): Promise<Metamodel> {
+    const metamodel = await metamodelService.getById(metamodelId, userId, projectId);
     if (!metamodel) {
       throw new ApiError(404, 'Metamodel not found');
     }
     return metamodel;
   }
 
-  private async getReadableModel(modelId: string, userId: string): Promise<Model> {
-    const model = await modelService.getById(modelId, userId);
+  private async getReadableModel(modelId: string, userId: string, projectId?: string): Promise<Model> {
+    const model = await modelService.getById(modelId, userId, projectId);
     if (!model) {
       throw new ApiError(404, 'Model not found');
     }
@@ -1108,9 +1188,10 @@ class SiriusInteropService {
   private async getViewpointForModel(
     viewpointId: string,
     model: Model | undefined,
-    userId: string
+    userId: string,
+    projectId?: string
   ): Promise<Viewpoint | undefined> {
-    const viewpoints = await viewpointService.getAll(userId, model?.metamodelId);
+    const viewpoints = await viewpointService.getAll(userId, model?.metamodelId, projectId);
     const match = viewpoints.find(viewpoint => viewpoint.id === viewpointId);
     if (!match) {
       throw new ApiError(404, 'Viewpoint not found for the supplied model');
@@ -1197,6 +1278,51 @@ class SiriusInteropService {
     const files = Object.values(zip.files).filter(file => !file.dir);
     for (const file of files) {
       this.assertSafeProjectPath((file as any).unsafeOriginalName || file.name);
+    }
+
+    const presentationSidecars = files.filter(file => (
+      file.name.split('/').pop()?.toLowerCase() === 'spatialdsl-presentation.json'
+    ));
+    if (presentationSidecars.length === 0) {
+      this.addWarning(report, 'warnings', {
+        severity: 'warning',
+        code: 'SPATIALDSL_PRESENTATION_SIDECAR_MISSING',
+        message: 'No spatialdsl-presentation.json was found. Sirius 2D layout can still be imported, but SpatialDSL elevation and 3D extents cannot be restored losslessly.',
+      });
+    } else if (presentationSidecars.length > 1) {
+      this.addWarning(report, 'unresolvedReferences', {
+        severity: 'error',
+        code: 'SPATIALDSL_PRESENTATION_SIDECAR_AMBIGUOUS',
+        message: 'The project ZIP contains more than one spatialdsl-presentation.json sidecar.',
+      });
+    } else {
+      const sidecarFile = presentationSidecars[0];
+      try {
+        const sidecar = JSON.parse(await sidecarFile.async('text')) as Record<string, any>;
+        const elements = sidecar.elements;
+        const positionsAreCanonical = elements && typeof elements === 'object' && !Array.isArray(elements)
+          && Object.values(elements).every((entry: any) => {
+            if (!entry?.position3D) return true;
+            const normalized = normalizePosition3D(entry.position3D);
+            return Boolean(normalized) && typeof entry.position3D.z === 'number';
+          });
+        if (sidecar.schemaVersion !== 1 || !sidecar.model?.id || !positionsAreCanonical) {
+          throw new Error('unsupported or malformed sidecar schema');
+        }
+        this.addWarning(report, 'warnings', {
+          severity: 'info',
+          code: 'SPATIALDSL_PRESENTATION_SIDECAR_RECOGNIZED',
+          message: `Validated lossless SpatialDSL presentation data from "${sidecarFile.name}".`,
+          sourcePath: sidecarFile.name,
+        });
+      } catch (error) {
+        this.addWarning(report, 'unresolvedReferences', {
+          severity: 'error',
+          code: 'SPATIALDSL_PRESENTATION_SIDECAR_INVALID',
+          message: `Could not validate "${sidecarFile.name}" as a SpatialDSL presentation sidecar.`,
+          sourcePath: sidecarFile.name,
+        });
+      }
     }
 
     const airdFiles = files.filter(file => file.name.toLowerCase().endsWith('.aird'));

@@ -61,6 +61,16 @@ export class CodegenHandlebarsService {
       const numeric = Number(value);
       return Number.isFinite(numeric) ? numeric / 2000 : 0;
     });
+
+    // Convert a base elevation and vertical extent from millimetres into the
+    // centre elevation required by centred OpenUSD proxy geometry.
+    Handlebars.registerHelper('baseCenterMeters', function(baseElevationMm, verticalExtentMm) {
+      const base = Number(baseElevationMm);
+      const extent = Number(verticalExtentMm);
+      return (Number.isFinite(base) && Number.isFinite(extent))
+        ? (base + extent / 2) / 1000
+        : 0;
+    });
     
     // Helper to quote string values but leave numbers and booleans as is
     Handlebars.registerHelper('quote', function(value) {
@@ -231,6 +241,8 @@ export class CodegenHandlebarsService {
       const props = {
         X: obj.X !== undefined ? obj.X : 'undefined',
         Y: obj.Y !== undefined ? obj.Y : 'undefined',
+        Z: obj.Z !== undefined ? obj.Z : 'undefined',
+        BaseElevationMm: obj.BaseElevationMm !== undefined ? obj.BaseElevationMm : 'undefined',
         RZ: obj.RZ !== undefined ? obj.RZ : 'undefined',
         Width: obj.Width !== undefined ? obj.Width : 'undefined',
         Length: obj.Length !== undefined ? obj.Length : 'undefined',

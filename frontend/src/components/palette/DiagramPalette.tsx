@@ -15,6 +15,7 @@ import LinkIcon from '@mui/icons-material/Link';
 import SyncAltIcon from '@mui/icons-material/SyncAlt';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useNavigate } from 'react-router-dom';
+import { useProject } from '../../contexts/ProjectContext';
 import {
   Diagram,
   MetaClass,
@@ -51,6 +52,7 @@ const DiagramPalette: React.FC<DiagramPaletteProps> = ({
   activeToolId,
 }) => {
   const navigate = useNavigate();
+  const { project } = useProject();
   const includedElementIds = new Set(
     diagram.elements
       .filter(element => element.type === 'node')
@@ -405,7 +407,7 @@ const DiagramPalette: React.FC<DiagramPaletteProps> = ({
               variant="text"
               size="small"
               startIcon={<TuneIcon />}
-              onClick={() => navigate(`/metamodels/${metamodel.id}/viewpoints`)}
+              onClick={() => navigate(`/projects/${project.id}/metamodels/${metamodel.id}/viewpoints`)}
               fullWidth
             >
               Manage view types

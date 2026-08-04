@@ -1,9 +1,9 @@
 import { Router, Response, NextFunction } from 'express';
 import { body } from 'express-validator';
-import { AuthenticatedRequest, validate } from '../middleware';
+import { AuthenticatedRequest, projectArgs, validate } from '../middleware';
 import { siriusInteropService } from '../services';
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
 const asyncHandler = (fn: Function) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   Promise.resolve(fn(req, res, next)).catch(next);
@@ -21,8 +21,8 @@ router.post(
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const preview = req.body.sourceFormat === 'aird'
-      ? await siriusInteropService.validateAirdView(req.body, req.user!.userId)
-      : await siriusInteropService.validate(req.body, req.user!.userId);
+      ? await siriusInteropService.validateAirdView(req.body, req.user!.userId, ...projectArgs(req))
+      : await siriusInteropService.validate(req.body, req.user!.userId, ...projectArgs(req));
     res.json({ success: true, data: preview });
   })
 );
@@ -36,7 +36,12 @@ router.post(
     body('options').optional().isObject().withMessage('options must be an object'),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const result = await siriusInteropService.importAird(req.body, req.user!.userId, req.user!.role);
+    const result = await siriusInteropService.importAird(
+      req.body,
+      req.user!.userId,
+      req.user!.role,
+      ...projectArgs(req)
+    );
     res.status(201).json({ success: true, data: result });
   })
 );
@@ -49,7 +54,12 @@ router.post(
     body('options').optional().isObject().withMessage('options must be an object'),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const result = await siriusInteropService.importOdesign(req.body, req.user!.userId, req.user!.role);
+    const result = await siriusInteropService.importOdesign(
+      req.body,
+      req.user!.userId,
+      req.user!.role,
+      ...projectArgs(req)
+    );
     res.status(201).json({ success: true, data: result });
   })
 );
@@ -62,7 +72,7 @@ router.post(
     body('options').optional().isObject().withMessage('options must be an object'),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const result = await siriusInteropService.exportOdesign(req.body, req.user!.userId);
+    const result = await siriusInteropService.exportOdesign(req.body, req.user!.userId, ...projectArgs(req));
     res.json({ success: true, data: result });
   })
 );
@@ -75,7 +85,7 @@ router.post(
     body('options').optional().isObject().withMessage('options must be an object'),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const result = await siriusInteropService.exportAird(req.body, req.user!.userId);
+    const result = await siriusInteropService.exportAird(req.body, req.user!.userId, ...projectArgs(req));
     res.json({ success: true, data: result });
   })
 );
@@ -89,7 +99,7 @@ router.post(
     body('diagramIds').optional().isArray().withMessage('diagramIds must be an array'),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const result = await siriusInteropService.exportProject(req.body, req.user!.userId);
+    const result = await siriusInteropService.exportProject(req.body, req.user!.userId, ...projectArgs(req));
     res.json({ success: true, data: result });
   })
 );

@@ -33,6 +33,7 @@ const mockMetamodelRow = {
   constraints: [],
   conformsToId: 'pkg-uuid-1',
   userId: 'user-uuid-1',
+  projectId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -146,6 +147,7 @@ describe('MetamodelService', () => {
         nsPrefix: 'ecore',
         classes: [],
         userId: 'user-uuid-1',
+        projectId: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -167,6 +169,48 @@ describe('MetamodelService', () => {
 
       expect(result.name).toBe('TestMetamodel');
       expect(prismaMock.metamodel.create).toHaveBeenCalled();
+    });
+
+    it('rejects an inconsistent metaclass vertical-placement policy', async () => {
+      prismaMock.ePackage.findFirst.mockResolvedValue({
+        id: 'pkg-uuid-1',
+        name: 'Ecore',
+        nsURI: 'http://ecore',
+        nsPrefix: 'ecore',
+        classes: [],
+        userId: 'user-uuid-1',
+        projectId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await expect(metamodelService.create(
+        {
+          id: 'mm-uuid-1',
+          name: 'TestMetamodel',
+          uri: 'http://example.com/mm',
+          prefix: 'tm',
+          conformsTo: 'pkg-uuid-1',
+          classes: [{
+            id: 'drone',
+            name: 'Drone',
+            abstract: false,
+            superTypes: [],
+            attributes: [],
+            references: [],
+            concreteSyntax: {
+              three_d: {
+                verticalPlacement: { mode: 'adjustable', stepMm: 0 },
+              },
+            },
+          } as any],
+          constraints: [],
+        },
+        'user-uuid-1',
+        'DSL_DESIGNER'
+      )).rejects.toThrow('stepMm must be greater than 0');
+
+      expect(prismaMock.metamodel.create).not.toHaveBeenCalled();
     });
 
     it('throws 403 for MODELER role', async () => {
@@ -245,6 +289,41 @@ describe('MetamodelService', () => {
       );
 
       expect(result.name).toBe('Updated Metamodel');
+    });
+
+    it('rejects a metamodel update whose default elevation is outside its bounds', async () => {
+      sharingServiceMock.checkAccess.mockResolvedValue({
+        hasAccess: true,
+        isOwner: true,
+      });
+
+      await expect(metamodelService.update(
+        'mm-uuid-1',
+        {
+          classes: [{
+            id: 'drone',
+            name: 'Drone',
+            abstract: false,
+            superTypes: [],
+            attributes: [],
+            references: [],
+            concreteSyntax: {
+              three_d: {
+                verticalPlacement: {
+                  mode: 'adjustable',
+                  defaultBaseZMm: 12000,
+                  minBaseZMm: 0,
+                  maxBaseZMm: 10000,
+                },
+              },
+            },
+          } as any],
+        },
+        'user-uuid-1',
+        'DSL_DESIGNER'
+      )).rejects.toThrow('defaultBaseZMm must be less than or equal to');
+
+      expect(prismaMock.metamodel.update).not.toHaveBeenCalled();
     });
 
     it('throws 404 when metamodel not accessible', async () => {

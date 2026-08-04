@@ -28,6 +28,7 @@ const mockProjectRow = {
   targetMetamodelId: 'mm-uuid-1',
   templates: [],
   userId: 'user-uuid-1',
+  projectId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -154,6 +155,28 @@ describe('CodeGenerationService', () => {
       );
 
       expect(sharingServiceMock.checkAccess).not.toHaveBeenCalled();
+    });
+
+    it('still enforces the target boundary for examples persisted in a Studio Project', async () => {
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: true });
+      prismaMock.metamodel.findFirst.mockResolvedValue(null);
+
+      await expect(
+        codeGenerationService.createProject(
+          {
+            id: 'proj-uuid-1',
+            name: 'ExampleProject',
+            isExample: true,
+            targetMetamodelId: 'other-project-metamodel',
+            templates: [],
+          },
+          'user-uuid-1',
+          'DSL_DESIGNER',
+          'project-1'
+        )
+      ).rejects.toMatchObject({ statusCode: 400 });
+
+      expect(prismaMock.codeGenerationProject.create).not.toHaveBeenCalled();
     });
   });
 

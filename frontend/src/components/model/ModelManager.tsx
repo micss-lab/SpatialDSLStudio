@@ -36,14 +36,16 @@ import { metamodelService } from '../../services/metamodel';
 import { getParentGroupSurfaceColor, groupByParent } from '../../services/common/grouping.service';
 import VisualModelEditor from './VisualModelEditor';
 import { ShareDialog, CreatedBy } from '../common';
-import { useAuth } from '../../contexts/AuthContext';
-import { useOwnerFilterMatcher } from '../../contexts/OwnerFilterContext';
+import { useProject } from '../../contexts/ProjectContext';
 
 const ModelManager: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { canShare, canCreate, canDelete } = useAuth();
-  const matchesOwner = useOwnerFilterMatcher();
+  const { can, project } = useProject();
+  const canShare = false;
+  const canCreate = can('model.create');
+  const canUpdate = can('model.update');
+  const canDelete = can('model.delete');
   const [models, setModels] = useState<Model[]>([]);
   const [metamodels, setMetamodels] = useState<Metamodel[]>([]);
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
@@ -214,7 +216,7 @@ const ModelManager: React.FC = () => {
         const refreshedImportedModel = refreshedModels.find(m => m.id === importedModel.id);
         if (refreshedImportedModel) {
           setSelectedModel(refreshedImportedModel);
-          navigate(`/models/${refreshedImportedModel.id}`);
+          navigate(`/projects/${project.id}/models/${refreshedImportedModel.id}`);
         }
         setImportStatus(`Imported ${importedModel.name}.`);
         return;
@@ -249,7 +251,7 @@ const ModelManager: React.FC = () => {
       const refreshedImportedModel = refreshedModels.find(m => m.id === importedModel.id);
       if (refreshedImportedModel) {
         setSelectedModel(refreshedImportedModel);
-        navigate(`/models/${refreshedImportedModel.id}`);
+        navigate(`/projects/${project.id}/models/${refreshedImportedModel.id}`);
       }
       setImportStatus(`Imported ${importedModel.name}.`);
       
@@ -383,7 +385,7 @@ const ModelManager: React.FC = () => {
       
       <List sx={{ flexGrow: 1 }}>
         {groupByParent(
-          models.filter(matchesOwner),
+          models,
           model => model.conformsTo || model.metamodelId,
           parentId => getMetamodelName(parentId)
         ).map(group => (
@@ -510,7 +512,14 @@ const ModelManager: React.FC = () => {
       {/* Model Visualizer */}
       {selectedModel ? (
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <VisualModelEditor modelId={selectedModel.id} />
+          {!canUpdate && (
+            <Alert severity="info" sx={{ m: 1, mb: 0 }}>
+              This model is read-only for your project role.
+            </Alert>
+          )}
+          <Box sx={{ flexGrow: 1, minHeight: 0, pointerEvents: canUpdate ? 'auto' : 'none' }}>
+            <VisualModelEditor modelId={selectedModel.id} />
+          </Box>
         </Box>
       ) : (
         <Box 

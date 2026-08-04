@@ -74,14 +74,14 @@ describe('2D/3D position write-through', () => {
       );
 
       diagramService.updateElement('diagram-1', 'el-1', {
-        style: { position3D: { x: 500, y: 700 } }
+        style: { position3D: { x: 500, y: 700, z: 300 } }
       });
 
       expect(modelService.updateModelElementPresentation).toHaveBeenCalledWith(
         'model-1',
         'el-1',
         expect.objectContaining({
-          position3D: { x: 500, y: 700 },
+          position3D: { x: 500, y: 700, z: 300 },
           position2D: { x: 500, y: 700 }
         })
       );
@@ -89,7 +89,7 @@ describe('2D/3D position write-through', () => {
 
     it('mirrors a 2D x/y move to position3D when the element already has a world-space position', () => {
       (modelService.getModelById as jest.Mock).mockReturnValue(
-        makeModel({ position2D: { x: 1, y: 2 }, position3D: { x: 1, y: 2 } })
+        makeModel({ position2D: { x: 1, y: 2 }, position3D: { x: 1, y: 2, z: 4500 } })
       );
 
       diagramService.updateElement('diagram-1', 'el-1', { x: 30, y: 40 });
@@ -99,29 +99,29 @@ describe('2D/3D position write-through', () => {
         'el-1',
         expect.objectContaining({
           position2D: { x: 30, y: 40 },
-          position3D: { x: 30, y: 40 }
+          position3D: { x: 30, y: 40, z: 4500 }
         })
       );
     });
 
     it('does not mirror across a legacy record whose 2D and 3D positions intentionally differ', () => {
       (modelService.getModelById as jest.Mock).mockReturnValue(
-        makeModel({ position2D: { x: 354, y: 104.5 }, position3D: { x: -22140, y: -9669 } })
+        makeModel({ position2D: { x: 354, y: 104.5 }, position3D: { x: -22140, y: -9669, z: 4500 } })
       );
 
       diagramService.updateElement('diagram-1', 'el-1', {
-        style: { position3D: { x: -20140, y: -9669 } }
+        style: { position3D: { x: -20140, y: -9669, z: 4500 } }
       });
 
       const persisted = (modelService.updateModelElementPresentation as jest.Mock).mock
         .calls[0][2];
-      expect(persisted.position3D).toEqual({ x: -20140, y: -9669 });
+      expect(persisted.position3D).toEqual({ x: -20140, y: -9669, z: 4500 });
       expect(persisted.position2D).toBeUndefined();
     });
 
     it('does not overwrite a world-space position from a schematic 2D drag', () => {
       (modelService.getModelById as jest.Mock).mockReturnValue(
-        makeModel({ position2D: { x: 354, y: 104.5 }, position3D: { x: -22140, y: -9669 } })
+        makeModel({ position2D: { x: 354, y: 104.5 }, position3D: { x: -22140, y: -9669, z: 4500 } })
       );
 
       diagramService.updateElement('diagram-1', 'el-1', { x: 489, y: 106.5 });
@@ -149,7 +149,7 @@ describe('2D/3D position write-through', () => {
   describe('updateModelElementPresentationInView (2D editor persist path)', () => {
     it('mirrors a 2D move to position3D when the element already has a world-space position', async () => {
       (modelService.getModelById as jest.Mock).mockReturnValue(
-        makeModel({ position2D: { x: 1, y: 2 }, position3D: { x: 1, y: 2 } })
+        makeModel({ position2D: { x: 1, y: 2 }, position3D: { x: 1, y: 2, z: 4500 } })
       );
 
       await diagramService.updateModelElementPresentationInView('diagram-1', 'el-1', {
@@ -158,7 +158,7 @@ describe('2D/3D position write-through', () => {
 
       const expected = expect.objectContaining({
         position2D: { x: 10, y: 20 },
-        position3D: { x: 10, y: 20 }
+        position3D: { x: 10, y: 20, z: 4500 }
       });
       expect(modelService.updateModelElementPresentation).toHaveBeenCalledWith(
         'model-1',
@@ -189,19 +189,38 @@ describe('2D/3D position write-through', () => {
 
     it('mirrors a 3D-only presentation update back to position2D', async () => {
       (modelService.getModelById as jest.Mock).mockReturnValue(
-        makeModel({ position2D: { x: 1, y: 2 }, position3D: { x: 1, y: 2 } })
+        makeModel({ position2D: { x: 1, y: 2 }, position3D: { x: 1, y: 2, z: 0 } })
       );
 
       await diagramService.updateModelElementPresentationInView('diagram-1', 'el-1', {
-        position3D: { x: 900, y: 450 }
+        position3D: { x: 900, y: 450, z: 1200 }
       });
 
       expect(modelService.updateModelElementPresentation).toHaveBeenCalledWith(
         'model-1',
         'el-1',
         expect.objectContaining({
-          position3D: { x: 900, y: 450 },
+          position3D: { x: 900, y: 450, z: 1200 },
           position2D: { x: 900, y: 450 }
+        })
+      );
+    });
+
+    it('changes elevation without changing the 2D ground-plane position', async () => {
+      (modelService.getModelById as jest.Mock).mockReturnValue(
+        makeModel({ position2D: { x: 900, y: 450 }, position3D: { x: 900, y: 450, z: 0 } })
+      );
+
+      await diagramService.updateModelElementPresentationInView('diagram-1', 'el-1', {
+        position3D: { x: 900, y: 450, z: 4500 }
+      });
+
+      expect(modelService.updateModelElementPresentation).toHaveBeenCalledWith(
+        'model-1',
+        'el-1',
+        expect.objectContaining({
+          position2D: { x: 900, y: 450 },
+          position3D: { x: 900, y: 450, z: 4500 }
         })
       );
     });

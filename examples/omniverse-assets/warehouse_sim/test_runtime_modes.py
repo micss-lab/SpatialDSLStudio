@@ -6,6 +6,7 @@ from pathlib import Path
 
 from run_warehouse_sim import (
     differential_wheel_speeds,
+    load_drone_asset_config,
     load_robot_asset_config,
     wrap_degrees,
 )
@@ -57,6 +58,27 @@ class RuntimeControlModeTests(unittest.TestCase):
             self.assertEqual(config["massKg"], 4.2)
             self.assertEqual(config["wheelRadiusM"], 0.08)
             self.assertTrue(math.isfinite(config["wheelSeparationM"]))
+
+    def test_manifest_supplies_kinematic_drone_contract(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "asset-manifest.json").write_text(
+                json.dumps({
+                    "defaults": {
+                        "InspectionDrone": {
+                            "asset": "inspection_drone.usda",
+                            "massKg": 2.0,
+                            "bodyMode": "kinematic",
+                        }
+                    }
+                }),
+                encoding="utf-8",
+            )
+
+            config = load_drone_asset_config(str(root))
+            self.assertEqual(config["asset"], "inspection_drone.usda")
+            self.assertEqual(config["massKg"], 2.0)
+            self.assertEqual(config["bodyMode"], "kinematic")
 
 
 if __name__ == "__main__":

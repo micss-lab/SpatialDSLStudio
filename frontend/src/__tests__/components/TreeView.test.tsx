@@ -8,6 +8,8 @@ import { modelService } from '../../services/model';
 import viewpointService from '../../services/viewpoint.service';
 import smartWarehouseMetamodel from '../../examples/data/smart-warehouse-metamodel.json';
 import smartWarehouseModel from '../../examples/data/smart-warehouse-model.json';
+import smartWarehouseViewpoints from '../../examples/data/smart-warehouse-viewpoints.json';
+import { Viewpoint } from '../../models/types';
 
 jest.mock('../../services/diagram', () => ({ diagramService: { getDiagramById: jest.fn() } }));
 jest.mock('../../services/model', () => ({
@@ -122,8 +124,9 @@ describe('TreeView', () => {
   });
 
   it('opens a visible-metaclass tree against the Smart Warehouse example', () => {
-    const warehouseClassId = '10000000-0000-4000-8000-000000000101';
-    const robotClassId = '10000000-0000-4000-8000-000000000102';
+    const treeDescription = (smartWarehouseViewpoints as unknown as Viewpoint[])[0].representationDescriptions.find(
+      description => description.kind === 'tree'
+    );
     (diagramService.getDiagramById as jest.Mock).mockReturnValue({
       id: 'warehouse-tree',
       modelId: smartWarehouseModel.id,
@@ -131,19 +134,15 @@ describe('TreeView', () => {
     (modelService.getModelById as jest.Mock).mockReturnValue(smartWarehouseModel);
     (metamodelService.getMetamodelById as jest.Mock).mockReturnValue(smartWarehouseMetamodel);
     (viewpointService.resolveRepresentationDescription as jest.Mock).mockReturnValue({
-      representationDescription: {
-        name: 'Warehouse Tree',
-        kind: 'tree',
-        visibleMetaClassIds: [warehouseClassId, robotClassId],
-      },
+      representationDescription: treeDescription,
     });
 
     render(<TreeView diagramId="warehouse-tree" />);
 
-    expect(screen.getByRole('tree', { name: 'Warehouse Tree' })).toBeInTheDocument();
-    expect(screen.getByText('WarehouseMAS')).toBeInTheDocument();
-    expect(screen.getByText('Mobile Robot Resource')).toBeInTheDocument();
+    expect(screen.getByRole('tree', { name: 'Warehouse Resource Hierarchy' })).toBeInTheDocument();
+    expect(screen.getByText('WarehouseMAS').closest('[role="treeitem"]')).toHaveAttribute('aria-level', '1');
+    expect(screen.getByText('Mobile Robot Resource').closest('[role="treeitem"]')).toHaveAttribute('aria-level', '2');
     expect(screen.getByText('Mobile Robot Resource #2')).toBeInTheDocument();
-    expect(screen.queryByText('Conveyor')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Conveyor').length).toBeGreaterThan(0);
   });
 });

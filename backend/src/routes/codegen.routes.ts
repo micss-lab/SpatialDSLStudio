@@ -1,12 +1,19 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { body, param, query } from 'express-validator';
-import { validate, authenticate, AuthenticatedRequest } from '../middleware';
+import {
+  validate,
+  authenticate,
+  AuthenticatedRequest,
+  projectResourceParam,
+  projectArgs,
+} from '../middleware';
 import { codeGenerationService } from '../services';
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
 // All routes require authentication
 router.use(authenticate);
+router.param('id', projectResourceParam('codeGenerationProject'));
 
 // Async handler wrapper
 const asyncHandler = (fn: Function) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -21,11 +28,15 @@ router.get('/projects', asyncHandler(async (req: AuthenticatedRequest, res: Resp
   const { metamodelId } = req.query;
   
   if (metamodelId && typeof metamodelId === 'string') {
-    const projects = await codeGenerationService.getProjectsByMetamodelId(metamodelId, req.user!.userId);
+    const projects = await codeGenerationService.getProjectsByMetamodelId(
+      metamodelId,
+      req.user!.userId,
+      ...projectArgs(req)
+    );
     return res.json({ success: true, data: projects });
   }
   
-  const projects = await codeGenerationService.getAllProjects(req.user!.userId);
+  const projects = await codeGenerationService.getAllProjects(req.user!.userId, ...projectArgs(req));
   res.json({ success: true, data: projects });
 }));
 
@@ -34,7 +45,7 @@ router.get('/projects', asyncHandler(async (req: AuthenticatedRequest, res: Resp
  * @desc    Get a single project by ID
  */
 router.get('/projects/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const project = await codeGenerationService.getProjectById(req.params.id, req.user!.userId);
+  const project = await codeGenerationService.getProjectById(req.params.id, req.user!.userId, ...projectArgs(req));
   if (!project) {
     return res.status(404).json({ success: false, error: 'Project not found' });
   }
@@ -52,7 +63,12 @@ router.post(
     // targetMetamodelId is optional - allow any string or null for example projects
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const project = await codeGenerationService.createProject(req.body, req.user!.userId, req.user!.role);
+    const project = await codeGenerationService.createProject(
+      req.body,
+      req.user!.userId,
+      req.user!.role,
+      ...projectArgs(req)
+    );
     res.status(201).json({ success: true, data: project });
   })
 );
@@ -78,7 +94,16 @@ router.delete(
   '/projects/:id',
   validate([param('id').isUUID().withMessage('Invalid ID format')]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    await codeGenerationService.deleteProject(req.params.id, req.user!.userId);
+    if (req.projectContext) {
+      await codeGenerationService.deleteProject(
+        req.params.id,
+        req.user!.userId,
+        req.user!.role,
+        req.projectContext.projectId
+      );
+    } else {
+      await codeGenerationService.deleteProject(req.params.id, req.user!.userId);
+    }
     res.json({ success: true, message: 'Project deleted successfully' });
   })
 );

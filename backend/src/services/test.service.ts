@@ -46,7 +46,20 @@ class TestService {
   /**
    * Get all test cases accessible by a user (owned + shared)
    */
-  async getAll(userId: string): Promise<TestCaseWithPermission[]> {
+  async getAll(userId: string, projectId?: string): Promise<TestCaseWithPermission[]> {
+    if (projectId) {
+      const projectTests = await prisma.testCase.findMany({
+        where: { projectId },
+        orderBy: { name: 'asc' },
+        include: { user: { select: { email: true } } },
+      });
+      return projectTests.map(testCase => ({
+        ...this.mapToTestCase(testCase),
+        isOwner: testCase.userId === userId,
+        permission: testCase.userId === userId ? undefined : 'EDITOR',
+        ownerEmail: testCase.userId === userId ? undefined : testCase.user.email,
+      }));
+    }
     // Platform admins see and can edit every test case on the platform.
     if (await sharingService.isAdmin(userId)) {
       const all = await prisma.testCase.findMany({
@@ -105,17 +118,17 @@ class TestService {
   /**
    * Get test cases by model ID accessible by user
    */
-  async getByModelId(modelId: string, userId: string): Promise<TestCaseWithPermission[]> {
-    const allTestCases = await this.getAll(userId);
-    return allTestCases.filter(tc => (tc as any).modelId === modelId);
+  async getByModelId(modelId: string, userId: string, projectId?: string): Promise<TestCaseWithPermission[]> {
+    const allTestCases = await this.getAll(userId, projectId);
+    return allTestCases.filter(tc => tc.modelId === modelId);
   }
 
   /**
    * Get a single test case by ID (with access check)
    */
-  async getById(id: string, userId: string): Promise<TestCaseWithPermission | null> {
+  async getById(id: string, userId: string, projectId?: string): Promise<TestCaseWithPermission | null> {
     const testCase = await prisma.testCase.findFirst({
-      where: { id },
+      where: { id, ...(projectId && { projectId }) },
     });
 
     if (!testCase) return null;
@@ -136,12 +149,22 @@ class TestService {
   /**
    * Create a new test case (requires ADMIN or DSL_DESIGNER role)
    */
-  async create(data: CreateTestCaseData, userId: string, userRole: UserRole): Promise<TestCase> {
+  async create(data: CreateTestCaseData, userId: string, userRole: UserRole, projectId?: string): Promise<TestCase> {
     if (!canPerformOperation(userRole, 'test', 'create')) {
       throw new ApiError(403, 'Your role does not allow creating test cases');
     }
 
     const targetId = data.modelId || data.metamodelId;
+    if (projectId && !targetId) {
+      throw new ApiError(400, 'A project test case must target a Model or Metamodel in this project');
+    }
+    if (projectId && targetId) {
+      const [model, metamodel] = await Promise.all([
+        prisma.model.findFirst({ where: { id: targetId, projectId }, select: { id: true } }),
+        prisma.metamodel.findFirst({ where: { id: targetId, projectId }, select: { id: true } }),
+      ]);
+      if (!model && !metamodel) throw new ApiError(400, 'Test target is not in this project');
+    }
 
     const testCase = await prisma.testCase.create({
       data: {
@@ -160,6 +183,7 @@ class TestService {
         expectedOutput: data.expectedOutput,
         modelId: targetId || '',
         userId,
+        projectId,
       },
     });
 
@@ -169,11 +193,16 @@ class TestService {
   /**
    * Create multiple test cases at once
    */
-  async createMany(testCases: CreateTestCaseData[], userId: string, userRole: UserRole): Promise<TestCase[]> {
+  async createMany(
+    testCases: CreateTestCaseData[],
+    userId: string,
+    userRole: UserRole,
+    projectId?: string
+  ): Promise<TestCase[]> {
     const created: TestCase[] = [];
 
     for (const data of testCases) {
-      const testCase = await this.create(data, userId, userRole);
+      const testCase = await this.create(data, userId, userRole, projectId);
       created.push(testCase);
     }
 
@@ -282,9 +311,12 @@ class TestService {
   /**
    * Delete a test case (owner only)
    */
-  async delete(id: string, userId: string): Promise<void> {
+  async delete(id: string, userId: string, userRole?: UserRole, projectId?: string): Promise<void> {
+    if (projectId && userRole && !canPerformOperation(userRole, 'test', 'create')) {
+      throw new ApiError(403, 'Your role does not allow deleting test definitions');
+    }
     const existing = await prisma.testCase.findFirst({
-      where: { id, userId },
+      where: projectId ? { id, projectId } : { id, userId },
     });
 
     if (!existing) {
@@ -300,10 +332,13 @@ class TestService {
   /**
    * Delete all test cases for a model (owner only)
    */
-  async deleteByModelId(modelId: string, userId: string): Promise<number> {
+  async deleteByModelId(modelId: string, userId: string, userRole?: UserRole, projectId?: string): Promise<number> {
+    if (projectId && userRole && !canPerformOperation(userRole, 'test', 'create')) {
+      throw new ApiError(403, 'Your role does not allow deleting test definitions');
+    }
     // Get all test cases for this model owned by user
     const testCases = await prisma.testCase.findMany({
-      where: { modelId, userId },
+      where: projectId ? { modelId, projectId } : { modelId, userId },
       select: { id: true },
     });
 
@@ -313,7 +348,7 @@ class TestService {
     }
 
     const result = await prisma.testCase.deleteMany({
-      where: { modelId, userId },
+      where: projectId ? { modelId, projectId } : { modelId, userId },
     });
 
     return result.count;
@@ -322,13 +357,13 @@ class TestService {
   /**
    * Reset all test cases for a model to pending status
    */
-  async resetByModelId(modelId: string, userId: string, userRole: UserRole): Promise<number> {
+  async resetByModelId(modelId: string, userId: string, userRole: UserRole, projectId?: string): Promise<number> {
     if (!canPerformOperation(userRole, 'test', 'run')) {
       throw new ApiError(403, 'Your role does not allow running tests');
     }
 
     const result = await prisma.testCase.updateMany({
-      where: { modelId, userId },
+      where: projectId ? { modelId, projectId } : { modelId, userId },
       data: {
         status: 'pending',
         errorMessage: null,
@@ -342,6 +377,8 @@ class TestService {
   private mapToTestCase(tc: any): TestCase {
     return {
       id: tc.id,
+      projectId: tc.projectId || undefined,
+      modelId: tc.modelId || undefined,
       name: tc.name,
       description: tc.description || '',
       type: tc.type as TestCaseType,

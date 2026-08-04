@@ -10,6 +10,10 @@ import {
 import { apiClient, API_ENDPOINTS } from './core';
 import { exampleDataService } from './metamodel/exampleData.service';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  validateConcreteSyntaxMapVerticalPlacements,
+  validateConcreteSyntaxVerticalPlacement,
+} from './spatial';
 
 export interface CreateViewpointPayload {
   id?: string;
@@ -28,6 +32,83 @@ const representationKinds = new Set<RepresentationKind>(['diagram', 'table', 'tr
 const isRecord = (value: unknown): value is Record<string, any> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 );
+
+export const validateRepresentationVerticalPlacementPolicies = (
+  value: unknown,
+  path = 'representationDescription'
+): string[] => {
+  if (!isRecord(value)) return [];
+  const errors: string[] = [];
+
+  if (value.concreteSyntaxByMetaClassId !== undefined) {
+    errors.push(...validateConcreteSyntaxMapVerticalPlacements(
+      value.concreteSyntaxByMetaClassId,
+      `${path}.concreteSyntaxByMetaClassId`
+    ));
+  }
+  if (Array.isArray(value.containerMappings)) {
+    value.containerMappings.forEach((mapping: unknown, index: number) => {
+      if (isRecord(mapping) && mapping.concreteSyntax !== undefined) {
+        errors.push(...validateConcreteSyntaxVerticalPlacement(
+          mapping.concreteSyntax,
+          `${path}.containerMappings[${index}].concreteSyntax`
+        ));
+      }
+    });
+  }
+  if (Array.isArray(value.layers)) {
+    value.layers.forEach((layer: unknown, layerIndex: number) => {
+      if (!isRecord(layer) || !Array.isArray(layer.mappings)) return;
+      layer.mappings.forEach((mapping: unknown, mappingIndex: number) => {
+        if (isRecord(mapping) && mapping.concreteSyntax !== undefined) {
+          errors.push(...validateConcreteSyntaxVerticalPlacement(
+            mapping.concreteSyntax,
+            `${path}.layers[${layerIndex}].mappings[${mappingIndex}].concreteSyntax`
+          ));
+        }
+      });
+    });
+  }
+  if (Array.isArray(value.conditionalStyles)) {
+    value.conditionalStyles.forEach((style: unknown, index: number) => {
+      if (isRecord(style) && style.concreteSyntax !== undefined) {
+        errors.push(...validateConcreteSyntaxVerticalPlacement(
+          style.concreteSyntax,
+          `${path}.conditionalStyles[${index}].concreteSyntax`
+        ));
+      }
+    });
+  }
+
+  return errors;
+};
+
+const validateViewpointVerticalPlacementPolicies = (
+  value: unknown,
+  path = 'viewpoint'
+): string[] => {
+  if (!isRecord(value)) return [];
+  const errors: string[] = [];
+  if (value.sharedConcreteSyntaxByMetaClassId !== undefined) {
+    errors.push(...validateConcreteSyntaxMapVerticalPlacements(
+      value.sharedConcreteSyntaxByMetaClassId,
+      `${path}.sharedConcreteSyntaxByMetaClassId`
+    ));
+  }
+  if (Array.isArray(value.representationDescriptions)) {
+    value.representationDescriptions.forEach((description: unknown, index: number) => {
+      errors.push(...validateRepresentationVerticalPlacementPolicies(
+        description,
+        `${path}.representationDescriptions[${index}]`
+      ));
+    });
+  }
+  return errors;
+};
+
+const requireValidVerticalPlacementPolicies = (errors: string[]): void => {
+  if (errors.length > 0) throw new Error(errors[0]);
+};
 
 const normalizeName = (value: unknown, fieldName: string): string => {
   if (typeof value !== 'string' || !value.trim()) {
@@ -77,6 +158,12 @@ const normalizeContainerMappings = (
     );
     if (mapping.concreteSyntax !== undefined && !isRecord(mapping.concreteSyntax)) {
       throw new Error(`${fieldName}[${index}].concreteSyntax must be an object`);
+    }
+    if (mapping.concreteSyntax !== undefined) {
+      requireValidVerticalPlacementPolicies(validateConcreteSyntaxVerticalPlacement(
+        mapping.concreteSyntax,
+        `${fieldName}[${index}].concreteSyntax`
+      ));
     }
 
     return {
@@ -234,6 +321,10 @@ const normalizeRepresentationDescription = (
   if (propertySections?.length && kind !== 'diagram') {
     throw new Error(`representationDescriptions[${index}].propertySections are only supported on diagrams`);
   }
+  requireValidVerticalPlacementPolicies(validateRepresentationVerticalPlacementPolicies(
+    value,
+    `representationDescriptions[${index}]`
+  ));
 
   return {
     id: typeof value.id === 'string' && value.id.trim() ? value.id.trim() : uuidv4(),
@@ -279,6 +370,16 @@ const normalizeImportedViewpoint = (value: unknown, metamodelId: string, index: 
   if (!Array.isArray(representationDescriptions)) {
     throw new Error(`viewpoints[${index}].representationDescriptions must be an array`);
   }
+  if (
+    value.sharedConcreteSyntaxByMetaClassId !== undefined
+    && !isRecord(value.sharedConcreteSyntaxByMetaClassId)
+  ) {
+    throw new Error(`viewpoints[${index}].sharedConcreteSyntaxByMetaClassId must be an object`);
+  }
+  requireValidVerticalPlacementPolicies(validateViewpointVerticalPlacementPolicies(
+    value,
+    `viewpoints[${index}]`
+  ));
 
   return {
     id: viewpointId,
@@ -308,13 +409,19 @@ const withViewpointId = (
 });
 
 class ViewpointService {
-  // Seed the cache with this session's example bundle plus the fixed-id
-  // fixtures: accounts that seeded before ids were remapped still resolve
-  // their example views against the fixture ids.
-  private viewpoints: Viewpoint[] = [
-    ...exampleDataService.getExampleViewpoints(),
-    ...exampleDataService.getLegacyExampleViewpoints(),
-  ];
+  private viewpoints: Viewpoint[] = this.getInitialViewpoints();
+
+  private getInitialViewpoints(): Viewpoint[] {
+    // Example viewpoints are a compatibility aid for the old, unscoped
+    // workspace. Project sessions must start empty and load only their own
+    // viewpoint definitions from the project API.
+    if (apiClient.getProjectId()) return [];
+
+    return [
+      ...exampleDataService.getExampleViewpoints(),
+      ...exampleDataService.getLegacyExampleViewpoints(),
+    ];
+  }
 
   getCachedViewpoints(metamodelId?: string): Viewpoint[] {
     return this.viewpoints.filter(viewpoint => !metamodelId || viewpoint.metamodelId === metamodelId);
@@ -329,6 +436,15 @@ class ViewpointService {
     return viewpoints;
   }
 
+  async clearCacheAndReinitialize(): Promise<void> {
+    this.clearCacheLocal();
+    await this.loadViewpoints();
+  }
+
+  clearCacheLocal(): void {
+    this.viewpoints = this.getInitialViewpoints();
+  }
+
   async getDefaultViewpoint(metamodelId: string): Promise<Viewpoint> {
     const viewpoint = await apiClient.get<Viewpoint>(
       `${API_ENDPOINTS.VIEWPOINTS}/default?metamodelId=${encodeURIComponent(metamodelId)}`
@@ -337,13 +453,21 @@ class ViewpointService {
     return viewpoint;
   }
 
+  async createDefaultViewpoint(metamodelId: string): Promise<Viewpoint> {
+    const viewpoint = await apiClient.post<Viewpoint>(`${API_ENDPOINTS.VIEWPOINTS}/default`, { metamodelId });
+    this.mergeViewpoints([viewpoint]);
+    return viewpoint;
+  }
+
   async createViewpoint(payload: CreateViewpointPayload): Promise<Viewpoint> {
+    requireValidVerticalPlacementPolicies(validateViewpointVerticalPlacementPolicies(payload));
     const viewpoint = await apiClient.post<Viewpoint>(API_ENDPOINTS.VIEWPOINTS, payload);
     this.mergeViewpoints([viewpoint]);
     return viewpoint;
   }
 
   async updateViewpoint(id: string, payload: UpdateViewpointPayload): Promise<Viewpoint> {
+    requireValidVerticalPlacementPolicies(validateViewpointVerticalPlacementPolicies(payload));
     const viewpoint = await apiClient.put<Viewpoint>(`${API_ENDPOINTS.VIEWPOINTS}/${id}`, payload);
     this.mergeViewpoints([viewpoint]);
     return viewpoint;
@@ -358,6 +482,7 @@ class ViewpointService {
     viewpointId: string,
     payload: RepresentationDescription
   ): Promise<Viewpoint> {
+    requireValidVerticalPlacementPolicies(validateRepresentationVerticalPlacementPolicies(payload));
     const viewpoint = await apiClient.post<Viewpoint>(
       `${API_ENDPOINTS.VIEWPOINTS}/${viewpointId}/representation-descriptions`,
       payload
@@ -371,6 +496,7 @@ class ViewpointService {
     representationDescriptionId: string,
     payload: Partial<RepresentationDescription>
   ): Promise<Viewpoint> {
+    requireValidVerticalPlacementPolicies(validateRepresentationVerticalPlacementPolicies(payload));
     const viewpoint = await apiClient.put<Viewpoint>(
       `${API_ENDPOINTS.VIEWPOINTS}/${viewpointId}/representation-descriptions/${representationDescriptionId}`,
       payload

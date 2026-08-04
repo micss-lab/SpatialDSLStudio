@@ -13,12 +13,16 @@ import VisualMetamodelEditor from './VisualMetamodelEditor';
 import { exportService, ecoreService } from '../../services/metamodel';
 import { ShareDialog, resolveOwnerEmail } from '../common';
 import { useAuth } from '../../contexts/AuthContext';
-import { useOwnerFilterMatcher } from '../../contexts/OwnerFilterContext';
+import { useProject } from '../../contexts/ProjectContext';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const MetamodelManager: React.FC = () => {
-  const { user, canShare, canCreate, canDelete, canEditMetamodel } = useAuth();
-  const matchesOwner = useOwnerFilterMatcher();
+  const { user } = useAuth();
+  const { can, project } = useProject();
+  const canShare = false;
+  const canCreate = can('metamodel.create');
+  const canDelete = can('metamodel.delete');
+  const canEditMetamodel = can('metamodel.update');
   const navigate = useNavigate();
   const { id: routeMetamodelId } = useParams<{ id?: string }>();
   const [metamodels, setMetamodels] = useState<Metamodel[]>([]);
@@ -89,14 +93,14 @@ const MetamodelManager: React.FC = () => {
 
     if (selectedMetamodel?.id === id || routeMetamodelId === id) {
       setSelectedMetamodel(null);
-      navigate('/metamodels');
+      navigate(`/projects/${project.id}/metamodels`);
     }
     refreshMetamodels();
   };
 
   const handleSelectMetamodel = (metamodel: Metamodel) => {
     setSelectedMetamodel(metamodel);
-    navigate(`/metamodels/${metamodel.id}`);
+    navigate(`/projects/${project.id}/metamodels/${metamodel.id}`);
   };
 
   useEffect(() => {
@@ -159,7 +163,7 @@ const MetamodelManager: React.FC = () => {
         // Import as JSON, preserving the metamodel ID and nested class/reference IDs.
         const metamodelData = JSON.parse(importData);
         const importedMetamodel = metamodelService.importMetamodel(metamodelData);
-        navigate(`/metamodels/${importedMetamodel.id}`);
+        navigate(`/projects/${project.id}/metamodels/${importedMetamodel.id}`);
       }
       
       setIsImportDialogOpen(false);
@@ -169,7 +173,7 @@ const MetamodelManager: React.FC = () => {
       
     } catch (error) {
       console.error('Error importing metamodel:', error);
-      alert('Error importing metamodel: Invalid format');
+      alert(`Error importing metamodel: ${error instanceof Error ? error.message : 'Invalid format'}`);
     }
   };
 
@@ -215,7 +219,7 @@ const MetamodelManager: React.FC = () => {
         </Box>
         
         <List sx={{ flexGrow: 1 }}>
-          {metamodels.filter(matchesOwner).map((metamodel) => {
+          {metamodels.map((metamodel) => {
             const ownerEmail = resolveOwnerEmail(
               { isOwner: metamodel.isOwner, ownerEmail: metamodel.ownerEmail },
               user?.email
@@ -309,7 +313,7 @@ const MetamodelManager: React.FC = () => {
             <ListItemText>Export (JSON or Ecore)</ListItemText>
           </MenuItem>
           <MenuItem onClick={() => {
-            if (actionsTarget) navigate(`/metamodels/${actionsTarget.id}/viewpoints`);
+            if (actionsTarget) navigate(`/projects/${project.id}/metamodels/${actionsTarget.id}/viewpoints`);
             closeActionsMenu();
           }}>
             <ListItemIcon><AccountTreeIcon fontSize="small" /></ListItemIcon>

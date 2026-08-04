@@ -203,6 +203,14 @@ describe('Smart Warehouse codegen end-to-end (import -> generate -> zip)', () =>
     expect(parsedLayout.pickups).toHaveLength(2);
     expect(parsedLayout.dropoffs).toHaveLength(1);
     expect(parsedLayout.chargers).toHaveLength(2);
+    expect(parsedLayout.drones).toEqual([
+      expect.objectContaining({ name: 'Inspection Drone Alpha', z: 4500 }),
+      expect.objectContaining({ name: 'Inspection Drone Beta', z: 0 }),
+    ]);
+    Object.values(parsedLayout)
+      .filter(Array.isArray)
+      .flat()
+      .forEach((record: any) => expect(Number.isFinite(record.z)).toBe(true));
     expect(parsedLayout.robots[0].batteryLevel).toBeDefined();
 
     const rootLayer = files.find(f => f.filename === 'warehouse_simulation.usda');

@@ -17,7 +17,8 @@ Implemented:
 - Smart Warehouse Visual Components and Omniverse projects consolidated on
   current-main PR #30
 - eight Visual Components outputs, including OPC UA configuration
-- OpenUSD scene generation for 28 physical warehouse elements
+- OpenUSD scene generation for 30 physical warehouse elements, including landed
+  and airborne inspection drones
 - model-driven OPC UA port and namespace values
 - automated Handlebars rendering, JSON parsing, and XML parsing tests
 - a normalized MIT-licensed NVIDIA F1TENTH AMR with provenance, collision, and
@@ -428,14 +429,19 @@ latter recursively verifies local USDA dependencies.
 
 ### P5: Spatial Semantics
 
-- [ ] Define an explicit transform between diagram coordinates and physical coordinates.
+- [x] Implement the Phase 10
+  [elevation and aerial placement plan](plans/phase-10-elevation-and-aerial-placement.md).
+- [x] Define an explicit transform between domain, Three.js, and OpenUSD coordinates.
 - [ ] Store scale, origin, axis direction, and units as model/view metadata.
-- [ ] Expose canonical spatial presentation fields to JS and OCL constraints.
-- [ ] Add bounds, overlap, and clearance helpers after coordinate semantics are stable.
-- [ ] Keep 2D layout edits independent from 3D placement unless synchronization is enabled.
+- [x] Expose canonical spatial presentation fields to JS and OCL constraints.
+- [x] Add plan-view-compatible and explicit 3D bounds, overlap, and clearance helpers.
+- [x] Synchronize aligned 2D/3D X/Y edits while preserving Z and deliberately
+  distinct legacy schematic layouts; keep elevation independent from 2D.
 
-Do not ship an implicit `1 pixel = 1 millimetre` conversion. The current Smart
-Warehouse fixture uses independent diagram and physical coordinate systems.
+The current Smart Warehouse fixture retains deliberately distinct schematic 2D
+and physical coordinates where they already differ. New aligned spatial
+placements use millimetres in canonical presentation; a future datum/scale
+metadata phase should make non-1:1 projections explicit.
 
 ### Optional: Portable Analytical Simulation
 

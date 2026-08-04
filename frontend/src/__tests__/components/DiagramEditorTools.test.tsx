@@ -67,6 +67,10 @@ jest.mock('../../components/diagram/DiagramElementProperties', () => () => null)
 jest.mock('../../components/diagram/RuleVisualizationPanel', () => () => null);
 jest.mock('../../components/diagram/ViewValidationPanel', () => () => null);
 
+jest.mock('../../contexts/ProjectContext', () => ({
+  useProject: () => ({ project: { id: 'project-1' } }),
+}));
+
 jest.mock('../../services/diagram', () => ({
   concreteSyntaxResolver: {
     resolve2D: jest.fn(() => ({ defaultSize: { width: 120, height: 80 } })),

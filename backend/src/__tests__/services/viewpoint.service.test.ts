@@ -275,6 +275,69 @@ describe('ViewpointService', () => {
       expect(prismaMock.viewpoint.create).not.toHaveBeenCalled();
     });
 
+    it('rejects inconsistent vertical-placement policies in representation notation', async () => {
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: true });
+      prismaMock.metamodel.findFirst.mockResolvedValue(mockMetamodelRow as any);
+      prismaMock.viewpoint.findMany.mockResolvedValue([]);
+
+      await expect(viewpointService.create(
+        {
+          name: 'Invalid elevation policy',
+          metamodelId: 'metamodel-uuid-1',
+          representationDescriptions: [{
+            id: 'rep-invalid-elevation',
+            name: 'Invalid Diagram',
+            viewpointId: 'viewpoint-invalid',
+            kind: 'diagram',
+            visibleMetaClassIds: ['cls-1'],
+            creatableMetaClassIds: ['cls-1'],
+            concreteSyntaxByMetaClassId: {
+              'cls-1': {
+                three_d: {
+                  verticalPlacement: {
+                    mode: 'adjustable',
+                    defaultBaseZMm: -100,
+                    minBaseZMm: 0,
+                  },
+                },
+              },
+            },
+          }],
+        },
+        'metamodel-owner-1',
+        'DSL_DESIGNER'
+      )).rejects.toThrow('defaultBaseZMm must be greater than or equal to');
+
+      expect(prismaMock.viewpoint.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects malformed vertical-placement policies in viewpoint shared notation', async () => {
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: true });
+      prismaMock.metamodel.findFirst.mockResolvedValue(mockMetamodelRow as any);
+      prismaMock.viewpoint.findMany.mockResolvedValue([]);
+
+      await expect(viewpointService.create(
+        {
+          name: 'Invalid shared policy',
+          metamodelId: 'metamodel-uuid-1',
+          sharedConcreteSyntaxByMetaClassId: {
+            'cls-1': {
+              three_d: {
+                verticalPlacement: {
+                  mode: 'adjustable',
+                  stepMm: '100' as any,
+                },
+              },
+            },
+          },
+        },
+        'metamodel-owner-1',
+        'DSL_DESIGNER'
+      )).rejects.toThrow('stepMm must be a finite number');
+
+      expect(prismaMock.viewpoint.create).not.toHaveBeenCalled();
+    });
+
     it('rejects duplicate viewpoint names case-insensitively within a metamodel', async () => {
       sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: true });
       prismaMock.metamodel.findFirst.mockResolvedValue(mockMetamodelRow as any);
@@ -315,6 +378,53 @@ describe('ViewpointService', () => {
           isDefault: true,
         }),
       }));
+    });
+
+    it('does not create a default viewpoint during a project-scoped read', async () => {
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: false, permission: 'VIEWER' });
+      prismaMock.viewpoint.findFirst.mockResolvedValue(null);
+
+      await expect(
+        viewpointService.getDefaultForMetamodel('metamodel-uuid-1', 'viewer-1', 'project-1')
+      ).rejects.toMatchObject({ statusCode: 404 });
+
+      expect(prismaMock.viewpoint.create).not.toHaveBeenCalled();
+    });
+
+    it('allows a DSL Designer to explicitly create a project default', async () => {
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: false, permission: 'EDITOR' });
+      prismaMock.metamodel.findFirst.mockResolvedValue({ ...mockMetamodelRow, projectId: 'project-1' } as any);
+      prismaMock.viewpoint.findFirst.mockResolvedValue(null);
+      prismaMock.viewpoint.findMany.mockResolvedValue([]);
+      (prismaMock.viewpoint.create as any).mockImplementation(async ({ data }: any) => ({
+        ...mockViewpointRow,
+        ...data,
+      }));
+
+      const result = await viewpointService.createDefaultForMetamodel(
+        'metamodel-uuid-1',
+        'designer-1',
+        'DSL_DESIGNER',
+        'project-1'
+      );
+
+      expect(result.isDefault).toBe(true);
+      expect(prismaMock.viewpoint.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ projectId: 'project-1', userId: 'designer-1' }),
+      }));
+    });
+
+    it('does not let a Modeler create a default viewpoint definition', async () => {
+      await expect(
+        viewpointService.createDefaultForMetamodel(
+          'metamodel-uuid-1',
+          'modeler-1',
+          'MODELER',
+          'project-1'
+        )
+      ).rejects.toMatchObject({ statusCode: 403 });
+
+      expect(prismaMock.viewpoint.create).not.toHaveBeenCalled();
     });
   });
 

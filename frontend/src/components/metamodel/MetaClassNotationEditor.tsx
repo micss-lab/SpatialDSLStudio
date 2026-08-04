@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Alert,
   Box,
   Divider,
   FormControl,
@@ -12,6 +13,7 @@ import {
 } from '@mui/material';
 import { MetaClass, MetaReference, Metamodel } from '../../models/types';
 import { metamodelService } from '../../services/metamodel';
+import { validateConcreteSyntaxVerticalPlacement } from '../../services/spatial';
 import ColorSwatchField from '../common/ColorSwatchField';
 
 interface MetaClassNotationEditorProps {
@@ -37,6 +39,12 @@ export const MetaClassNotationEditor: React.FC<MetaClassNotationEditorProps> = (
   onUpdateSelectedClass,
   onUpdateSelectedReference
 }) => {
+  const [verticalPlacementError, setVerticalPlacementError] = React.useState('');
+
+  React.useEffect(() => {
+    setVerticalPlacementError('');
+  }, [selectedClass?.id]);
+
   const refreshClassSelection = (classId: string) => {
     const updatedMetamodel = metamodelService.getMetamodelById(metamodel.id);
     if (!updatedMetamodel) return;
@@ -66,11 +74,20 @@ export const MetaClassNotationEditor: React.FC<MetaClassNotationEditorProps> = (
       }
     };
 
+    const errors = validateConcreteSyntaxVerticalPlacement(concreteSyntax, 'notation');
+    if (errors.length > 0) {
+      setVerticalPlacementError(
+        errors[0].replace('notation.three_d.verticalPlacement', 'Vertical placement')
+      );
+      return;
+    }
+
+    setVerticalPlacementError('');
     metamodelService.updateMetaClass(metamodel.id, selectedClass.id, { concreteSyntax });
     refreshClassSelection(selectedClass.id);
   };
 
-  const updateClassNestedNotation = (path: 'two_d' | 'three_d', key: string, nestedValue: Record<string, number>) => {
+  const updateClassNestedNotation = (path: 'two_d' | 'three_d', key: string, nestedValue: Record<string, any>) => {
     if (!selectedClass) return;
     const concreteSyntax = {
       ...(selectedClass.concreteSyntax || {}),
@@ -83,6 +100,15 @@ export const MetaClassNotationEditor: React.FC<MetaClassNotationEditorProps> = (
       }
     };
 
+    const errors = validateConcreteSyntaxVerticalPlacement(concreteSyntax, 'notation');
+    if (errors.length > 0) {
+      setVerticalPlacementError(
+        errors[0].replace('notation.three_d.verticalPlacement', 'Vertical placement')
+      );
+      return;
+    }
+
+    setVerticalPlacementError('');
     metamodelService.updateMetaClass(metamodel.id, selectedClass.id, { concreteSyntax });
     refreshClassSelection(selectedClass.id);
   };
@@ -166,6 +192,9 @@ export const MetaClassNotationEditor: React.FC<MetaClassNotationEditorProps> = (
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Fallback class notation. Representation descriptions own view notation.
       </Typography>
+      {verticalPlacementError && (
+        <Alert severity="error" sx={{ mb: 2 }}>{verticalPlacementError}</Alert>
+      )}
       <Stack spacing={2}>
         <Typography variant="subtitle2">2D</Typography>
         <FormControl size="small">
@@ -205,10 +234,33 @@ export const MetaClassNotationEditor: React.FC<MetaClassNotationEditorProps> = (
         </FormControl>
         <ColorSwatchField label="Fallback color" value={threeD.fallbackColor || '#4287f5'} disabled={readOnly} onChange={(value) => updateClassNotation('three_d', 'fallbackColor', value)} />
         <Stack direction="row" spacing={1}>
-          <TextField label="W mm" type="number" size="small" value={threeD.defaultSizeMm?.widthMm || 500} disabled={readOnly} onChange={(event) => updateClassNestedNotation('three_d', 'defaultSizeMm', { widthMm: Number(event.target.value) })} />
-          <TextField label="H mm" type="number" size="small" value={threeD.defaultSizeMm?.heightMm || 800} disabled={readOnly} onChange={(event) => updateClassNestedNotation('three_d', 'defaultSizeMm', { heightMm: Number(event.target.value) })} />
-          <TextField label="D mm" type="number" size="small" value={threeD.defaultSizeMm?.depthMm || 200} disabled={readOnly} onChange={(event) => updateClassNestedNotation('three_d', 'defaultSizeMm', { depthMm: Number(event.target.value) })} />
+          <TextField label="Length X (mm)" type="number" size="small" value={threeD.defaultSizeMm?.widthMm ?? 500} disabled={readOnly} onChange={(event) => updateClassNestedNotation('three_d', 'defaultSizeMm', { widthMm: Number(event.target.value) })} />
+          <TextField label="Width Y (mm)" type="number" size="small" value={threeD.defaultSizeMm?.heightMm ?? 800} disabled={readOnly} onChange={(event) => updateClassNestedNotation('three_d', 'defaultSizeMm', { heightMm: Number(event.target.value) })} />
+          <TextField label="Height Z (mm)" type="number" size="small" value={threeD.defaultSizeMm?.depthMm ?? 200} disabled={readOnly} onChange={(event) => updateClassNestedNotation('three_d', 'defaultSizeMm', { depthMm: Number(event.target.value) })} />
         </Stack>
+        <FormControl size="small">
+          <InputLabel>Vertical placement</InputLabel>
+          <Select
+            label="Vertical placement"
+            value={threeD.verticalPlacement?.mode || 'grounded'}
+            disabled={readOnly}
+            onChange={(event) => updateClassNotation('three_d', 'verticalPlacement', {
+              ...(threeD.verticalPlacement || {}),
+              mode: event.target.value,
+            })}
+          >
+            <MenuItem value="grounded">Grounded</MenuItem>
+            <MenuItem value="adjustable">Adjustable</MenuItem>
+          </Select>
+        </FormControl>
+        {threeD.verticalPlacement?.mode === 'adjustable' && (
+          <Stack direction="row" spacing={1}>
+            <TextField label="Default Z" type="number" size="small" value={threeD.verticalPlacement.defaultBaseZMm ?? 0} disabled={readOnly} error={verticalPlacementError.includes('defaultBaseZMm')} onChange={(event) => updateClassNestedNotation('three_d', 'verticalPlacement', { defaultBaseZMm: Number(event.target.value) })} />
+            <TextField label="Min Z" type="number" size="small" value={threeD.verticalPlacement.minBaseZMm ?? 0} disabled={readOnly} error={verticalPlacementError.includes('minBaseZMm')} onChange={(event) => updateClassNestedNotation('three_d', 'verticalPlacement', { minBaseZMm: Number(event.target.value) })} />
+            <TextField label="Max Z" type="number" size="small" value={threeD.verticalPlacement.maxBaseZMm ?? 10000} disabled={readOnly} error={verticalPlacementError.includes('maxBaseZMm')} onChange={(event) => updateClassNestedNotation('three_d', 'verticalPlacement', { maxBaseZMm: Number(event.target.value) })} />
+            <TextField label="Step" type="number" size="small" value={threeD.verticalPlacement.stepMm ?? 100} disabled={readOnly} error={verticalPlacementError.includes('stepMm')} inputProps={{ min: Number.MIN_VALUE }} onChange={(event) => updateClassNestedNotation('three_d', 'verticalPlacement', { stepMm: Number(event.target.value) })} />
+          </Stack>
+        )}
       </Stack>
     </Box>
   );

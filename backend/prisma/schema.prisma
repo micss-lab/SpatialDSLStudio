@@ -41,44 +41,196 @@ enum SharePermission {
   EDITOR
 }
 
+enum ProjectRole {
+  OWNER
+  DSL_DESIGNER
+  MODELER
+  VIEWER
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum MetamodelMigrationStatus {
+  APPLIED
+  FAILED
+}
+
+enum PipelineRunStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
 // ===========================================
 // User Authentication
 // ===========================================
 
 model User {
-  id          String    @id @default(uuid())
-  email       String    @unique
-  password    String    // Hashed with bcrypt
-  role        UserRole  @default(VIEWER)
-  emailVerified Boolean @default(false)
-  isSuspended Boolean   @default(false)
-  lastLogin   DateTime?
-  
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String // Hashed with bcrypt
+  role          UserRole  @default(VIEWER)
+  emailVerified Boolean   @default(false)
+  isSuspended   Boolean   @default(false)
+  lastLogin     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations - user owns all their data
-  ePackages      EPackage[]
-  metamodels     Metamodel[]
-  models         Model[]
-  diagrams       Diagram[]
+  ePackages           EPackage[]
+  metamodels          Metamodel[]
+  models              Model[]
+  diagrams            Diagram[]
   transformationRules TransformationRule[]
   codegenProjects     CodeGenerationProject[]
-  testCases      TestCase[]
-  storedFiles    StoredFile[]
-  viewpoints     Viewpoint[]
-  
+  testCases           TestCase[]
+  storedFiles         StoredFile[]
+  viewpoints          Viewpoint[]
+
+  // Project ownership and membership. Resource userId fields remain as
+  // creator attribution during the project-scope migration.
+  ownedProjects       StudioProject[]      @relation("ProjectOwner")
+  projectMemberships  ProjectMembership[]
+  projectCheckpoints  ProjectCheckpoint[]
+  metamodelMigrations MetamodelMigration[]
+  pipelineRuns        PipelineRun[]
+
   // Sharing relations
   ownedShares    SharedResource[] @relation("ShareOwner")
   receivedShares SharedResource[] @relation("ShareRecipient")
 
   // Password reset & role request relations
-  passwordResetTokens  PasswordResetToken[]
+  passwordResetTokens    PasswordResetToken[]
   emailVerificationCodes EmailVerificationCode[]
-  roleRequests         RoleRequest[]
-  reviewedRoleRequests RoleRequest[] @relation("RoleRequestReviewer")
+  roleRequests           RoleRequest[]
+  reviewedRoleRequests   RoleRequest[]           @relation("RoleRequestReviewer")
 
   @@map("users")
+}
+
+// ===========================================
+// Studio Projects (workspace and security boundary)
+// ===========================================
+
+model StudioProject {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+
+  ownerId String
+  owner   User   @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships         ProjectMembership[]
+  ePackages           EPackage[]
+  metamodels          Metamodel[]
+  viewpoints          Viewpoint[]
+  models              Model[]
+  diagrams            Diagram[]
+  transformationRules TransformationRule[]
+  codegenProjects     CodeGenerationProject[]
+  testCases           TestCase[]
+  storedFiles         StoredFile[]
+  checkpoints         ProjectCheckpoint[]
+  metamodelMigrations MetamodelMigration[]
+  pipelineRuns        PipelineRun[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@map("studio_projects")
+}
+
+model ProjectMembership {
+  id        String        @id @default(uuid())
+  projectId String
+  project   StudioProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      ProjectRole
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@map("project_memberships")
+}
+
+// Immutable, dependency-closed snapshots of the project artifact graph.
+// Membership and authorization data are deliberately excluded from manifests.
+model ProjectCheckpoint {
+  id          String        @id @default(uuid())
+  projectId   String
+  project     StudioProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sequence    Int
+  tag         String?
+  message     String?
+  manifest    Json
+  contentHash String
+  createdById String
+  createdBy   User          @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime      @default(now())
+
+  migrations   MetamodelMigration[]
+  pipelineRuns PipelineRun[]
+
+  @@unique([projectId, sequence])
+  @@unique([projectId, tag])
+  @@index([projectId, createdAt])
+  @@map("project_checkpoints")
+}
+
+// Applied language-evolution operations and their impact/migration evidence.
+model MetamodelMigration {
+  id                 String                   @id @default(uuid())
+  projectId          String
+  project            StudioProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  metamodelId        String
+  sourceCheckpointId String
+  sourceCheckpoint   ProjectCheckpoint        @relation(fields: [sourceCheckpointId], references: [id], onDelete: Restrict)
+  sourceHash         String
+  targetHash         String
+  status             MetamodelMigrationStatus
+  changeSet          Json
+  impactReport       Json
+  migrationReport    Json
+  createdById        String
+  createdBy          User                     @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt          DateTime                 @default(now())
+  appliedAt          DateTime?
+
+  @@index([projectId, metamodelId, createdAt])
+  @@map("metamodel_migrations")
+}
+
+// Retained evidence for deterministic, headless project automation.
+model PipelineRun {
+  id                 String             @id @default(uuid())
+  projectId          String
+  project            StudioProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name               String
+  status             PipelineRunStatus  @default(RUNNING)
+  definition         Json
+  result             Json?
+  sourceCheckpointId String?
+  sourceCheckpoint   ProjectCheckpoint? @relation(fields: [sourceCheckpointId], references: [id], onDelete: SetNull)
+  contentHash        String?
+  failureMessage     String?
+  createdById        String
+  createdBy          User               @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt          DateTime           @default(now())
+  startedAt          DateTime           @default(now())
+  completedAt        DateTime?
+
+  @@index([projectId, createdAt])
+  @@map("pipeline_runs")
 }
 
 // ===========================================
@@ -90,18 +242,18 @@ model SharedResource {
   resourceType ResourceType
   resourceId   String
   permission   SharePermission
-  
+
   // Owner of the resource
-  ownerId      String
-  owner        User            @relation("ShareOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  
+  ownerId String
+  owner   User   @relation("ShareOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
   // User the resource is shared with
   sharedWithId String
-  sharedWith   User            @relation("ShareRecipient", fields: [sharedWithId], references: [id], onDelete: Cascade)
-  
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  
+  sharedWith   User   @relation("ShareRecipient", fields: [sharedWithId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Same resource can't be shared twice with the same user
   @@unique([resourceType, resourceId, sharedWithId])
   @@map("shared_resources")
@@ -112,26 +264,32 @@ model SharedResource {
 // ===========================================
 
 model EPackage {
-  id        String   @id @default(uuid())
-  name      String
-  nsURI     String
-  nsPrefix  String
-  
+  id       String @id @default(uuid())
+  name     String
+  nsURI    String
+  nsPrefix String
+
   // Store the entire classes array as JSONB for flexibility
   // This includes EClass, EAttribute, EReference definitions
-  classes   Json     @default("[]")
-  
+  classes Json @default("[]")
+
   // Owner
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String?
+  project   StudioProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // Metamodels that conform to this meta-metamodel
   metamodels Metamodel[]
-  
-  @@unique([nsURI, userId])
+
+  // Namespace identity is project-local. This lets one user own multiple
+  // independent projects that each contain the standard Ecore package.
+  @@unique([projectId, nsURI])
+  @@index([projectId])
   @@map("e_packages")
 }
 
@@ -140,36 +298,40 @@ model EPackage {
 // ===========================================
 
 model Metamodel {
-  id         String   @id @default(uuid())
-  name       String
+  id          String  @id @default(uuid())
+  name        String
   description String?
-  uri        String
-  prefix     String
-  eClass     String?  // ID of corresponding EClass in meta-metamodel
-  
+  uri         String
+  prefix      String
+  eClass      String? // ID of corresponding EClass in meta-metamodel
+
   // Store complex nested data as JSONB
   // classes: MetaClass[] with attributes, references, constraints
-  classes    Json     @default("[]")
-  enums      Json     @default("[]")
-  
+  classes Json @default("[]")
+  enums   Json @default("[]")
+
   // Global constraints (OCL and JavaScript)
-  constraints Json    @default("[]")
-  
+  constraints Json @default("[]")
+
   // Foreign key to meta-metamodel package
   conformsToId String
   conformsTo   EPackage @relation(fields: [conformsToId], references: [id])
-  
+
   // Owner
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String?
+  project   StudioProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
   models     Model[]
   viewpoints Viewpoint[]
-  
+
+  @@index([projectId])
   @@map("metamodels")
 }
 
@@ -178,7 +340,7 @@ model Metamodel {
 // ===========================================
 
 model Viewpoint {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   name        String
   description String?
 
@@ -187,13 +349,16 @@ model Viewpoint {
   metamodel   Metamodel @relation(fields: [metamodelId], references: [id], onDelete: Cascade)
 
   // Embedded RepresentationDescription[] for the first iteration.
-  representationDescriptions Json @default("[]")
-  sharedConcreteSyntax       Json @default("{}")
+  representationDescriptions Json    @default("[]")
+  sharedConcreteSyntax       Json    @default("{}")
   isDefault                  Boolean @default(false)
 
   // Owner follows metamodel ownership/access.
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String?
+  project   StudioProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -201,6 +366,7 @@ model Viewpoint {
   diagrams Diagram[]
 
   @@unique([metamodelId, name, userId])
+  @@index([projectId])
   @@map("viewpoints")
 }
 
@@ -209,32 +375,36 @@ model Viewpoint {
 // ===========================================
 
 model Model {
-  id           String   @id @default(uuid())
-  name         String
-  description  String?
-  metamodelId  String   // Duplicate for easy access
-  
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  metamodelId String // Duplicate for easy access
+
   // Store model elements as JSONB
   // elements: ModelElement[] with attributes, style, references
-  elements     Json     @default("[]")
-  
+  elements Json @default("[]")
+
   // Optional connections for visualization
-  connections  Json     @default("[]")
-  
+  connections Json @default("[]")
+
   // Foreign key to metamodel
   conformsToId String
   conformsTo   Metamodel @relation(fields: [conformsToId], references: [id], onDelete: Cascade)
-  
+
   // Owner
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String?
+  project   StudioProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  diagrams     Diagram[]
-  
+  diagrams Diagram[]
+
+  @@index([projectId])
   @@map("models")
 }
 
@@ -243,39 +413,43 @@ model Model {
 // ===========================================
 
 model Diagram {
-  id        String   @id @default(uuid())
-  name      String
+  id          String  @id @default(uuid())
+  name        String
   description String?
-  
+
   // Foreign key to model
-  modelId   String
-  model     Model    @relation(fields: [modelId], references: [id], onDelete: Cascade)
-  
+  modelId String
+  model   Model  @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
   // Store diagram elements as JSONB
   // elements: DiagramElement[] with positions, styles, etc.
-  elements  Json     @default("[]")
+  elements Json @default("[]")
 
   // Optional Sirius-style specification links. Diagram remains the current
   // compatibility table for concrete View / representation instances.
-  viewpointId String?
-  viewpoint   Viewpoint? @relation(fields: [viewpointId], references: [id], onDelete: SetNull)
+  viewpointId                 String?
+  viewpoint                   Viewpoint? @relation(fields: [viewpointId], references: [id], onDelete: SetNull)
   representationDescriptionId String?
 
   // View membership for the model-backed projection contract.
   includedElementIds Json @default("[]")
   schemaVersion      Int  @default(2)
   migrationWarnings  Json @default("[]")
-  
+
   // 3D grid settings
-  gridSettings Json  @default("{\"sizeX\": 20000, \"sizeY\": 20000}")
-  
+  gridSettings Json @default("{\"sizeX\": 20000, \"sizeY\": 20000}")
+
   // Owner
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String?
+  project   StudioProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
+  @@index([projectId])
   @@map("diagrams")
 }
 
@@ -285,34 +459,38 @@ model Diagram {
 
 // Single table for transformation rules with embedded patterns
 model TransformationRule {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   name        String
   description String?
-  priority    Int      @default(0)
-  enabled     Boolean  @default(true)
-  
+  priority    Int     @default(0)
+  enabled     Boolean @default(true)
+
   // LHS Pattern (embedded as JSON)
-  lhs         Json     @default("{}")
-  
+  lhs Json @default("{}")
+
   // RHS Pattern (embedded as JSON)
-  rhs         Json     @default("{}")
-  
+  rhs Json @default("{}")
+
   // NAC Patterns (embedded as JSON array)
-  nacs        Json     @default("[]")
-  
+  nacs Json @default("[]")
+
   // Additional application conditions
-  conditions  Json     @default("[]")
-  
+  conditions Json @default("[]")
+
   // Optional reference to diagram visualization
-  diagramId   String?
-  
+  diagramId String?
+
   // Owner
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String?
+  project   StudioProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
   @@map("transformation_rules")
 }
 
@@ -321,25 +499,29 @@ model TransformationRule {
 // ===========================================
 
 model CodeGenerationProject {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   name        String
   description String?
-  isExample   Boolean  @default(false)
-  
+  isExample   Boolean @default(false)
+
   // Target metamodel ID (stored as string without foreign key for example projects)
   targetMetamodelId String?
-  
+
   // Store templates as JSONB
   // templates: CodeGenerationTemplate[]
-  templates   Json     @default("[]")
-  
+  templates Json @default("[]")
+
   // Owner
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String?
+  project   StudioProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
   @@map("code_generation_projects")
 }
 
@@ -348,7 +530,7 @@ model CodeGenerationProject {
 // ===========================================
 
 model TestCase {
-  id                  String   @id @default(uuid())
+  id                  String         @id @default(uuid())
   name                String
   description         String?
   type                TestCaseType
@@ -357,29 +539,33 @@ model TestCase {
   targetProperty      String?
   status              TestCaseStatus @default(pending)
   errorMessage        String?
-  
+
   // For constraint tests
-  constraintId        String?
-  constraintType      ConstraintType?
-  
+  constraintId   String?
+  constraintType ConstraintType?
+
   // Test inputs/outputs
-  originalInput       Json?
-  expectedOutput      Json?
-  actualOutput        Json?
-  
+  originalInput  Json?
+  expectedOutput Json?
+  actualOutput   Json?
+
   // Test values as JSONB
-  testValues          Json     @default("[]")
-  
+  testValues Json @default("[]")
+
   // Target ID - can be model or metamodel ID (no foreign key constraint for flexibility)
-  modelId             String?
-  
+  modelId String?
+
   // Owner
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String?
+  project   StudioProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
   @@map("test_cases")
 }
 
@@ -407,25 +593,29 @@ enum ConstraintType {
 // ===========================================
 
 model StoredFile {
-  id        String   @id @default(uuid())
-  filename  String
-  mimetype  String
-  size      Int
-  type      FileType
-  
+  id       String   @id @default(uuid())
+  filename String
+  mimetype String
+  size     Int
+  type     FileType
+
   // Store the actual file data as bytes
-  data      Bytes
-  
+  data Bytes
+
   // Metadata
-  metadata  Json     @default("{}")
-  
+  metadata Json @default("{}")
+
   // Owner
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String?
+  project   StudioProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
+  @@index([projectId])
   @@map("stored_files")
 }
 
@@ -447,6 +637,7 @@ model PasswordResetToken {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+
   @@map("password_reset_tokens")
 }
 
@@ -481,5 +672,6 @@ model RoleRequest {
   reviewedAt    DateTime?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
+
   @@map("role_requests")
 }

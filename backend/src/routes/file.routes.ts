@@ -1,13 +1,22 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { param, query } from 'express-validator';
-import { validate, uploadSingle, authenticate, AuthenticatedRequest } from '../middleware';
+import {
+  validate,
+  uploadSingle,
+  authenticate,
+  AuthenticatedRequest,
+  projectResourceParam,
+  requireProjectCapability,
+  projectArgs,
+} from '../middleware';
 import { fileStorageService } from '../services';
 import { FileType } from '../../../shared/types';
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
 // All routes require authentication
 router.use(authenticate);
+router.param('id', projectResourceParam('storedFile'));
 
 // Async handler wrapper
 const asyncHandler = (fn: Function) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -26,7 +35,7 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
     fileType = type as FileType;
   }
   
-  const files = await fileStorageService.getAll(req.user!.userId, fileType);
+  const files = await fileStorageService.getAll(req.user!.userId, fileType, ...projectArgs(req));
   res.json({ success: true, data: files });
 }));
 
@@ -35,7 +44,7 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
  * @desc    Get storage statistics
  */
 router.get('/stats', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const stats = await fileStorageService.getStorageStats(req.user!.userId);
+  const stats = await fileStorageService.getStorageStats(req.user!.userId, ...projectArgs(req));
   res.json({ success: true, data: stats });
 }));
 
@@ -44,7 +53,7 @@ router.get('/stats', asyncHandler(async (req: AuthenticatedRequest, res: Respons
  * @desc    Get file metadata by ID (without data)
  */
 router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const file = await fileStorageService.getMetadataById(req.params.id, req.user!.userId);
+  const file = await fileStorageService.getMetadataById(req.params.id, req.user!.userId, ...projectArgs(req));
   if (!file) {
     return res.status(404).json({ success: false, error: 'File not found' });
   }
@@ -56,7 +65,7 @@ router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response)
  * @desc    Get file with base64 data
  */
 router.get('/:id/data', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const file = await fileStorageService.getById(req.params.id, req.user!.userId);
+  const file = await fileStorageService.getById(req.params.id, req.user!.userId, ...projectArgs(req));
   if (!file) {
     return res.status(404).json({ success: false, error: 'File not found' });
   }
@@ -68,7 +77,7 @@ router.get('/:id/data', asyncHandler(async (req: AuthenticatedRequest, res: Resp
  * @desc    Download file as binary stream
  */
 router.get('/:id/download', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const file = await fileStorageService.getRawData(req.params.id, req.user!.userId);
+  const file = await fileStorageService.getRawData(req.params.id, req.user!.userId, ...projectArgs(req));
   if (!file) {
     return res.status(404).json({ success: false, error: 'File not found' });
   }
@@ -85,6 +94,7 @@ router.get('/:id/download', asyncHandler(async (req: AuthenticatedRequest, res: 
  */
 router.post(
   '/upload',
+  requireProjectCapability('model.update'),
   uploadSingle,
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     if (!req.file) {
@@ -120,7 +130,8 @@ router.post(
       req.file.mimetype,
       fileType,
       req.user!.userId,
-      metadata
+      metadata,
+      ...projectArgs(req)
     );
     
     res.status(201).json({ success: true, data: result });
@@ -133,6 +144,7 @@ router.post(
  */
 router.post(
   '/upload-base64',
+  requireProjectCapability('model.update'),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { data, filename, mimetype, type, metadata } = req.body;
     
@@ -154,7 +166,8 @@ router.post(
       mimetype,
       fileType as FileType,
       req.user!.userId,
-      metadata
+      metadata,
+      ...projectArgs(req)
     );
     
     res.status(201).json({ success: true, data: result });
@@ -167,9 +180,15 @@ router.post(
  */
 router.put(
   '/:id/metadata',
+  requireProjectCapability('model.update'),
   validate([param('id').isUUID().withMessage('Invalid ID format')]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const file = await fileStorageService.updateMetadata(req.params.id, req.body, req.user!.userId);
+    const file = await fileStorageService.updateMetadata(
+      req.params.id,
+      req.body,
+      req.user!.userId,
+      ...projectArgs(req)
+    );
     res.json({ success: true, data: file });
   })
 );
@@ -180,9 +199,10 @@ router.put(
  */
 router.delete(
   '/:id',
+  requireProjectCapability('model.update'),
   validate([param('id').isUUID().withMessage('Invalid ID format')]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    await fileStorageService.delete(req.params.id, req.user!.userId);
+    await fileStorageService.delete(req.params.id, req.user!.userId, ...projectArgs(req));
     res.json({ success: true, message: 'File deleted successfully' });
   })
 );
@@ -193,9 +213,14 @@ router.delete(
  */
 router.post(
   '/cleanup',
+  requireProjectCapability('model.update'),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { maxAge } = req.body;
-    const count = await fileStorageService.cleanupOldFiles(req.user!.userId, maxAge);
+    const count = await fileStorageService.cleanupOldFiles(
+      req.user!.userId,
+      maxAge,
+      ...projectArgs(req)
+    );
     res.json({ success: true, message: `${count} file(s) cleaned up` });
   })
 );

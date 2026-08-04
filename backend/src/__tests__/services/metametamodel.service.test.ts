@@ -18,6 +18,7 @@ const mockEPackage = {
   nsPrefix: 'ecore',
   classes: [],
   userId: 'user-uuid-1',
+  projectId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };

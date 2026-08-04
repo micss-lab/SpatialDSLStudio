@@ -56,6 +56,53 @@ Security notes:
 
 Returns service heartbeat and timestamp.
 
+## Project endpoints
+
+Base: `/api/projects`
+
+A Studio Project is the workspace, navigation context, and authorization
+boundary that owns every modeling artifact. Each artifact belongs to exactly one
+project.
+
+- `GET /` (optional query: `includeArchived`)
+- `POST /`
+- `GET /:projectId`
+- `PUT /:projectId`
+- `POST /:projectId/archive`
+- `POST /:projectId/restore`
+- `GET /:projectId/members`
+- `POST /:projectId/members` (body: `email`, `role`)
+- `PATCH /:projectId/members/:userId` (body: `role`)
+- `DELETE /:projectId/members/:userId`
+
+Membership roles are `OWNER`, `DSL_DESIGNER`, `MODELER`, and `VIEWER`. They are
+separate from the platform-wide `UserRole`; `ADMIN` stays a platform concern.
+
+An archived project is read-only: any non-`GET`/`HEAD`/`OPTIONS` request to its
+scoped routes returns `409`.
+
+## Project-scoped resource endpoints
+
+Every resource group is also mounted under a project. These are the canonical
+URLs; the flat routes above remain as compatibility adapters.
+
+- `/api/projects/:projectId/epackages`
+- `/api/projects/:projectId/metamodels`
+- `/api/projects/:projectId/viewpoints`
+- `/api/projects/:projectId/models`
+- `/api/projects/:projectId/views`
+- `/api/projects/:projectId/transformations`
+- `/api/projects/:projectId/code-generation`
+- `/api/projects/:projectId/tests`
+- `/api/projects/:projectId/files`
+- `/api/projects/:projectId/interoperability`
+- `/api/projects/:projectId/lifecycle`
+- `/api/projects/:projectId/pipelines`
+
+Path parameters are validated against project membership, so a user who belongs
+to two projects cannot address project B's artifact through project A's URL;
+that returns `404`, not `403`.
+
 ## EPackage (meta-metamodel) endpoints
 
 Base: `/api/epackages`
@@ -82,6 +129,15 @@ Base: `/api/metamodels`
 - `DELETE /:id/classes/:classId`
 - `POST /:id/constraints`
 - `POST /:id/classes/:classId/constraints`
+
+Metamodel evolution (project-scoped mount only):
+
+- `POST /:id/evolution/preview`
+- `POST /:id/evolution/apply`
+- `GET /:id/evolution/migrations`
+
+See [Metamodel evolution endpoints](#metamodel-evolution-endpoints) for the
+request and response contracts.
 
 ## Model endpoints
 
@@ -342,6 +398,113 @@ Valid share permissions:
 - `VIEWER`
 - `EDITOR`
 
+## Lifecycle and checkpoint endpoints
+
+Base: `/api/projects/:projectId/lifecycle`
+
+- `GET /graph`: the current dependency-closed artifact manifest
+- `GET /checkpoints`: checkpoint list, newest first, without manifest bodies
+- `POST /checkpoints` (body: optional `tag`, optional `message`)
+- `GET /checkpoints/:checkpointId`: one checkpoint including its manifest
+- `GET /checkpoints/:checkpointId/diff` (optional query: `against`)
+- `POST /checkpoints/:checkpointId/restore` (body: `confirmContentHash`)
+
+A manifest is deterministic: artifacts are emitted in dependency order and
+hashed with a canonical JSON encoding, so an unchanged project always produces
+the same `contentHash`. Building a manifest fails if an artifact depends on
+something outside the project.
+
+`diff` compares the checkpoint with another checkpoint when `against` is a
+checkpoint ID, and with the live project state when `against` is `current` or is
+omitted. It returns `added`, `removed`, and `changed` artifact references plus an
+`unchanged` count.
+
+Restore semantics:
+
+- `confirmContentHash` must equal the checkpoint's stored hash, otherwise the
+  request fails with `400`. This is what makes a restore an explicit act rather
+  than an accidental one.
+- The stored manifest is re-hashed before anything is written. A per-artifact or
+  root hash that no longer matches fails with `409` and writes nothing, so a
+  tampered or corrupted checkpoint cannot be applied.
+- The restore runs in a single transaction. It rewrites project artifacts and
+  the project name/description only.
+- Membership, project roles, and sharing are **not** restored. Recovering an
+  old graph must never resurrect a removed collaborator's access.
+- Checkpoints are immutable and are not deleted by a restore, so restoring to an
+  older checkpoint is itself reversible.
+- The restored graph's root hash equals the checkpoint hash.
+
+Capabilities: `checkpoint.create` (DSL_DESIGNER and above) and
+`checkpoint.restore` (OWNER only).
+
+## Metamodel evolution endpoints
+
+Base: `/api/projects/:projectId/metamodels/:id/evolution`
+
+- `POST /preview` (body: `nextMetamodel`, optional `rules`)
+- `POST /apply` (body: `nextMetamodel`, `expectedSourceHash`, optional `rules`,
+  optional `checkpointTag`, optional `message`)
+- `GET /migrations`
+
+`preview` compares the stored metamodel with `nextMetamodel` by stable class and
+feature IDs and returns a report with:
+
+- `changes[]`: each with a `kind`, the `classId`/`featureId`, before/after
+  fragments, and a `breaking` flag;
+- `impacts[]`: affected models, viewpoints, transformations, generators, and
+  tests with the reasons they are affected;
+- `blockers[]`: conditions that prevent an apply until an explicit rule covers
+  them, such as removing a class that still has instances; and
+- `warnings[]`: non-blocking notes.
+
+Preview never mutates anything.
+
+`apply` requires `expectedSourceHash` from the preview. If the metamodel changed
+in between, the request fails with `409` rather than migrating against a stale
+plan. Before mutating, it creates a Phase 11 checkpoint and records its ID as the
+migration's `sourceCheckpointId`, so any migration can be rolled back with the
+restore endpoint. Metamodel and model changes are applied in one transaction.
+
+Migration rules are explicit: `rename-attribute`, `remove-attribute`, and
+`remove-class`. An unsafe deletion without a matching rule is rejected.
+
+Capability: `metamodel.evolve` (DSL_DESIGNER and above). Reading migration
+history needs only `project.read`.
+
+## Pipeline endpoints
+
+Base: `/api/projects/:projectId/pipelines`
+
+- `GET /runs`
+- `GET /runs/:runId`
+- `POST /runs` (body: `name`, `steps[]`, optional `checkpointTag`)
+
+Step kinds:
+
+| Kind | Required fields |
+| --- | --- |
+| `validate-model` | `id`, `modelId` |
+| `apply-transformation` | `id`, `modelId`, `ruleId`, optional `maxIterations` |
+| `run-tests` | `id`, `modelId` |
+| `generate` | `id`, `modelId`, `codegenProjectId` |
+
+Run semantics:
+
+- A source checkpoint is captured before the first step, so every run records
+  exactly which project state it executed against.
+- Steps run in the given order and stop at the first failure. Completed step
+  results are still retained on a failed run.
+- Every run gets a deterministic `contentHash` over its source checkpoint hash,
+  its normalized definition, and its step results. The same checkpoint and
+  definition reproduce the same hash, which is what makes a run comparable
+  across environments.
+- A failed run returns HTTP `201` with `status: "FAILED"` and a
+  `failureMessage`. The HTTP status describes the request, not the model
+  outcome; read `status` to decide whether the run passed.
+
+Capability: `pipeline.execute` (MODELER and above).
+
 ## Admin endpoints
 
 Base: `/api/admin` (ADMIN role required)
@@ -372,7 +535,22 @@ Resource and system:
 - Resource operations are further constrained by role and ownership/share checks.
 - Sharing creation is restricted to allowed roles and owner verification.
 
+On project-scoped routes, authority comes from project membership rather than
+the platform role. Capabilities accumulate by role:
+
+| Project role | Adds |
+| --- | --- |
+| `VIEWER` | `project.read` |
+| `MODELER` | model/view create, update, delete; `transformation.execute`; `codegen.execute`; `test.execute`; `pipeline.execute` |
+| `DSL_DESIGNER` | metamodel and viewpoint authoring; `transformation.author`; `codegen.author`; `test.author`; `checkpoint.create`; `metamodel.evolve` |
+| `OWNER` | `project.settings.update`; `project.members.manage`; `project.archive`; `checkpoint.restore` |
+
+A platform `ADMIN` receives the owner capability set on any project. A missing
+capability returns `403`; an artifact outside the addressed project returns
+`404`.
+
 ## Related docs
 
+- [Project Lifecycle](../user-guide/project-lifecycle.md)
 - [Roles and Sharing](../user-guide/roles-and-sharing.md)
 - [Data Model](data-model.md)

@@ -12,14 +12,43 @@ import {
 } from '../../../shared/types';
 import { sharingService } from './sharing.service';
 import { canPerformOperation } from '../middleware/permissions';
+import {
+  normalizeModelElementSpatial,
+  normalizePresentation,
+  validatePresentation,
+} from '../../../shared/spatial';
+import { spatialElementErrors } from '../middleware/presentationValidation';
 
 export interface ModelWithPermission extends Model, ResourceWithPermission {}
 
 class ModelService {
+  private normalizeElement(element: ModelElement, path = 'element'): ModelElement {
+    const errors = spatialElementErrors(element, path);
+    if (errors.length > 0) throw new ApiError(400, errors[0]);
+    return normalizeModelElementSpatial(element);
+  }
+
+  private normalizeElements(elements: ModelElement[] = []): ModelElement[] {
+    return elements.map((element, index) => this.normalizeElement(element, `elements[${index}]`));
+  }
+
   /**
    * Get all models accessible by a user (owned + shared)
    */
-  async getAll(userId: string): Promise<ModelWithPermission[]> {
+  async getAll(userId: string, projectId?: string): Promise<ModelWithPermission[]> {
+    if (projectId) {
+      const projectModels = await prisma.model.findMany({
+        where: { projectId },
+        orderBy: { name: 'asc' },
+        include: { user: { select: { email: true } } },
+      });
+      return projectModels.map(model => ({
+        ...this.mapToModel(model),
+        isOwner: model.userId === userId,
+        permission: model.userId === userId ? undefined : 'EDITOR',
+        ownerEmail: model.userId === userId ? undefined : model.user.email,
+      }));
+    }
     // Platform admins see and can edit every model on the platform.
     if (await sharingService.isAdmin(userId)) {
       const all = await prisma.model.findMany({
@@ -80,17 +109,17 @@ class ModelService {
   /**
    * Get models by metamodel ID accessible by user
    */
-  async getByMetamodelId(metamodelId: string, userId: string): Promise<ModelWithPermission[]> {
-    const allModels = await this.getAll(userId);
+  async getByMetamodelId(metamodelId: string, userId: string, projectId?: string): Promise<ModelWithPermission[]> {
+    const allModels = await this.getAll(userId, projectId);
     return allModels.filter(m => m.conformsTo === metamodelId);
   }
 
   /**
    * Get a single model by ID (with access check)
    */
-  async getById(id: string, userId: string): Promise<ModelWithPermission | null> {
+  async getById(id: string, userId: string, projectId?: string): Promise<ModelWithPermission | null> {
     const model = await prisma.model.findFirst({
-      where: { id },
+      where: { id, ...(projectId && { projectId }) },
     });
 
     if (!model) return null;
@@ -111,7 +140,7 @@ class ModelService {
   /**
    * Create a new model (requires ADMIN or DSL_DESIGNER role)
    */
-  async create(data: CreateModelRequest, userId: string, userRole: UserRole): Promise<Model> {
+  async create(data: CreateModelRequest, userId: string, userRole: UserRole, projectId?: string): Promise<Model> {
     if (!canPerformOperation(userRole, 'model', 'create')) {
       throw new ApiError(403, 'Your role does not allow creating models');
     }
@@ -121,6 +150,10 @@ class ModelService {
     if (!access.hasAccess) {
       throw new ApiError(400, 'Referenced metamodel (conformsTo) not found');
     }
+    if (projectId) {
+      const metamodel = await prisma.metamodel.findFirst({ where: { id: data.conformsTo, projectId } });
+      if (!metamodel) throw new ApiError(400, 'Referenced metamodel is not in this project');
+    }
 
     const model = await prisma.model.create({
       data: {
@@ -128,10 +161,11 @@ class ModelService {
         name: data.name,
         description: data.description,
         metamodelId: data.metamodelId,
-        elements: (data.elements || []) as any,
+        elements: this.normalizeElements(data.elements || []) as any,
         connections: (data.connections || []) as any,
         conformsToId: data.conformsTo,
         userId,
+        projectId,
       },
     });
 
@@ -161,7 +195,7 @@ class ModelService {
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.description !== undefined && { description: data.description }),
-        ...(data.elements !== undefined && { elements: data.elements as any }),
+        ...(data.elements !== undefined && { elements: this.normalizeElements(data.elements) as any }),
         ...(data.connections !== undefined && { connections: data.connections as any }),
       },
     });
@@ -172,9 +206,14 @@ class ModelService {
   /**
    * Delete a model (owner or platform admin)
    */
-  async delete(id: string, userId: string, userRole: UserRole): Promise<void> {
+  async delete(id: string, userId: string, userRole: UserRole, projectId?: string): Promise<void> {
+    if (projectId && !canPerformOperation(userRole, 'model', 'deleteInstance')) {
+      throw new ApiError(403, 'Your role does not allow deleting models');
+    }
     const existing = await prisma.model.findFirst({
-      where: userRole === 'ADMIN' ? { id } : { id, userId },
+      where: projectId
+        ? { id, projectId }
+        : userRole === 'ADMIN' ? { id } : { id, userId },
     });
 
     if (!existing) {
@@ -219,7 +258,7 @@ class ModelService {
       throw new ApiError(400, 'Element with this ID already exists');
     }
 
-    elements.push(element);
+    elements.push(this.normalizeElement(element));
 
     const updated = await prisma.model.update({
       where: { id: modelId },
@@ -262,7 +301,7 @@ class ModelService {
       throw new ApiError(404, 'Element not found in model');
     }
 
-    elements[elementIndex] = { ...elements[elementIndex], ...updates };
+    elements[elementIndex] = this.normalizeElement({ ...elements[elementIndex], ...updates });
 
     const updated = await prisma.model.update({
       where: { id: modelId },
@@ -295,6 +334,9 @@ class ModelService {
       throw new ApiError(403, 'You do not have permission to modify this model');
     }
 
+    const presentationErrors = validatePresentation(presentation);
+    if (presentationErrors.length > 0) throw new ApiError(400, presentationErrors[0]);
+
     const model = await prisma.model.findFirst({
       where: { id: modelId },
     });
@@ -310,18 +352,48 @@ class ModelService {
       throw new ApiError(404, 'Element not found in model');
     }
 
-    elements[elementIndex] = {
+    const currentPresentation = normalizePresentation(elements[elementIndex].presentation);
+    const normalizedUpdates = normalizePresentation(presentation);
+    const current2D = currentPresentation?.position2D;
+    const current3D = currentPresentation?.position3D;
+    const aligned = !current2D || !current3D
+      || (current2D.x === current3D.x && current2D.y === current3D.y);
+    let syncedUpdates = normalizedUpdates;
+
+    if (normalizedUpdates.position2D && !normalizedUpdates.position3D && current2D && current3D) {
+      syncedUpdates = {
+        ...normalizedUpdates,
+        position3D: {
+          x: current3D.x + (normalizedUpdates.position2D.x - current2D.x),
+          y: current3D.y + (normalizedUpdates.position2D.y - current2D.y),
+          z: current3D.z,
+        },
+      };
+    } else if (normalizedUpdates.position3D && !normalizedUpdates.position2D && aligned) {
+      syncedUpdates = {
+        ...normalizedUpdates,
+        position2D: {
+          x: normalizedUpdates.position3D.x,
+          y: normalizedUpdates.position3D.y,
+        },
+      };
+    }
+
+    const candidate = {
       ...elements[elementIndex],
       presentation: {
-        ...(elements[elementIndex].presentation || {}),
-        ...presentation,
-        position2D: presentation.position2D || elements[elementIndex].presentation?.position2D,
-        position3D: presentation.position3D || elements[elementIndex].presentation?.position3D,
-        size2D: presentation.size2D || elements[elementIndex].presentation?.size2D,
-        size3D: presentation.size3D || elements[elementIndex].presentation?.size3D,
-        appearance: presentation.appearance || elements[elementIndex].presentation?.appearance,
+        ...(currentPresentation || {}),
+        ...syncedUpdates,
+        position2D: syncedUpdates.position2D || currentPresentation?.position2D,
+        position3D: syncedUpdates.position3D || currentPresentation?.position3D,
+        size2D: syncedUpdates.size2D || currentPresentation?.size2D,
+        size3D: syncedUpdates.size3D || currentPresentation?.size3D,
+        appearance: Object.prototype.hasOwnProperty.call(syncedUpdates, 'appearance')
+          ? syncedUpdates.appearance
+          : currentPresentation?.appearance,
       },
     };
+    elements[elementIndex] = this.normalizeElement(candidate);
 
     const updated = await prisma.model.update({
       where: { id: modelId },
@@ -456,10 +528,11 @@ class ModelService {
   private mapToModel(m: any): Model {
     return {
       id: m.id,
+      projectId: m.projectId || undefined,
       name: m.name,
       description: m.description || undefined,
       metamodelId: m.metamodelId,
-      elements: (m.elements as unknown as ModelElement[]) || [],
+      elements: this.normalizeElements((m.elements as unknown as ModelElement[]) || []),
       connections: (m.connections as unknown as ModelConnection[]) || [],
       conformsTo: m.conformsToId,
     };

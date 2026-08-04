@@ -1,7 +1,7 @@
 {
   "id": "10000000-0000-4000-8000-000000000100",
   "name": "Smart Warehouse",
-  "description": "Abstract syntax for warehouse automation systems with robots, conveyors, charging stations, output locations, and pathway areas.",
+  "description": "Abstract syntax for warehouse automation systems with ground robots, aerial inspection drones, conveyors, charging stations, output locations, and pathway areas.",
   "eClass": "e7d0d970-9abd-4218-9ef9-9789e7b8862c",
   "uri": "http://www.modeling-tool.com/warehousemm",
   "prefix": "warehousemm",
@@ -58,91 +58,104 @@
       "references": [
         {
           "id": "f7530f99-1b89-4570-8ca6-6894f56521d6",
-          "name": "contains",
+          "name": "pathwayAreas",
           "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
           "target": "10000000-0000-4000-8000-000000000106",
           "containment": true,
           "cardinality": {
             "lowerBound": 0,
-            "upperBound": 1
+            "upperBound": "*"
           },
           "allowSelfReference": true,
           "attributes": []
         },
         {
           "id": "d5ee2c04-1ba2-4273-a339-39ba11b203fe",
-          "name": "contains",
+          "name": "robots",
           "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
           "target": "10000000-0000-4000-8000-000000000102",
           "containment": true,
           "cardinality": {
             "lowerBound": 0,
-            "upperBound": 1
+            "upperBound": "*"
           },
           "allowSelfReference": true,
           "attributes": []
         },
         {
           "id": "9c2b6a3a-7a36-4da1-8720-3e4948cfd021",
-          "name": "contains",
+          "name": "outputLocations",
           "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
           "target": "10000000-0000-4000-8000-000000000104",
           "containment": true,
           "cardinality": {
             "lowerBound": 0,
-            "upperBound": 1
+            "upperBound": "*"
           },
           "allowSelfReference": true,
           "attributes": []
         },
         {
           "id": "865fa445-a8a6-4ae6-b171-44d19f36bf62",
-          "name": "contains",
+          "name": "conveyors",
           "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
           "target": "10000000-0000-4000-8000-000000000103",
           "containment": true,
           "cardinality": {
             "lowerBound": 0,
-            "upperBound": 1
+            "upperBound": "*"
           },
           "allowSelfReference": true,
           "attributes": []
         },
         {
           "id": "84680dfa-f3c8-4641-948f-7a47131cc35a",
-          "name": "contains",
+          "name": "chargingStations",
           "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
           "target": "10000000-0000-4000-8000-000000000105",
           "containment": true,
           "cardinality": {
             "lowerBound": 0,
-            "upperBound": 1
+            "upperBound": "*"
           },
           "allowSelfReference": true,
           "attributes": []
         },
         {
           "id": "ref-contains-rack",
-          "name": "contains",
+          "name": "storageRacks",
           "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
           "target": "10000000-0000-4000-8000-00000000010a",
           "containment": true,
           "cardinality": {
             "lowerBound": 0,
-            "upperBound": 1
+            "upperBound": "*"
           },
           "allowSelfReference": true,
           "attributes": []
         },
         {
           "id": "ref-contains-dock",
-          "name": "contains",
+          "name": "docks",
           "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
           "target": "10000000-0000-4000-8000-00000000010b",
           "containment": true,
           "cardinality": {
             "lowerBound": 0,
-            "upperBound": 1
+            "upperBound": "*"
+          },
+          "allowSelfReference": true,
+          "attributes": []
+        },
+        {
+          "id": "ref-contains-drone",
+          "name": "drones",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "10000000-0000-4000-8000-00000000010c",
+          "containment": true,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": "*"
           },
           "allowSelfReference": true,
           "attributes": []
@@ -708,6 +721,87 @@
         }
       ],
       "references": []
+    },
+    {
+      "id": "10000000-0000-4000-8000-00000000010c",
+      "name": "InspectionDrone",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "attr-drone-name",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "defaultValue": ""
+        },
+        {
+          "id": "attr-drone-status",
+          "name": "Status",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "defaultValue": "Landed"
+        },
+        {
+          "id": "attr-drone-battery",
+          "name": "BatteryLevel",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "number",
+          "required": true,
+          "many": false,
+          "defaultValue": 100
+        },
+        {
+          "id": "attr-drone-max-altitude",
+          "name": "MaxAltitudeMm",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "number",
+          "required": true,
+          "many": false,
+          "defaultValue": 10000
+        }
+      ],
+      "references": [],
+      "constraints": [
+        {
+          "id": "constraint-drone-airborne-min-altitude",
+          "name": "Airborne minimum altitude",
+          "contextClassName": "InspectionDrone",
+          "contextClassId": "10000000-0000-4000-8000-00000000010c",
+          "expression": "self.Status !== 'Airborne' || (self.position3D && self.position3D.z >= 1000)",
+          "description": "An airborne inspection drone must have at least 1000 mm base elevation.",
+          "isValid": true,
+          "severity": "error",
+          "type": "javascript"
+        },
+        {
+          "id": "constraint-drone-max-altitude",
+          "name": "Maximum altitude",
+          "contextClassName": "InspectionDrone",
+          "contextClassId": "10000000-0000-4000-8000-00000000010c",
+          "expression": "!self.position3D || self.position3D.z <= self.MaxAltitudeMm",
+          "description": "A drone's base elevation must not exceed its configured maximum altitude.",
+          "isValid": true,
+          "severity": "error",
+          "type": "javascript"
+        },
+        {
+          "id": "constraint-drone-rack-clearance-3d",
+          "name": "Storage rack 3D clearance",
+          "contextClassName": "InspectionDrone",
+          "contextClassId": "10000000-0000-4000-8000-00000000010c",
+          "expression": "!self.position3D || findElementsByType('10000000-0000-4000-8000-00000000010a').every(rack => !spatial.overlaps3D(findElementById(self.id), rack))",
+          "description": "Drone volumes must not intersect storage rack volumes.",
+          "isValid": true,
+          "severity": "error",
+          "type": "javascript"
+        }
+      ]
     }
   ],
   "conformsTo": "8b8a9170-bd78-4e15-80dd-e018f295e8cc",

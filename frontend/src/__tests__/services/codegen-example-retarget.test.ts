@@ -32,10 +32,12 @@ describe('codegenExampleDataService.loadExampleProjects', () => {
     codegenExampleDataService.loadExampleProjects();
 
     const loaded = codegenProjectCrudService.getAllProjects();
-    expect(loaded).toHaveLength(1);
-    expect(loaded[0].targetMetamodelId).toBe('account-mm-id');
-    loaded[0].templates.forEach(template => {
-      expect(template.targetMetamodelId).toBe('account-mm-id');
+    expect(loaded).toHaveLength(2);
+    loaded.forEach(project => {
+      expect(project.targetMetamodelId).toBe('account-mm-id');
+      project.templates.forEach(template => {
+        expect(template.targetMetamodelId).toBe('account-mm-id');
+      });
     });
   });
 
@@ -45,9 +47,11 @@ describe('codegenExampleDataService.loadExampleProjects', () => {
     codegenExampleDataService.loadExampleProjects();
 
     const loaded = codegenProjectCrudService.getAllProjects();
-    expect(loaded).toHaveLength(1);
-    expect(loaded[0].targetMetamodelId).toBe(
-      exampleDataService.getExampleProjects()[0].targetMetamodelId
-    );
+    expect(loaded).toHaveLength(2);
+    loaded.forEach((project, index) => {
+      expect(project.targetMetamodelId).toBe(
+        exampleDataService.getExampleProjects()[index].targetMetamodelId
+      );
+    });
   });
 });

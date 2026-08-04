@@ -3,7 +3,15 @@ import {
   ModelElement,
   Metamodel
 } from '../../../models/types';
-import { spatialContextFields, boundsOf, overlaps, clearance } from '../spatial.helpers';
+import {
+  spatialContextFields,
+  boundsOf,
+  bounds3DOf,
+  overlaps,
+  overlaps3D,
+  clearance,
+  clearance3D
+} from '../spatial.helpers';
 
 /**
  * Prepare model elements for OCL evaluation
@@ -21,17 +29,21 @@ export function prepareContextForOCL(
   }
 
   // Create the base context with type information and attribute values.
-  // Placement data from element.presentation is exposed too, with style taking precedence.
+  // Placement data from element.presentation is canonical and takes precedence
+  // over any unmigrated legacy spatial keys in style.
   const context: any = {
+    ...element.style,
     ...element.presentation,
     ...spatialContextFields(element),
-    ...element.style,
     id: element.id,
     _type: metaClass.name, // Used by the typeDeterminer function
     spatial: {
       boundsOf,
+      bounds3DOf,
       overlaps,
-      clearance
+      overlaps3D,
+      clearance,
+      clearance3D
     },
   };
 

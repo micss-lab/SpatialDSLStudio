@@ -1,12 +1,15 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { body, param, query } from 'express-validator';
-import { validate, authenticate, AuthenticatedRequest } from '../middleware';
+import { validate, authenticate, AuthenticatedRequest, projectResourceParam, projectArgs } from '../middleware';
 import { diagramService } from '../services';
+import { validatePresentation } from '../../../shared/spatial';
+import { requireNoSpatialErrors, spatialElementErrors } from '../middleware/presentationValidation';
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
 // All routes require authentication
 router.use(authenticate);
+router.param('id', projectResourceParam('diagram'));
 
 // Async handler wrapper
 const asyncHandler = (fn: Function) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -23,11 +26,11 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
   const { modelId } = req.query;
   
   if (modelId && typeof modelId === 'string') {
-    const diagrams = await diagramService.getByModelId(modelId, req.user!.userId);
+    const diagrams = await diagramService.getByModelId(modelId, req.user!.userId, ...projectArgs(req));
     return res.json({ success: true, data: diagrams });
   }
   
-  const diagrams = await diagramService.getAll(req.user!.userId);
+  const diagrams = await diagramService.getAll(req.user!.userId, ...projectArgs(req));
   res.json({ success: true, data: diagrams });
 }));
 
@@ -36,7 +39,7 @@ router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) =>
  * @desc    Get a single diagram by ID
  */
 router.get('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const diagram = await diagramService.getById(req.params.id, req.user!.userId);
+  const diagram = await diagramService.getById(req.params.id, req.user!.userId, ...projectArgs(req));
   if (!diagram) {
     return res.status(404).json({ success: false, error: 'Diagram not found' });
   }
@@ -54,9 +57,13 @@ router.post(
     body('modelId').notEmpty().withMessage('modelId is required'),
     body('viewpointId').optional().isString().withMessage('viewpointId must be a string'),
     body('representationDescriptionId').optional().isString().withMessage('representationDescriptionId must be a string'),
+    body('elements').optional().isArray().withMessage('elements must be an array'),
+    body('elements').optional().custom((elements: unknown[]) => requireNoSpatialErrors(
+      elements.flatMap((element, index) => spatialElementErrors(element, `elements[${index}]`))
+    )),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const diagram = await diagramService.create(req.body, req.user!.userId, req.user!.role);
+    const diagram = await diagramService.create(req.body, req.user!.userId, req.user!.role, ...projectArgs(req));
     res.status(201).json({ success: true, data: diagram });
   })
 );
@@ -71,6 +78,10 @@ router.put(
     param('id').isUUID().withMessage('Invalid ID format'),
     body('viewpointId').optional().isString().withMessage('viewpointId must be a string'),
     body('representationDescriptionId').optional().isString().withMessage('representationDescriptionId must be a string'),
+    body('elements').optional().isArray().withMessage('elements must be an array'),
+    body('elements').optional().custom((elements: unknown[]) => requireNoSpatialErrors(
+      elements.flatMap((element, index) => spatialElementErrors(element, `elements[${index}]`))
+    )),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const diagram = await diagramService.update(req.params.id, req.body, req.user!.userId, req.user!.role);
@@ -86,7 +97,7 @@ router.delete(
   '/:id',
   validate([param('id').isUUID().withMessage('Invalid ID format')]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    await diagramService.delete(req.params.id, req.user!.userId, req.user!.role);
+    await diagramService.delete(req.params.id, req.user!.userId, req.user!.role, ...projectArgs(req));
     res.json({ success: true, message: 'Diagram deleted successfully' });
   })
 );
@@ -101,6 +112,7 @@ router.post(
     param('id').isUUID().withMessage('Invalid view ID format'),
     body('modelElementId').notEmpty().withMessage('modelElementId is required'),
     body('presentation').optional().isObject().withMessage('presentation must be an object'),
+    body('presentation').optional().custom(value => requireNoSpatialErrors(validatePresentation(value))),
     body('presentation.attachedToElementId').optional().isString().trim().notEmpty().withMessage('attachedToElementId must be a non-empty string'),
     body('presentation.attachmentSide').optional().isIn(attachmentSides).withMessage('attachmentSide must be top, right, bottom, or left'),
     body('presentation.attachmentOffsetRatio').optional().isFloat({ min: 0, max: 1 }).withMessage('attachmentOffsetRatio must be between 0 and 1').toFloat(),
@@ -127,6 +139,7 @@ router.post(
     param('id').isUUID().withMessage('Invalid view ID format'),
     body('metaClassId').notEmpty().withMessage('metaClassId is required'),
     body('presentation').optional().isObject().withMessage('presentation must be an object'),
+    body('presentation').optional().custom(value => requireNoSpatialErrors(validatePresentation(value))),
     body('presentation.attachedToElementId').optional().isString().trim().notEmpty().withMessage('attachedToElementId must be a non-empty string'),
     body('presentation.attachmentSide').optional().isIn(attachmentSides).withMessage('attachmentSide must be top, right, bottom, or left'),
     body('presentation.attachmentOffsetRatio').optional().isFloat({ min: 0, max: 1 }).withMessage('attachmentOffsetRatio must be between 0 and 1').toFloat(),
@@ -166,6 +179,7 @@ router.put(
   validate([
     param('id').isUUID().withMessage('Invalid view ID format'),
     param('modelElementId').notEmpty().withMessage('modelElementId is required'),
+    body().custom(value => requireNoSpatialErrors(validatePresentation(value))),
     body('attachedToElementId').optional().isString().trim().notEmpty().withMessage('attachedToElementId must be a non-empty string'),
     body('attachmentSide').optional().isIn(attachmentSides).withMessage('attachmentSide must be top, right, bottom, or left'),
     body('attachmentOffsetRatio').optional().isFloat({ min: 0, max: 1 }).withMessage('attachmentOffsetRatio must be between 0 and 1').toFloat(),
@@ -220,6 +234,7 @@ router.post(
     body('style.attachedToElementId').optional().isString().trim().notEmpty().withMessage('style.attachedToElementId must be a non-empty string'),
     body('style.attachmentSide').optional().isIn(attachmentSides).withMessage('style.attachmentSide must be top, right, bottom, or left'),
     body('style.attachmentOffsetRatio').optional().isFloat({ min: 0, max: 1 }).withMessage('style.attachmentOffsetRatio must be between 0 and 1').toFloat(),
+    body().custom(value => requireNoSpatialErrors(spatialElementErrors(value))),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const diagram = await diagramService.addElement(req.params.id, req.body, req.user!.userId, req.user!.role);
@@ -242,6 +257,7 @@ router.put(
     body('style.attachedToElementId').optional().isString().trim().notEmpty().withMessage('style.attachedToElementId must be a non-empty string'),
     body('style.attachmentSide').optional().isIn(attachmentSides).withMessage('style.attachmentSide must be top, right, bottom, or left'),
     body('style.attachmentOffsetRatio').optional().isFloat({ min: 0, max: 1 }).withMessage('style.attachmentOffsetRatio must be between 0 and 1').toFloat(),
+    body().custom(value => requireNoSpatialErrors(spatialElementErrors(value))),
   ]),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const diagram = await diagramService.updateElement(req.params.id, req.params.elementId, req.body, req.user!.userId, req.user!.role);

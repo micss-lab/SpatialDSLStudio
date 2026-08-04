@@ -41,7 +41,8 @@ It uses the current model-based code generation context:
 - `countByClassName.*`
 - `WarehouseModel.WarehouseMAS`
 - `WarehouseModel["Mobile Robot Resource"]`
-- 3D placement fields: `X`, `Y`, `RZ`, `Length`, `Width`
+- 3D placement fields: `X`, `Y`, `Z`, `BaseElevationMm`, `RZ`, `Length`,
+  `Width`, `Height`
 - stable generated identifiers such as `opcNodeId`, `controlId`, `taskId`, and
   `productId`
 - `resolvedReferences.<referenceName>` target summaries (ID, name, class, and
@@ -61,6 +62,10 @@ The importable project contains eight templates:
 - `OutputLocation.json`: output location placement.
 - `ChargingStationLocation.json`: charging station placement.
 - `OPCUAConfig.xml`: OPC UA connectivity configuration.
+
+The Smart Warehouse model now also contains `InspectionDrone` elements. The
+Visual Components templates intentionally do not iterate that class, so their
+eight-file output remains unchanged; aerial control is outside this target.
 
 The code generation UI supports `java`, `python`, `json`, `xml`, and `plaintext`
 template content types. The five location templates are tagged `json` and the

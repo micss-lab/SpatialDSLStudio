@@ -34,6 +34,7 @@ const mockDiagramRow = {
   migrationWarnings: [],
   gridSettings: { sizeX: 20000, sizeY: 20000 },
   userId: 'user-uuid-1',
+  projectId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -47,6 +48,7 @@ const mockModelRow = {
   connections: [],
   conformsToId: 'metamodel-uuid-1',
   userId: 'user-uuid-1',
+  projectId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -82,6 +84,7 @@ const mockMetamodelRow = {
   constraints: [],
   conformsToId: 'epackage-uuid-1',
   userId: 'user-uuid-1',
+  projectId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -105,6 +108,7 @@ const mockViewpointRow = {
   sharedConcreteSyntax: {},
   isDefault: true,
   userId: 'user-uuid-1',
+  projectId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -626,6 +630,92 @@ describe('DiagramService', () => {
   });
 
   describe('updateModelPresentation', () => {
+    const arrangeSpatialUpdate = (presentation: any) => {
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: true });
+      prismaMock.diagram.findFirst.mockResolvedValue({
+        ...mockDiagramRow,
+        viewpointId: mockViewpointRow.id,
+        representationDescriptionId: 'representation-uuid-1',
+        includedElementIds: ['robot-1'],
+      } as any);
+      prismaMock.model.findFirst.mockResolvedValue({
+        ...mockModelRow,
+        elements: [{
+          id: 'robot-1',
+          modelElementId: 'cls-1',
+          style: { name: 'Robot' },
+          references: {},
+          presentation,
+        }],
+      } as any);
+      prismaMock.metamodel.findFirst.mockResolvedValue(mockMetamodelRow as any);
+      prismaMock.model.update.mockResolvedValue(mockModelRow as any);
+    };
+
+    it('preserves non-zero elevation when aligned X/Y is edited through a view', async () => {
+      arrangeSpatialUpdate({
+        position2D: { x: 100, y: 200 },
+        position3D: { x: 100, y: 200, z: 4500 },
+      });
+
+      await diagramService.updateModelPresentation(
+        'diag-uuid-1',
+        'robot-1',
+        { position2D: { x: 130, y: 175 } },
+        'user-uuid-1',
+        'DSL_DESIGNER'
+      );
+
+      expect(prismaMock.model.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: {
+          elements: [expect.objectContaining({
+            presentation: expect.objectContaining({
+              position2D: { x: 130, y: 175 },
+              position3D: { x: 130, y: 175, z: 4500 },
+            }),
+          })],
+        },
+      }));
+    });
+
+    it('preserves deliberately distinct physical X/Y during a schematic 2D edit', async () => {
+      arrangeSpatialUpdate({
+        position2D: { x: 354, y: 104.5 },
+        position3D: { x: -22140, y: -9669, z: 4500 },
+      });
+
+      await diagramService.updateModelPresentation(
+        'diag-uuid-1',
+        'robot-1',
+        { position2D: { x: 489, y: 106.5 } },
+        'user-uuid-1',
+        'DSL_DESIGNER'
+      );
+
+      const savedElements = (prismaMock.model.update.mock.calls[0][0].data as any).elements;
+      expect(savedElements[0].presentation.position2D).toEqual({ x: 489, y: 106.5 });
+      expect(savedElements[0].presentation.position3D).toEqual({ x: -22140, y: -9669, z: 4500 });
+    });
+
+    it('changes Z without moving 2D X/Y', async () => {
+      arrangeSpatialUpdate({
+        position2D: { x: 100, y: 200 },
+        position3D: { x: 100, y: 200, z: 0 },
+      });
+
+      await diagramService.updateModelPresentation(
+        'diag-uuid-1',
+        'robot-1',
+        { position3D: { x: 100, y: 200, z: 4500 } },
+        'user-uuid-1',
+        'DSL_DESIGNER'
+      );
+
+      const savedElements = (prismaMock.model.update.mock.calls[0][0].data as any).elements;
+      expect(savedElements[0].presentation.position2D).toEqual({ x: 100, y: 200 });
+      expect(savedElements[0].presentation.position3D).toEqual({ x: 100, y: 200, z: 4500 });
+    });
+
     it('rejects pin updates when the owner metaclass is not allowed by the representation', async () => {
       const pinMetamodelRow = {
         ...mockMetamodelRow,

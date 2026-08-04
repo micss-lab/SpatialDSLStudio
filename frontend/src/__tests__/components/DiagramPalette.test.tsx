@@ -11,6 +11,10 @@ jest.mock('../../services/viewpoint.service', () => ({
   },
 }));
 
+jest.mock('../../contexts/ProjectContext', () => ({
+  useProject: () => ({ project: { id: 'project-1' } }),
+}));
+
 const mockResolve = viewpointService.resolveRepresentationDescription as jest.Mock;
 
 const metamodel = {
