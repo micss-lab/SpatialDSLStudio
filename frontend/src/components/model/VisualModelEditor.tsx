@@ -1154,6 +1154,10 @@ const VisualModelEditor: React.FC<VisualModelEditorProps> = ({ modelId }) => {
           backgroundColor: '#f5f5f5'
         }}
       >
+        {/* The container is measured in an effect, so the first render still has
+            a zero size. Mounting Konva then makes it draw a 0x0 canvas, which
+            throws InvalidStateError, so wait for a real measurement. */}
+        {stageSize.width > 0 && stageSize.height > 0 && (
         <Stage
           ref={stageRef}
           width={stageSize.width}
@@ -1176,7 +1180,8 @@ const VisualModelEditor: React.FC<VisualModelEditorProps> = ({ modelId }) => {
             {renderTempReference()}
           </Layer>
         </Stage>
-        
+        )}
+
         {/* Add a visual indicator when in reference drawing mode */}
         {isDrawingReference && (
           <Box

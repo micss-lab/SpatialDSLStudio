@@ -24,7 +24,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
-import { StudioProject } from '../../models/project.types';
+import { ProjectArtifactCounts, StudioProject } from '../../models/project.types';
 import { projectService } from '../../services/project.service';
 import { LAST_PROJECT_KEY } from '../../contexts/ProjectContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -34,6 +34,55 @@ const roleLabel = (project: StudioProject) => project.isPlatformAdmin
   : project.role === 'DSL_DESIGNER'
     ? 'DSL Designer'
     : project.role.charAt(0) + project.role.slice(1).toLowerCase();
+
+/**
+ * The first four are always shown so cards stay the same height and are easy to
+ * compare. The rest only earn a slot when the project actually uses them.
+ */
+const countedArtifacts = (counts: ProjectArtifactCounts) => {
+  const primary = [
+    { label: 'Metamodels', value: counts.metamodels },
+    { label: 'Models', value: counts.models },
+    { label: 'Viewpoints', value: counts.viewpoints },
+    { label: 'Views', value: counts.views },
+  ];
+  const secondary = [
+    { label: 'Transformations', value: counts.transformations },
+    { label: 'Generators', value: counts.generatorConfigurations },
+    { label: 'Tests', value: counts.tests },
+    { label: 'Files', value: counts.files },
+  ].filter(item => item.value > 0);
+  return [...primary, ...secondary];
+};
+
+const ArtifactCounts: React.FC<{ counts: ProjectArtifactCounts }> = ({ counts }) => (
+  <Box
+    sx={{
+      mt: 2,
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))',
+      gap: 1,
+    }}
+  >
+    {countedArtifacts(counts).map(item => (
+      <Box
+        key={item.label}
+        sx={{
+          px: 1,
+          py: 0.75,
+          borderRadius: 1,
+          bgcolor: 'action.hover',
+          textAlign: 'center',
+        }}
+      >
+        <Typography variant="h6" lineHeight={1.2} color={item.value > 0 ? 'text.primary' : 'text.disabled'}>
+          {item.value}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">{item.label}</Typography>
+      </Box>
+    ))}
+  </Box>
+);
 
 export const ProjectPickerPage: React.FC = () => {
   const navigate = useNavigate();
@@ -101,7 +150,7 @@ export const ProjectPickerPage: React.FC = () => {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 6 }}>
-      <Container maxWidth="lg">
+      <Container maxWidth="xl">
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={2} mb={4}>
           <Box>
             <Typography variant="h4" gutterBottom>Projects</Typography>
@@ -142,13 +191,13 @@ export const ProjectPickerPage: React.FC = () => {
         ) : (
           <Grid container spacing={2}>
             {projects.map(project => (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={project.id}>
+              <Grid size={{ xs: 12, md: 6, xl: 4 }} key={project.id}>
                 <Card variant="outlined" sx={{ height: '100%' }}>
                   <CardActionArea onClick={() => openProject(project.id)} sx={{ height: '100%', alignItems: 'stretch' }}>
-                    <CardContent>
+                    <CardContent sx={{ p: 3 }}>
                       <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
                         <Typography variant="h6">{project.name}</Typography>
-                        <Stack direction="row" gap={0.5}>
+                        <Stack direction="row" gap={0.5} flexShrink={0}>
                           {project.status === 'ARCHIVED' && <Chip size="small" color="default" label="Archived" />}
                           <Chip size="small" label={roleLabel(project)} />
                         </Stack>
@@ -156,7 +205,8 @@ export const ProjectPickerPage: React.FC = () => {
                       <Typography color="text.secondary" sx={{ mt: 1, minHeight: 48 }}>
                         {project.description || 'No project description'}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      {project.artifactCounts && <ArtifactCounts counts={project.artifactCounts} />}
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
                         {project.memberCount} member{project.memberCount === 1 ? '' : 's'} · Updated {new Date(project.updatedAt).toLocaleDateString()}
                       </Typography>
                     </CardContent>
