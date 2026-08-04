@@ -50,7 +50,7 @@ class ApiClient {
   }
 
   private scopeEndpoint(endpoint: string): string {
-    if (!this.projectId || endpoint.startsWith('/projects/')) return endpoint;
+    if (endpoint.startsWith('/projects/')) return endpoint;
 
     const mappings: Array<[string, string]> = [
       ['/epackages', 'epackages'],
@@ -67,6 +67,14 @@ class ApiClient {
 
     for (const [legacyPrefix, projectFeature] of mappings) {
       if (endpoint === legacyPrefix || endpoint.startsWith(`${legacyPrefix}/`) || endpoint.startsWith(`${legacyPrefix}?`)) {
+        // The flat route answers with every project's artifacts for this user.
+        // Falling back to it when no project is active breaks project isolation
+        // silently: a service that initializes before the project context is
+        // ready would cache another project's models and show them in the
+        // sidebar. Refusing makes the ordering bug visible instead.
+        if (!this.projectId) {
+          throw new Error(`${endpoint} requires an active project. Open a project before loading its artifacts.`);
+        }
         return `/projects/${this.projectId}/${projectFeature}${endpoint.slice(legacyPrefix.length)}`;
       }
     }
