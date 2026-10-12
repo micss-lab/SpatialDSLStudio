@@ -1,0 +1,411 @@
+{
+  "id": "b1100000-0000-4000-8000-000000000100",
+  "name": "Smart Building",
+  "eClass": "e7d0d970-9abd-4218-9ef9-9789e7b8862c",
+  "description": "Sensor deployment in a building: rooms and corridors with ceiling and wall-mounted smoke detectors, motion sensors, cameras, and radio gateways.",
+  "uri": "http://www.spatialdsl.studio/examples/smart-building",
+  "prefix": "smartbuilding",
+  "conformsTo": "8b8a9170-bd78-4e15-80dd-e018f295e8cc",
+  "classes": [
+    {
+      "id": "b1100000-0000-4000-8000-000000000101",
+      "name": "Building",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "b1100000-0000-4000-8000-000000001001",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "defaultValue": ""
+        },
+        {
+          "id": "b1100000-0000-4000-8000-000000001002",
+          "name": "address",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "defaultValue": ""
+        }
+      ],
+      "references": [
+        {
+          "id": "b1100000-0000-4000-8000-000000003003",
+          "name": "zones",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "b1100000-0000-4000-8000-000000000102",
+          "containment": true,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": "*"
+          },
+          "allowSelfReference": false,
+          "isMultiValued": true
+        },
+        {
+          "id": "b1100000-0000-4000-8000-000000003004",
+          "name": "devices",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "b1100000-0000-4000-8000-000000000105",
+          "containment": true,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": "*"
+          },
+          "allowSelfReference": false,
+          "isMultiValued": true
+        }
+      ],
+      "position": {
+        "x": 60,
+        "y": 60
+      }
+    },
+    {
+      "id": "b1100000-0000-4000-8000-000000000102",
+      "name": "Zone",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": true,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "b1100000-0000-4000-8000-000000001005",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "defaultValue": ""
+        },
+        {
+          "id": "b1100000-0000-4000-8000-000000001006",
+          "name": "level",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "defaultValue": 0
+        }
+      ],
+      "references": [],
+      "position": {
+        "x": 60,
+        "y": 300
+      },
+      "concreteSyntax": {
+        "three_d": {
+          "fallbackShape": "box",
+          "defaultSizeMm": {
+            "widthMm": 6000,
+            "heightMm": 4000,
+            "depthMm": 50
+          }
+        }
+      }
+    },
+    {
+      "id": "b1100000-0000-4000-8000-000000000103",
+      "name": "Room",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [
+        "b1100000-0000-4000-8000-000000000102"
+      ],
+      "attributes": [
+        {
+          "id": "b1100000-0000-4000-8000-000000001007",
+          "name": "roomNumber",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "defaultValue": ""
+        },
+        {
+          "id": "b1100000-0000-4000-8000-000000001008",
+          "name": "usage",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": false,
+          "many": false,
+          "defaultValue": ""
+        }
+      ],
+      "references": [],
+      "position": {
+        "x": 0,
+        "y": 520
+      }
+    },
+    {
+      "id": "b1100000-0000-4000-8000-000000000104",
+      "name": "Corridor",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [
+        "b1100000-0000-4000-8000-000000000102"
+      ],
+      "attributes": [],
+      "references": [],
+      "position": {
+        "x": 220,
+        "y": 520
+      }
+    },
+    {
+      "id": "b1100000-0000-4000-8000-000000000105",
+      "name": "Device",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": true,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "b1100000-0000-4000-8000-000000001009",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "defaultValue": ""
+        },
+        {
+          "id": "b1100000-0000-4000-8000-00000000100a",
+          "name": "deviceId",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "defaultValue": ""
+        }
+      ],
+      "references": [
+        {
+          "id": "b1100000-0000-4000-8000-00000000300b",
+          "name": "installedIn",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "b1100000-0000-4000-8000-000000000102",
+          "containment": false,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": false,
+          "isMultiValued": false
+        },
+        {
+          "id": "b1100000-0000-4000-8000-00000000300c",
+          "name": "gateway",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "b1100000-0000-4000-8000-000000000109",
+          "containment": false,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": false,
+          "isMultiValued": false
+        }
+      ],
+      "position": {
+        "x": 520,
+        "y": 300
+      }
+    },
+    {
+      "id": "b1100000-0000-4000-8000-000000000106",
+      "name": "SmokeDetector",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [
+        "b1100000-0000-4000-8000-000000000105"
+      ],
+      "attributes": [
+        {
+          "id": "b1100000-0000-4000-8000-00000000100d",
+          "name": "coverageRadiusMm",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "defaultValue": 5000
+        }
+      ],
+      "references": [],
+      "position": {
+        "x": 380,
+        "y": 560
+      },
+      "concreteSyntax": {
+        "three_d": {
+          "fallbackShape": "cylinder",
+          "defaultSizeMm": {
+            "widthMm": 120,
+            "heightMm": 120,
+            "depthMm": 50
+          }
+        }
+      }
+    },
+    {
+      "id": "b1100000-0000-4000-8000-000000000107",
+      "name": "MotionSensor",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [
+        "b1100000-0000-4000-8000-000000000105"
+      ],
+      "attributes": [
+        {
+          "id": "b1100000-0000-4000-8000-00000000100e",
+          "name": "coverageRadiusMm",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "defaultValue": 6000
+        }
+      ],
+      "references": [],
+      "position": {
+        "x": 580,
+        "y": 560
+      },
+      "concreteSyntax": {
+        "three_d": {
+          "fallbackShape": "sphere",
+          "defaultSizeMm": {
+            "widthMm": 80,
+            "heightMm": 80,
+            "depthMm": 60
+          }
+        }
+      }
+    },
+    {
+      "id": "b1100000-0000-4000-8000-000000000108",
+      "name": "Camera",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [
+        "b1100000-0000-4000-8000-000000000105"
+      ],
+      "attributes": [
+        {
+          "id": "b1100000-0000-4000-8000-00000000100f",
+          "name": "coverageRadiusMm",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "defaultValue": 10000
+        },
+        {
+          "id": "b1100000-0000-4000-8000-000000001010",
+          "name": "fieldOfViewDeg",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "defaultValue": 90
+        }
+      ],
+      "references": [],
+      "position": {
+        "x": 780,
+        "y": 560
+      },
+      "concreteSyntax": {
+        "three_d": {
+          "fallbackShape": "box",
+          "defaultSizeMm": {
+            "widthMm": 150,
+            "heightMm": 100,
+            "depthMm": 100
+          }
+        }
+      }
+    },
+    {
+      "id": "b1100000-0000-4000-8000-000000000109",
+      "name": "Gateway",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [
+        "b1100000-0000-4000-8000-000000000105"
+      ],
+      "attributes": [
+        {
+          "id": "b1100000-0000-4000-8000-000000001011",
+          "name": "radioRangeMm",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "defaultValue": 15000
+        }
+      ],
+      "references": [],
+      "position": {
+        "x": 980,
+        "y": 560
+      },
+      "concreteSyntax": {
+        "three_d": {
+          "fallbackShape": "box",
+          "defaultSizeMm": {
+            "widthMm": 200,
+            "heightMm": 150,
+            "depthMm": 50
+          }
+        }
+      }
+    }
+  ],
+  "constraints": [],
+  "spatialRules": [
+    {
+      "id": "b1100000-0000-4000-8000-000000000301",
+      "name": "Rooms do not overlap",
+      "kind": "noOverlap",
+      "sourceClassId": "b1100000-0000-4000-8000-000000000103",
+      "targetClassId": "b1100000-0000-4000-8000-000000000103",
+      "mode": "plan",
+      "severity": "error"
+    },
+    {
+      "id": "b1100000-0000-4000-8000-000000000302",
+      "name": "Device inside a zone",
+      "kind": "within",
+      "sourceClassId": "b1100000-0000-4000-8000-000000000105",
+      "targetClassId": "b1100000-0000-4000-8000-000000000102",
+      "mode": "plan",
+      "severity": "error"
+    },
+    {
+      "id": "b1100000-0000-4000-8000-000000000303",
+      "name": "Smoke detector away from walls",
+      "kind": "within",
+      "sourceClassId": "b1100000-0000-4000-8000-000000000106",
+      "targetClassId": "b1100000-0000-4000-8000-000000000102",
+      "distanceMm": 300,
+      "mode": "plan",
+      "severity": "error",
+      "message": "{source} must be at least {distance} mm inside a room or corridor."
+    },
+    {
+      "id": "b1100000-0000-4000-8000-000000000304",
+      "name": "Device in gateway range",
+      "kind": "maxDistance",
+      "sourceClassId": "b1100000-0000-4000-8000-000000000105",
+      "targetClassId": "b1100000-0000-4000-8000-000000000109",
+      "distanceMm": 15000,
+      "mode": "volume",
+      "severity": "error"
+    }
+  ]
+}

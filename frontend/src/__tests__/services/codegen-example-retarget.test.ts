@@ -32,12 +32,18 @@ describe('codegenExampleDataService.loadExampleProjects', () => {
     codegenExampleDataService.loadExampleProjects();
 
     const loaded = codegenProjectCrudService.getAllProjects();
-    expect(loaded).toHaveLength(2);
-    loaded.forEach(project => {
+    expect(loaded).toHaveLength(exampleDataService.getExampleProjects().length);
+    const warehouseProjects = loaded.filter(project => project.name.startsWith('Smart Warehouse'));
+    expect(warehouseProjects).toHaveLength(2);
+    warehouseProjects.forEach(project => {
       expect(project.targetMetamodelId).toBe('account-mm-id');
       project.templates.forEach(template => {
         expect(template.targetMetamodelId).toBe('account-mm-id');
       });
+    });
+    // Examples of other languages keep their own bundle targets.
+    loaded.filter(project => !project.name.startsWith('Smart Warehouse')).forEach(project => {
+      expect(project.targetMetamodelId).not.toBe('account-mm-id');
     });
   });
 
@@ -47,7 +53,7 @@ describe('codegenExampleDataService.loadExampleProjects', () => {
     codegenExampleDataService.loadExampleProjects();
 
     const loaded = codegenProjectCrudService.getAllProjects();
-    expect(loaded).toHaveLength(2);
+    expect(loaded).toHaveLength(exampleDataService.getExampleProjects().length);
     loaded.forEach((project, index) => {
       expect(project.targetMetamodelId).toBe(
         exampleDataService.getExampleProjects()[index].targetMetamodelId

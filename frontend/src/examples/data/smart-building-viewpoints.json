@@ -1,0 +1,430 @@
+[
+  {
+    "id": "b4400000-0000-4000-8000-000000000001",
+    "name": "Building Operations",
+    "description": "Floor-plan and 3D placement views of the sensor deployment.",
+    "metamodelId": "b1100000-0000-4000-8000-000000000100",
+    "isDefault": true,
+    "sharedConcreteSyntaxByMetaClassId": {},
+    "representationDescriptions": [
+      {
+        "id": "b4400000-0000-4000-8000-000000000101",
+        "name": "Floor Plan",
+        "description": "Plan view of rooms, corridor, devices, and their radio gateway links.",
+        "viewpointId": "b4400000-0000-4000-8000-000000000001",
+        "kind": "diagram",
+        "visibleMetaClassIds": [
+          "b1100000-0000-4000-8000-000000000103",
+          "b1100000-0000-4000-8000-000000000104",
+          "b1100000-0000-4000-8000-000000000106",
+          "b1100000-0000-4000-8000-000000000107",
+          "b1100000-0000-4000-8000-000000000108",
+          "b1100000-0000-4000-8000-000000000109"
+        ],
+        "creatableMetaClassIds": [
+          "b1100000-0000-4000-8000-000000000103",
+          "b1100000-0000-4000-8000-000000000104",
+          "b1100000-0000-4000-8000-000000000106",
+          "b1100000-0000-4000-8000-000000000107",
+          "b1100000-0000-4000-8000-000000000108",
+          "b1100000-0000-4000-8000-000000000109"
+        ],
+        "concreteSyntaxByMetaClassId": {
+          "b1100000-0000-4000-8000-000000000103": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "rgba(241, 245, 249, 0.6)",
+              "strokeColor": "#475569",
+              "strokeWidth": 2,
+              "fontSize": 14
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#CBD5E1",
+              "defaultSizeMm": {
+                "widthMm": 6000,
+                "heightMm": 4000,
+                "depthMm": 50
+              },
+              "verticalPlacement": {
+                "mode": "grounded"
+              }
+            }
+          },
+          "b1100000-0000-4000-8000-000000000104": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "rgba(226, 232, 240, 0.6)",
+              "strokeColor": "#64748B",
+              "strokeWidth": 1
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#94A3B8",
+              "defaultSizeMm": {
+                "widthMm": 12000,
+                "heightMm": 2400,
+                "depthMm": 50
+              },
+              "verticalPlacement": {
+                "mode": "grounded"
+              }
+            }
+          },
+          "b1100000-0000-4000-8000-000000000106": {
+            "two_d": {
+              "shape": "circle",
+              "fillColor": "#FECACA",
+              "strokeColor": "#B91C1C",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 24,
+                "height": 24
+              }
+            },
+            "three_d": {
+              "fallbackShape": "cylinder",
+              "fallbackColor": "#DC2626",
+              "defaultSizeMm": {
+                "widthMm": 120,
+                "heightMm": 120,
+                "depthMm": 50
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 2700,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 4000,
+                "stepMm": 50
+              }
+            }
+          },
+          "b1100000-0000-4000-8000-000000000107": {
+            "two_d": {
+              "shape": "triangle",
+              "fillColor": "#FED7AA",
+              "strokeColor": "#C2410C",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 20,
+                "height": 20
+              }
+            },
+            "three_d": {
+              "fallbackShape": "sphere",
+              "fallbackColor": "#EA580C",
+              "defaultSizeMm": {
+                "widthMm": 80,
+                "heightMm": 80,
+                "depthMm": 60
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 2200,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 4000,
+                "stepMm": 50
+              }
+            }
+          },
+          "b1100000-0000-4000-8000-000000000108": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#BFDBFE",
+              "strokeColor": "#1D4ED8",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 22,
+                "height": 22
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#2563EB",
+              "defaultSizeMm": {
+                "widthMm": 150,
+                "heightMm": 100,
+                "depthMm": 100
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 2500,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 4000,
+                "stepMm": 50
+              }
+            }
+          },
+          "b1100000-0000-4000-8000-000000000109": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#BBF7D0",
+              "strokeColor": "#15803D",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 26,
+                "height": 26
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#16A34A",
+              "defaultSizeMm": {
+                "widthMm": 200,
+                "heightMm": 150,
+                "depthMm": 50
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 2400,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 4000,
+                "stepMm": 50
+              }
+            }
+          }
+        },
+        "edgeMappings": [
+          {
+            "id": "b4400000-0000-4000-8000-000000000201",
+            "referenceId": "b1100000-0000-4000-8000-00000000300c",
+            "referenceName": "gateway",
+            "concreteSyntax": {
+              "lineColor": "#16A34A",
+              "lineWidth": 1,
+              "lineDash": [
+                4,
+                4
+              ],
+              "arrowHead": "none",
+              "labelFormat": ""
+            }
+          }
+        ],
+        "isDefault": true
+      },
+      {
+        "id": "b4400000-0000-4000-8000-000000000102",
+        "name": "Device Placement 3D",
+        "description": "Rooms as floor slabs with devices at their mounting heights; device elevation is adjustable, zones are grounded.",
+        "viewpointId": "b4400000-0000-4000-8000-000000000001",
+        "kind": "diagram",
+        "visibleMetaClassIds": [
+          "b1100000-0000-4000-8000-000000000103",
+          "b1100000-0000-4000-8000-000000000104",
+          "b1100000-0000-4000-8000-000000000106",
+          "b1100000-0000-4000-8000-000000000107",
+          "b1100000-0000-4000-8000-000000000108",
+          "b1100000-0000-4000-8000-000000000109"
+        ],
+        "creatableMetaClassIds": [
+          "b1100000-0000-4000-8000-000000000103",
+          "b1100000-0000-4000-8000-000000000104",
+          "b1100000-0000-4000-8000-000000000106",
+          "b1100000-0000-4000-8000-000000000107",
+          "b1100000-0000-4000-8000-000000000108",
+          "b1100000-0000-4000-8000-000000000109"
+        ],
+        "concreteSyntaxByMetaClassId": {
+          "b1100000-0000-4000-8000-000000000103": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "rgba(241, 245, 249, 0.6)",
+              "strokeColor": "#475569",
+              "strokeWidth": 2,
+              "fontSize": 14
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#CBD5E1",
+              "defaultSizeMm": {
+                "widthMm": 6000,
+                "heightMm": 4000,
+                "depthMm": 50
+              },
+              "verticalPlacement": {
+                "mode": "grounded"
+              }
+            }
+          },
+          "b1100000-0000-4000-8000-000000000104": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "rgba(226, 232, 240, 0.6)",
+              "strokeColor": "#64748B",
+              "strokeWidth": 1
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#94A3B8",
+              "defaultSizeMm": {
+                "widthMm": 12000,
+                "heightMm": 2400,
+                "depthMm": 50
+              },
+              "verticalPlacement": {
+                "mode": "grounded"
+              }
+            }
+          },
+          "b1100000-0000-4000-8000-000000000106": {
+            "two_d": {
+              "shape": "circle",
+              "fillColor": "#FECACA",
+              "strokeColor": "#B91C1C",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 24,
+                "height": 24
+              }
+            },
+            "three_d": {
+              "fallbackShape": "cylinder",
+              "fallbackColor": "#DC2626",
+              "defaultSizeMm": {
+                "widthMm": 120,
+                "heightMm": 120,
+                "depthMm": 50
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 2700,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 4000,
+                "stepMm": 50
+              }
+            }
+          },
+          "b1100000-0000-4000-8000-000000000107": {
+            "two_d": {
+              "shape": "triangle",
+              "fillColor": "#FED7AA",
+              "strokeColor": "#C2410C",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 20,
+                "height": 20
+              }
+            },
+            "three_d": {
+              "fallbackShape": "sphere",
+              "fallbackColor": "#EA580C",
+              "defaultSizeMm": {
+                "widthMm": 80,
+                "heightMm": 80,
+                "depthMm": 60
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 2200,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 4000,
+                "stepMm": 50
+              }
+            }
+          },
+          "b1100000-0000-4000-8000-000000000108": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#BFDBFE",
+              "strokeColor": "#1D4ED8",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 22,
+                "height": 22
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#2563EB",
+              "defaultSizeMm": {
+                "widthMm": 150,
+                "heightMm": 100,
+                "depthMm": 100
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 2500,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 4000,
+                "stepMm": 50
+              }
+            }
+          },
+          "b1100000-0000-4000-8000-000000000109": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#BBF7D0",
+              "strokeColor": "#15803D",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 26,
+                "height": 26
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#16A34A",
+              "defaultSizeMm": {
+                "widthMm": 200,
+                "heightMm": 150,
+                "depthMm": 50
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 2400,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 4000,
+                "stepMm": 50
+              }
+            }
+          }
+        },
+        "edgeMappings": [
+          {
+            "id": "b4400000-0000-4000-8000-000000000202",
+            "referenceId": "b1100000-0000-4000-8000-00000000300c",
+            "referenceName": "gateway",
+            "concreteSyntax": {
+              "lineColor": "#16A34A",
+              "lineWidth": 1,
+              "lineDash": [
+                4,
+                4
+              ],
+              "arrowHead": "none",
+              "labelFormat": ""
+            }
+          }
+        ],
+        "isDefault": false
+      },
+      {
+        "id": "b4400000-0000-4000-8000-000000000103",
+        "name": "Device Inventory",
+        "description": "Editable device list.",
+        "viewpointId": "b4400000-0000-4000-8000-000000000001",
+        "kind": "table",
+        "visibleMetaClassIds": [
+          "b1100000-0000-4000-8000-000000000106",
+          "b1100000-0000-4000-8000-000000000107",
+          "b1100000-0000-4000-8000-000000000108",
+          "b1100000-0000-4000-8000-000000000109"
+        ],
+        "creatableMetaClassIds": [],
+        "tableColumns": [
+          "name",
+          "deviceId"
+        ]
+      }
+    ]
+  }
+]

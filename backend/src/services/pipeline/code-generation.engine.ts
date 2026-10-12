@@ -115,6 +115,23 @@ export class CodeGenerationEngine {
     const elements = [...model.elements]
       .sort((left, right) => left.id.localeCompare(right.id))
       .map(element => elementContext(element, classById.get(element.modelElementId)?.name || element.modelElementId));
+    // Like the browser generator, expose reference targets by name so
+    // templates do not need hard-coded element IDs.
+    const contextById = new Map(elements.map(element => [element.id, element]));
+    const targetSummary = (targetId: string): Record<string, any> => {
+      const target = contextById.get(targetId);
+      return target
+        ? { id: target.id, name: target.name, className: target.metaClassName }
+        : { id: targetId, unresolved: true };
+    };
+    elements.forEach(element => {
+      element.resolvedReferences = Object.fromEntries(Object.entries(element.references || {}).map(([name, value]) => [
+        name,
+        Array.isArray(value)
+          ? value.map(item => targetSummary(String(item)))
+          : typeof value === 'string' ? targetSummary(value) : value,
+      ]));
+    });
     const byClassId: Record<string, any[]> = {};
     const byClassName: Record<string, any[]> = {};
     elements.forEach(element => {

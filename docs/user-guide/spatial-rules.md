@@ -124,6 +124,26 @@ The bundled Smart Warehouse metamodel declares an abstract `FixedEquipment` supe
 To see a violation, move or rotate one conveyor into the other in the 2D or 3D view and refresh the
 validation panel.
 
+## Example: Smart Building
+
+The Smart Building example (project starter "Include Smart Building starter") is a sensor-deployment
+language: a `Building` contains `Room` and `Corridor` zones (abstract `Zone`) and `SmokeDetector`,
+`MotionSensor`, `Camera`, and `Gateway` devices (abstract `Device`). Devices reference the zone they are
+installed in and their gateway. The bundled model has six rooms, one corridor, and 25 devices, and
+satisfies all four rules.
+
+| Rule | Kind | Source | Target | Distance | Mode | Severity |
+| --- | --- | --- | --- | --- | --- | --- |
+| Rooms do not overlap | `noOverlap` | Room | Room | | plan | error |
+| Device inside a zone | `within` | Device | Zone | 0 mm | plan | error |
+| Smoke detector away from walls | `within` | SmokeDetector | Zone | 300 mm | plan | error |
+| Device in gateway range | `maxDistance` | Device | Gateway | 15,000 mm | volume | error |
+
+Its 3D representation keeps zones grounded and gives devices adjustable elevation (smoke detectors
+2,700 mm by default, motion sensors 2,200 mm, cameras 2,500 mm, gateways 2,400 mm; 0 to 4,000 mm). The
+"Smart Building Commissioning" generator writes `device-commissioning.json` with each device's ID, type,
+room, gateway, position in metres (including its mounting height), and yaw.
+
 ## Escape hatch: OCL and JavaScript helpers
 
 JavaScript and OCL constraints can call the same geometry through a `spatial` namespace:

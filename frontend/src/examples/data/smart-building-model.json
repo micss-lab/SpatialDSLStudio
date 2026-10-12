@@ -1,0 +1,1133 @@
+{
+  "id": "b2200000-0000-4000-8000-000000000001",
+  "name": "Research Building Sensors",
+  "metamodelId": "b1100000-0000-4000-8000-000000000100",
+  "conformsTo": "b1100000-0000-4000-8000-000000000100",
+  "description": "Ground-floor sensor deployment: six rooms, one corridor, 25 devices at their mounting heights.",
+  "elements": [
+    {
+      "id": "b2200000-0000-4000-8000-000000000100",
+      "modelElementId": "b1100000-0000-4000-8000-000000000101",
+      "style": {
+        "name": "Research Building",
+        "address": "Example campus, building B"
+      },
+      "references": {
+        "zones": [
+          "b2200000-0000-4000-8000-000000000107",
+          "b2200000-0000-4000-8000-000000000101",
+          "b2200000-0000-4000-8000-000000000102",
+          "b2200000-0000-4000-8000-000000000103",
+          "b2200000-0000-4000-8000-000000000104",
+          "b2200000-0000-4000-8000-000000000105",
+          "b2200000-0000-4000-8000-000000000106"
+        ],
+        "devices": [
+          "b2200000-0000-4000-8000-000000000201",
+          "b2200000-0000-4000-8000-000000000202",
+          "b2200000-0000-4000-8000-000000000203",
+          "b2200000-0000-4000-8000-000000000204",
+          "b2200000-0000-4000-8000-000000000205",
+          "b2200000-0000-4000-8000-000000000206",
+          "b2200000-0000-4000-8000-000000000207",
+          "b2200000-0000-4000-8000-000000000208",
+          "b2200000-0000-4000-8000-000000000209",
+          "b2200000-0000-4000-8000-00000000020a",
+          "b2200000-0000-4000-8000-00000000020b",
+          "b2200000-0000-4000-8000-00000000020c",
+          "b2200000-0000-4000-8000-00000000020d",
+          "b2200000-0000-4000-8000-00000000020e",
+          "b2200000-0000-4000-8000-00000000020f",
+          "b2200000-0000-4000-8000-000000000210",
+          "b2200000-0000-4000-8000-000000000211",
+          "b2200000-0000-4000-8000-000000000212",
+          "b2200000-0000-4000-8000-000000000213",
+          "b2200000-0000-4000-8000-000000000214",
+          "b2200000-0000-4000-8000-000000000215",
+          "b2200000-0000-4000-8000-000000000216",
+          "b2200000-0000-4000-8000-000000000217",
+          "b2200000-0000-4000-8000-000000000218",
+          "b2200000-0000-4000-8000-000000000219"
+        ]
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000107",
+      "modelElementId": "b1100000-0000-4000-8000-000000000104",
+      "style": {
+        "name": "Main corridor",
+        "level": 0
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 40,
+          "y": 312
+        },
+        "size2D": {
+          "width": 1200,
+          "height": 96
+        },
+        "position3D": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "size3D": {
+          "widthMm": 30000,
+          "heightMm": 2400,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000101",
+      "modelElementId": "b1100000-0000-4000-8000-000000000103",
+      "style": {
+        "name": "Room 101",
+        "level": 0,
+        "roomNumber": "101",
+        "usage": "Office"
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 40,
+          "y": 40
+        },
+        "size2D": {
+          "width": 400,
+          "height": 272
+        },
+        "position3D": {
+          "x": -10000,
+          "y": 4600,
+          "z": 0
+        },
+        "size3D": {
+          "widthMm": 10000,
+          "heightMm": 6800,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000102",
+      "modelElementId": "b1100000-0000-4000-8000-000000000103",
+      "style": {
+        "name": "Room 102",
+        "level": 0,
+        "roomNumber": "102",
+        "usage": "Meeting room"
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 440,
+          "y": 40
+        },
+        "size2D": {
+          "width": 400,
+          "height": 272
+        },
+        "position3D": {
+          "x": 0,
+          "y": 4600,
+          "z": 0
+        },
+        "size3D": {
+          "widthMm": 10000,
+          "heightMm": 6800,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000103",
+      "modelElementId": "b1100000-0000-4000-8000-000000000103",
+      "style": {
+        "name": "Room 103",
+        "level": 0,
+        "roomNumber": "103",
+        "usage": "Office"
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 840,
+          "y": 40
+        },
+        "size2D": {
+          "width": 400,
+          "height": 272
+        },
+        "position3D": {
+          "x": 10000,
+          "y": 4600,
+          "z": 0
+        },
+        "size3D": {
+          "widthMm": 10000,
+          "heightMm": 6800,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000104",
+      "modelElementId": "b1100000-0000-4000-8000-000000000103",
+      "style": {
+        "name": "Room 104",
+        "level": 0,
+        "roomNumber": "104",
+        "usage": "Server room"
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 40,
+          "y": 408
+        },
+        "size2D": {
+          "width": 400,
+          "height": 272
+        },
+        "position3D": {
+          "x": -10000,
+          "y": -4600,
+          "z": 0
+        },
+        "size3D": {
+          "widthMm": 10000,
+          "heightMm": 6800,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000105",
+      "modelElementId": "b1100000-0000-4000-8000-000000000103",
+      "style": {
+        "name": "Room 105",
+        "level": 0,
+        "roomNumber": "105",
+        "usage": "Lab"
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 440,
+          "y": 408
+        },
+        "size2D": {
+          "width": 400,
+          "height": 272
+        },
+        "position3D": {
+          "x": 0,
+          "y": -4600,
+          "z": 0
+        },
+        "size3D": {
+          "widthMm": 10000,
+          "heightMm": 6800,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000106",
+      "modelElementId": "b1100000-0000-4000-8000-000000000103",
+      "style": {
+        "name": "Room 106",
+        "level": 0,
+        "roomNumber": "106",
+        "usage": "Storage"
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 840,
+          "y": 408
+        },
+        "size2D": {
+          "width": 400,
+          "height": 272
+        },
+        "position3D": {
+          "x": 10000,
+          "y": -4600,
+          "z": 0
+        },
+        "size3D": {
+          "widthMm": 10000,
+          "heightMm": 6800,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000201",
+      "modelElementId": "b1100000-0000-4000-8000-000000000109",
+      "style": {
+        "name": "GW-1",
+        "deviceId": "GW-1",
+        "radioRangeMm": 15000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000107"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 427,
+          "y": 347
+        },
+        "size2D": {
+          "width": 26,
+          "height": 26
+        },
+        "position3D": {
+          "x": -5000,
+          "y": 0,
+          "z": 2400
+        },
+        "size3D": {
+          "widthMm": 200,
+          "heightMm": 150,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000202",
+      "modelElementId": "b1100000-0000-4000-8000-000000000109",
+      "style": {
+        "name": "GW-2",
+        "deviceId": "GW-2",
+        "radioRangeMm": 15000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000107"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 827,
+          "y": 347
+        },
+        "size2D": {
+          "width": 26,
+          "height": 26
+        },
+        "position3D": {
+          "x": 5000,
+          "y": 0,
+          "z": 2400
+        },
+        "size3D": {
+          "widthMm": 200,
+          "heightMm": 150,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000203",
+      "modelElementId": "b1100000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "SD-101",
+        "deviceId": "SD-101",
+        "coverageRadiusMm": 5000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000101",
+        "gateway": "b2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 228,
+          "y": 164
+        },
+        "size2D": {
+          "width": 24,
+          "height": 24
+        },
+        "position3D": {
+          "x": -10000,
+          "y": 4600,
+          "z": 2700
+        },
+        "size3D": {
+          "widthMm": 120,
+          "heightMm": 120,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000204",
+      "modelElementId": "b1100000-0000-4000-8000-000000000107",
+      "style": {
+        "name": "MS-101",
+        "deviceId": "MS-101",
+        "coverageRadiusMm": 6000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000101",
+        "gateway": "b2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 54,
+          "y": 54
+        },
+        "size2D": {
+          "width": 20,
+          "height": 20
+        },
+        "position3D": {
+          "x": -14400,
+          "y": 7400,
+          "z": 2200
+        },
+        "size3D": {
+          "widthMm": 80,
+          "heightMm": 80,
+          "depthMm": 60
+        },
+        "rotationZ": -45
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000205",
+      "modelElementId": "b1100000-0000-4000-8000-000000000108",
+      "style": {
+        "name": "CAM-101",
+        "deviceId": "CAM-101",
+        "coverageRadiusMm": 10000,
+        "fieldOfViewDeg": 90
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000101",
+        "gateway": "b2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 405,
+          "y": 53
+        },
+        "size2D": {
+          "width": 22,
+          "height": 22
+        },
+        "position3D": {
+          "x": -5600,
+          "y": 7400,
+          "z": 2500
+        },
+        "size3D": {
+          "widthMm": 150,
+          "heightMm": 100,
+          "depthMm": 100
+        },
+        "rotationZ": -135
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000206",
+      "modelElementId": "b1100000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "SD-102",
+        "deviceId": "SD-102",
+        "coverageRadiusMm": 5000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000102",
+        "gateway": "b2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 628,
+          "y": 164
+        },
+        "size2D": {
+          "width": 24,
+          "height": 24
+        },
+        "position3D": {
+          "x": 0,
+          "y": 4600,
+          "z": 2700
+        },
+        "size3D": {
+          "widthMm": 120,
+          "heightMm": 120,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000207",
+      "modelElementId": "b1100000-0000-4000-8000-000000000107",
+      "style": {
+        "name": "MS-102",
+        "deviceId": "MS-102",
+        "coverageRadiusMm": 6000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000102",
+        "gateway": "b2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 454,
+          "y": 54
+        },
+        "size2D": {
+          "width": 20,
+          "height": 20
+        },
+        "position3D": {
+          "x": -4400,
+          "y": 7400,
+          "z": 2200
+        },
+        "size3D": {
+          "widthMm": 80,
+          "heightMm": 80,
+          "depthMm": 60
+        },
+        "rotationZ": -45
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000208",
+      "modelElementId": "b1100000-0000-4000-8000-000000000108",
+      "style": {
+        "name": "CAM-102",
+        "deviceId": "CAM-102",
+        "coverageRadiusMm": 10000,
+        "fieldOfViewDeg": 90
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000102",
+        "gateway": "b2200000-0000-4000-8000-000000000202"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 805,
+          "y": 277
+        },
+        "size2D": {
+          "width": 22,
+          "height": 22
+        },
+        "position3D": {
+          "x": 4400,
+          "y": 1800,
+          "z": 2500
+        },
+        "size3D": {
+          "widthMm": 150,
+          "heightMm": 100,
+          "depthMm": 100
+        },
+        "rotationZ": 135
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000209",
+      "modelElementId": "b1100000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "SD-103",
+        "deviceId": "SD-103",
+        "coverageRadiusMm": 5000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000103",
+        "gateway": "b2200000-0000-4000-8000-000000000202"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 1028,
+          "y": 164
+        },
+        "size2D": {
+          "width": 24,
+          "height": 24
+        },
+        "position3D": {
+          "x": 10000,
+          "y": 4600,
+          "z": 2700
+        },
+        "size3D": {
+          "widthMm": 120,
+          "heightMm": 120,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-00000000020a",
+      "modelElementId": "b1100000-0000-4000-8000-000000000107",
+      "style": {
+        "name": "MS-103",
+        "deviceId": "MS-103",
+        "coverageRadiusMm": 6000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000103",
+        "gateway": "b2200000-0000-4000-8000-000000000202"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 1206,
+          "y": 54
+        },
+        "size2D": {
+          "width": 20,
+          "height": 20
+        },
+        "position3D": {
+          "x": 14400,
+          "y": 7400,
+          "z": 2200
+        },
+        "size3D": {
+          "widthMm": 80,
+          "heightMm": 80,
+          "depthMm": 60
+        },
+        "rotationZ": -135
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-00000000020b",
+      "modelElementId": "b1100000-0000-4000-8000-000000000108",
+      "style": {
+        "name": "CAM-103",
+        "deviceId": "CAM-103",
+        "coverageRadiusMm": 10000,
+        "fieldOfViewDeg": 90
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000103",
+        "gateway": "b2200000-0000-4000-8000-000000000202"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 853,
+          "y": 53
+        },
+        "size2D": {
+          "width": 22,
+          "height": 22
+        },
+        "position3D": {
+          "x": 5600,
+          "y": 7400,
+          "z": 2500
+        },
+        "size3D": {
+          "widthMm": 150,
+          "heightMm": 100,
+          "depthMm": 100
+        },
+        "rotationZ": -45
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-00000000020c",
+      "modelElementId": "b1100000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "SD-104",
+        "deviceId": "SD-104",
+        "coverageRadiusMm": 5000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000104",
+        "gateway": "b2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 228,
+          "y": 532
+        },
+        "size2D": {
+          "width": 24,
+          "height": 24
+        },
+        "position3D": {
+          "x": -10000,
+          "y": -4600,
+          "z": 2700
+        },
+        "size3D": {
+          "widthMm": 120,
+          "heightMm": 120,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-00000000020d",
+      "modelElementId": "b1100000-0000-4000-8000-000000000107",
+      "style": {
+        "name": "MS-104",
+        "deviceId": "MS-104",
+        "coverageRadiusMm": 6000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000104",
+        "gateway": "b2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 54,
+          "y": 646
+        },
+        "size2D": {
+          "width": 20,
+          "height": 20
+        },
+        "position3D": {
+          "x": -14400,
+          "y": -7400,
+          "z": 2200
+        },
+        "size3D": {
+          "widthMm": 80,
+          "heightMm": 80,
+          "depthMm": 60
+        },
+        "rotationZ": 45
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-00000000020e",
+      "modelElementId": "b1100000-0000-4000-8000-000000000108",
+      "style": {
+        "name": "CAM-104",
+        "deviceId": "CAM-104",
+        "coverageRadiusMm": 10000,
+        "fieldOfViewDeg": 90
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000104",
+        "gateway": "b2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 405,
+          "y": 645
+        },
+        "size2D": {
+          "width": 22,
+          "height": 22
+        },
+        "position3D": {
+          "x": -5600,
+          "y": -7400,
+          "z": 2500
+        },
+        "size3D": {
+          "widthMm": 150,
+          "heightMm": 100,
+          "depthMm": 100
+        },
+        "rotationZ": 135
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-00000000020f",
+      "modelElementId": "b1100000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "SD-105",
+        "deviceId": "SD-105",
+        "coverageRadiusMm": 5000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000105",
+        "gateway": "b2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 628,
+          "y": 532
+        },
+        "size2D": {
+          "width": 24,
+          "height": 24
+        },
+        "position3D": {
+          "x": 0,
+          "y": -4600,
+          "z": 3000
+        },
+        "size3D": {
+          "widthMm": 120,
+          "heightMm": 120,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000210",
+      "modelElementId": "b1100000-0000-4000-8000-000000000107",
+      "style": {
+        "name": "MS-105",
+        "deviceId": "MS-105",
+        "coverageRadiusMm": 6000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000105",
+        "gateway": "b2200000-0000-4000-8000-000000000202"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 806,
+          "y": 646
+        },
+        "size2D": {
+          "width": 20,
+          "height": 20
+        },
+        "position3D": {
+          "x": 4400,
+          "y": -7400,
+          "z": 2200
+        },
+        "size3D": {
+          "widthMm": 80,
+          "heightMm": 80,
+          "depthMm": 60
+        },
+        "rotationZ": 135
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000211",
+      "modelElementId": "b1100000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "SD-106",
+        "deviceId": "SD-106",
+        "coverageRadiusMm": 5000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000106",
+        "gateway": "b2200000-0000-4000-8000-000000000202"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 1028,
+          "y": 532
+        },
+        "size2D": {
+          "width": 24,
+          "height": 24
+        },
+        "position3D": {
+          "x": 10000,
+          "y": -4600,
+          "z": 2700
+        },
+        "size3D": {
+          "widthMm": 120,
+          "heightMm": 120,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000212",
+      "modelElementId": "b1100000-0000-4000-8000-000000000107",
+      "style": {
+        "name": "MS-106",
+        "deviceId": "MS-106",
+        "coverageRadiusMm": 6000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000106",
+        "gateway": "b2200000-0000-4000-8000-000000000202"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 1206,
+          "y": 646
+        },
+        "size2D": {
+          "width": 20,
+          "height": 20
+        },
+        "position3D": {
+          "x": 14400,
+          "y": -7400,
+          "z": 2200
+        },
+        "size3D": {
+          "widthMm": 80,
+          "heightMm": 80,
+          "depthMm": 60
+        },
+        "rotationZ": 135
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000213",
+      "modelElementId": "b1100000-0000-4000-8000-000000000108",
+      "style": {
+        "name": "CAM-106",
+        "deviceId": "CAM-106",
+        "coverageRadiusMm": 10000,
+        "fieldOfViewDeg": 90
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000106",
+        "gateway": "b2200000-0000-4000-8000-000000000202"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 853,
+          "y": 645
+        },
+        "size2D": {
+          "width": 22,
+          "height": 22
+        },
+        "position3D": {
+          "x": 5600,
+          "y": -7400,
+          "z": 2500
+        },
+        "size3D": {
+          "widthMm": 150,
+          "heightMm": 100,
+          "depthMm": 100
+        },
+        "rotationZ": 45
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000214",
+      "modelElementId": "b1100000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "SD-C1",
+        "deviceId": "SD-C1",
+        "coverageRadiusMm": 5000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000107",
+        "gateway": "b2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 228,
+          "y": 348
+        },
+        "size2D": {
+          "width": 24,
+          "height": 24
+        },
+        "position3D": {
+          "x": -10000,
+          "y": 0,
+          "z": 2700
+        },
+        "size3D": {
+          "widthMm": 120,
+          "heightMm": 120,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000215",
+      "modelElementId": "b1100000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "SD-C2",
+        "deviceId": "SD-C2",
+        "coverageRadiusMm": 5000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000107",
+        "gateway": "b2200000-0000-4000-8000-000000000202"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 1028,
+          "y": 348
+        },
+        "size2D": {
+          "width": 24,
+          "height": 24
+        },
+        "position3D": {
+          "x": 10000,
+          "y": 0,
+          "z": 2700
+        },
+        "size3D": {
+          "widthMm": 120,
+          "heightMm": 120,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000216",
+      "modelElementId": "b1100000-0000-4000-8000-000000000107",
+      "style": {
+        "name": "MS-C1",
+        "deviceId": "MS-C1",
+        "coverageRadiusMm": 6000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000107",
+        "gateway": "b2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 630,
+          "y": 350
+        },
+        "size2D": {
+          "width": 20,
+          "height": 20
+        },
+        "position3D": {
+          "x": 0,
+          "y": 0,
+          "z": 2200
+        },
+        "size3D": {
+          "widthMm": 80,
+          "heightMm": 80,
+          "depthMm": 60
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000217",
+      "modelElementId": "b1100000-0000-4000-8000-000000000107",
+      "style": {
+        "name": "MS-C2",
+        "deviceId": "MS-C2",
+        "coverageRadiusMm": 6000
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000107",
+        "gateway": "b2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 330,
+          "y": 350
+        },
+        "size2D": {
+          "width": 20,
+          "height": 20
+        },
+        "position3D": {
+          "x": -7500,
+          "y": 0,
+          "z": 2200
+        },
+        "size3D": {
+          "widthMm": 80,
+          "heightMm": 80,
+          "depthMm": 60
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000218",
+      "modelElementId": "b1100000-0000-4000-8000-000000000108",
+      "style": {
+        "name": "CAM-C1",
+        "deviceId": "CAM-C1",
+        "coverageRadiusMm": 10000,
+        "fieldOfViewDeg": 90
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000107",
+        "gateway": "b2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 49,
+          "y": 349
+        },
+        "size2D": {
+          "width": 22,
+          "height": 22
+        },
+        "position3D": {
+          "x": -14500,
+          "y": 0,
+          "z": 2600
+        },
+        "size3D": {
+          "widthMm": 150,
+          "heightMm": 100,
+          "depthMm": 100
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "b2200000-0000-4000-8000-000000000219",
+      "modelElementId": "b1100000-0000-4000-8000-000000000108",
+      "style": {
+        "name": "CAM-C2",
+        "deviceId": "CAM-C2",
+        "coverageRadiusMm": 10000,
+        "fieldOfViewDeg": 90
+      },
+      "references": {
+        "installedIn": "b2200000-0000-4000-8000-000000000107",
+        "gateway": "b2200000-0000-4000-8000-000000000202"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 1209,
+          "y": 349
+        },
+        "size2D": {
+          "width": 22,
+          "height": 22
+        },
+        "position3D": {
+          "x": 14500,
+          "y": 0,
+          "z": 2600
+        },
+        "size3D": {
+          "widthMm": 150,
+          "heightMm": 100,
+          "depthMm": 100
+        },
+        "rotationZ": 180
+      }
+    }
+  ],
+  "connections": []
+}

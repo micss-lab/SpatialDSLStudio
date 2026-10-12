@@ -1,0 +1,17 @@
+{
+  "id": "b5500000-0000-4000-8000-000000000001",
+  "name": "Smart Building Commissioning",
+  "targetMetamodelId": "b1100000-0000-4000-8000-000000000100",
+  "isExample": true,
+  "description": "Generates the device commissioning list (device ID, type, room, gateway, position in metres, yaw) from the Smart Building model.",
+  "templates": [
+    {
+      "id": "b5500000-0000-4000-8000-000000000101",
+      "name": "Device Commissioning List",
+      "language": "json",
+      "templateContent": "{\n  \"building\": \"{{#each elementsByClassName.Building}}{{name}}{{/each}}\",\n  \"units\": {\"position\": \"m\", \"yaw\": \"deg\"},\n  \"devices\": [\n{{resetListComma \"devices\"}}{{#each elementsByClassName.SmokeDetector}}{{commaIfNeeded \"devices\"}}\n    {\"deviceId\": \"{{deviceId}}\", \"type\": \"SmokeDetector\", \"room\": \"{{resolvedReferences.installedIn.name}}\", \"gateway\": \"{{resolvedReferences.gateway.name}}\", \"x\": {{meters X}}, \"y\": {{meters Y}}, \"z\": {{meters Z}}, \"yaw\": {{#unless RZ}}0{{else}}{{RZ}}{{/unless}} }{{/each}}\n{{#each elementsByClassName.MotionSensor}}{{commaIfNeeded \"devices\"}}\n    {\"deviceId\": \"{{deviceId}}\", \"type\": \"MotionSensor\", \"room\": \"{{resolvedReferences.installedIn.name}}\", \"gateway\": \"{{resolvedReferences.gateway.name}}\", \"x\": {{meters X}}, \"y\": {{meters Y}}, \"z\": {{meters Z}}, \"yaw\": {{#unless RZ}}0{{else}}{{RZ}}{{/unless}} }{{/each}}\n{{#each elementsByClassName.Camera}}{{commaIfNeeded \"devices\"}}\n    {\"deviceId\": \"{{deviceId}}\", \"type\": \"Camera\", \"room\": \"{{resolvedReferences.installedIn.name}}\", \"gateway\": \"{{resolvedReferences.gateway.name}}\", \"x\": {{meters X}}, \"y\": {{meters Y}}, \"z\": {{meters Z}}, \"yaw\": {{#unless RZ}}0{{else}}{{RZ}}{{/unless}} }{{/each}}\n{{#each elementsByClassName.Gateway}}{{commaIfNeeded \"devices\"}}\n    {\"deviceId\": \"{{deviceId}}\", \"type\": \"Gateway\", \"room\": \"{{resolvedReferences.installedIn.name}}\", \"gateway\": \"{{resolvedReferences.gateway.name}}\", \"x\": {{meters X}}, \"y\": {{meters Y}}, \"z\": {{meters Z}}, \"yaw\": {{#unless RZ}}0{{else}}{{RZ}}{{/unless}} }{{/each}}\n  ]\n}\n",
+      "targetMetamodelId": "b1100000-0000-4000-8000-000000000100",
+      "outputPattern": "device-commissioning.json"
+    }
+  ]
+}

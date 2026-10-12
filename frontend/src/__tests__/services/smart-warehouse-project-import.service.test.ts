@@ -59,6 +59,22 @@ jest.mock('../../services/metamodel/exampleData.service', () => ({
         { id: 'generator-usd', name: 'Omniverse', targetMetamodelId: 'metamodel-1', templates: [] },
       ],
     })),
+    getSmartBuildingBundle: jest.fn(() => ({
+      metamodels: [{
+        id: 'building-metamodel',
+        name: 'Smart Building',
+        uri: 'urn:building',
+        prefix: 'building',
+        conformsTo: 'legacy-core',
+        eClass: 'legacy-epackage',
+        classes: [],
+        spatialRules: [{ id: 'rule-1', name: 'Rooms apart', kind: 'noOverlap', sourceClassId: 'room', targetClassId: 'room', severity: 'error' }],
+      }],
+      models: [{ id: 'building-model', name: 'Building', metamodelId: 'building-metamodel', conformsTo: 'building-metamodel', elements: [], connections: [] }],
+      viewpoints: [{ id: 'building-viewpoint', name: 'Building Operations', metamodelId: 'building-metamodel', representationDescriptions: [] }],
+      views: [{ id: 'building-view', name: 'Floor Plan', modelId: 'building-model', elements: [] }],
+      projects: [{ id: 'building-generator', name: 'Commissioning', targetMetamodelId: 'building-metamodel', templates: [] }],
+    })),
   },
 }));
 
@@ -69,12 +85,14 @@ import { smartWarehouseProjectImportService } from '../../services/smart-warehou
 const mockApiClient = apiClient as jest.Mocked<typeof apiClient>;
 const mockExampleDataService = exampleDataService as jest.Mocked<typeof exampleDataService>;
 const starterBundle = mockExampleDataService.getSmartWarehouseBundle();
+const buildingBundle = mockExampleDataService.getSmartBuildingBundle();
 
 describe('Smart Warehouse project starter import', () => {
   beforeEach(() => {
     mockProjectId = 'previous-project';
     jest.clearAllMocks();
     mockExampleDataService.getSmartWarehouseBundle.mockReturnValue(starterBundle);
+    mockExampleDataService.getSmartBuildingBundle.mockReturnValue(buildingBundle);
     mockApiClient.getProjectId.mockImplementation(() => mockProjectId);
     mockApiClient.setProjectId.mockImplementation((projectId: string | null) => {
       mockProjectId = projectId;
@@ -122,6 +140,20 @@ describe('Smart Warehouse project starter import', () => {
     expect(mockApiClient.post).toHaveBeenCalledWith('/diagrams', expect.objectContaining({ id: 'view-1' }));
     expect(mockApiClient.post).toHaveBeenCalledWith('/codegen/projects', expect.objectContaining({ id: 'generator-vc' }));
     expect(mockApiClient.post).toHaveBeenCalledWith('/codegen/projects', expect.objectContaining({ id: 'generator-usd' }));
+  });
+
+  it('imports the Smart Building starter, spatial rules included, into one scoped project', async () => {
+    const summary = await smartWarehouseProjectImportService.importSmartBuildingInto('building-project');
+
+    expect(summary).toEqual({ metamodels: 1, models: 1, viewpoints: 1, views: 1, generatorConfigurations: 1 });
+    expect(mockApiClient.setProjectId).toHaveBeenNthCalledWith(1, 'building-project');
+    expect(mockApiClient.setProjectId).toHaveBeenLastCalledWith('previous-project');
+    expect(mockApiClient.post).toHaveBeenCalledWith('/metamodels', expect.objectContaining({
+      id: 'building-metamodel',
+      conformsTo: 'core-1',
+      spatialRules: [expect.objectContaining({ id: 'rule-1', kind: 'noOverlap' })],
+    }));
+    expect(mockApiClient.post).toHaveBeenCalledWith('/codegen/projects', expect.objectContaining({ id: 'building-generator' }));
   });
 
   it('restores the prior API scope if an artifact import fails', async () => {

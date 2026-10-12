@@ -96,6 +96,7 @@ export const ProjectPickerPage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const [includeSmartWarehouse, setIncludeSmartWarehouse] = useState(false);
+  const [includeSmartBuilding, setIncludeSmartBuilding] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -121,17 +122,18 @@ export const ProjectPickerPage: React.FC = () => {
       setError(null);
       const project = await projectService.create({ name: name.trim(), description: description.trim() || undefined });
       projectCreated = true;
-      if (includeSmartWarehouse) {
+      if (includeSmartWarehouse || includeSmartBuilding) {
         const { smartWarehouseProjectImportService } = await import(
           '../../services/smart-warehouse-project-import.service'
         );
-        await smartWarehouseProjectImportService.importInto(project.id);
+        if (includeSmartWarehouse) await smartWarehouseProjectImportService.importInto(project.id);
+        if (includeSmartBuilding) await smartWarehouseProjectImportService.importSmartBuildingInto(project.id);
       }
       setDialogOpen(false);
       openProject(project.id);
     } catch (createError: any) {
       setError(projectCreated
-        ? `The project was created, but the Smart Warehouse starter could not be imported: ${createError?.message || 'unknown error'}`
+        ? `The project was created, but the starter could not be imported: ${createError?.message || 'unknown error'}`
         : createError?.message || 'Unable to create project');
     } finally {
       setCreating(false);
@@ -261,6 +263,18 @@ export const ProjectPickerPage: React.FC = () => {
           />
           <Typography variant="caption" color="text.secondary" display="block">
             Imports the metamodel, model, viewpoints, saved views, and both Visual Components and Omniverse generator configurations into this project.
+          </Typography>
+          <FormControlLabel
+            control={(
+              <Switch
+                checked={includeSmartBuilding}
+                onChange={event => setIncludeSmartBuilding(event.target.checked)}
+              />
+            )}
+            label="Include Smart Building starter"
+          />
+          <Typography variant="caption" color="text.secondary" display="block">
+            Imports a sensor-deployment language with spatial rules, a building model, floor-plan and 3D views, and a device commissioning generator.
           </Typography>
         </DialogContent>
         <DialogActions>
