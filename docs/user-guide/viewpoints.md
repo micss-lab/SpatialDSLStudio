@@ -220,6 +220,10 @@ instances demonstrate landed Z=0 and airborne Z=4,500 mm placement.
 
 The UML Activity example includes a `UML Activity` viewpoint with an executable `Activity Diagram` representation, containment-driven activity containers, semantic input/output pins, object flows, and an editable `Activity Node Inventory` table.
 
+The Smart Home example includes a `Home Layout` viewpoint with a `Floor Plan` diagram (rooms, devices, and dashed links to the hub), a `Device Placement 3D` diagram in which rooms are grounded floor slabs and devices have adjustable mounting heights, and an editable `Device Inventory` table.
+
+New projects can start from any of these examples: the project dialog offers "Include Smart Warehouse starter", "Include Smart Home starter", and "Include UML Activity starter".
+
 ## Compatibility
 
 The API path and database table remain `/api/diagrams` and `Diagram` for compatibility. User-facing terminology should treat these as Views: concrete saved representation instances.

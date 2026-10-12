@@ -6,6 +6,9 @@ import { modelValidationEngine } from '../../services/pipeline/model-validation.
 import { testExecutionEngine } from '../../services/pipeline/test-execution.engine';
 import { transformationEngine } from '../../services/pipeline/transformation.engine';
 import { evaluateSpatialRules } from '../../../../shared/spatial-rules';
+import smartHomeMetamodel from '../../../../frontend/src/examples/data/smart-home-metamodel.json';
+import smartHomeModel from '../../../../frontend/src/examples/data/smart-home-model.json';
+import smartHomeProject from '../../../../examples/codegen-projects/smart-home-device-configuration-project.json';
 
 const projectId = 'project-uuid-1';
 
@@ -175,6 +178,31 @@ describe('headless pipeline engines', () => {
       content: 'count=1;z=3',
     }));
     expect(first[0].contentHash).toMatch(/^sha256:/);
+  });
+
+  it('validates and generates the Smart Home example with room names and elevations', () => {
+    const homeMetamodel = smartHomeMetamodel as unknown as Metamodel;
+    const homeModel = smartHomeModel as unknown as Model;
+    expect(modelValidationEngine.validate(homeModel, homeMetamodel)).toEqual({ valid: true, issues: [] });
+
+    const [file] = codeGenerationEngine.generate(
+      homeModel,
+      homeMetamodel,
+      smartHomeProject.templates as any
+    );
+    const output = JSON.parse(file.content);
+    expect(file.filename).toBe('device-configuration.json');
+    expect(output.devices).toHaveLength(13);
+    output.devices.forEach((device: any) => {
+      const element = homeModel.elements.find(candidate => candidate.style.deviceId === device.deviceId)!;
+      expect(device.z).toBeCloseTo(element.presentation!.position3D!.z / 1000, 9);
+      expect(device.room).toBe(homeModel.elements.find(candidate => (
+        candidate.id === element.references.room
+      ))!.style.name);
+    });
+    expect(output.devices.find((device: any) => device.deviceId === 'SD-LIV')).toEqual({
+      deviceId: 'SD-LIV', type: 'SmokeDetector', room: 'Living room', x: -2, y: 2.5, z: 2.6, yaw: 0,
+    });
   });
 
   it('rejects generated path traversal', () => {

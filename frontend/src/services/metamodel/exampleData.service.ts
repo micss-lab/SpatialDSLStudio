@@ -10,6 +10,11 @@ import activityDiagramMetamodelData from '../../examples/data/activity-diagram-m
 import activityDiagramModelData from '../../examples/data/activity-diagram-model.json';
 import activityDiagramViewsData from '../../examples/data/activity-diagram-views.json';
 import activityDiagramViewpointsData from '../../examples/data/activity-diagram-viewpoints.json';
+import smartHomeMetamodelData from '../../examples/data/smart-home-metamodel.json';
+import smartHomeModelData from '../../examples/data/smart-home-model.json';
+import smartHomeViewsData from '../../examples/data/smart-home-views.json';
+import smartHomeViewpointsData from '../../examples/data/smart-home-viewpoints.json';
+import smartHomeProjectData from '../../examples/data/smart-home-project.json';
 
 export interface ExampleBundle {
   metamodels: Metamodel[];
@@ -80,13 +85,25 @@ class ExampleDataService {
   private getBundle(): ExampleBundle {
     if (!this.bundle) {
       const raw = {
-        metamodels: [smartWarehouseMetamodelData, activityDiagramMetamodelData],
-        models: [smartWarehouseModelData, activityDiagramModelData],
-        views: [...(smartWarehouseViewsData as unknown[]), ...(activityDiagramViewsData as unknown[])],
-        viewpoints: [...(smartWarehouseViewpointsData as unknown[]), ...(activityDiagramViewpointsData as unknown[])],
-        projects: [smartWarehouseProjectData, smartWarehouseOmniverseProjectData].map(project => ({
+        metamodels: [smartWarehouseMetamodelData, activityDiagramMetamodelData, smartHomeMetamodelData],
+        models: [smartWarehouseModelData, activityDiagramModelData, smartHomeModelData],
+        views: [
+          ...(smartWarehouseViewsData as unknown[]),
+          ...(activityDiagramViewsData as unknown[]),
+          ...(smartHomeViewsData as unknown[]),
+        ],
+        viewpoints: [
+          ...(smartWarehouseViewpointsData as unknown[]),
+          ...(activityDiagramViewpointsData as unknown[]),
+          ...(smartHomeViewpointsData as unknown[]),
+        ],
+        projects: [
+          smartWarehouseProjectData,
+          smartWarehouseOmniverseProjectData,
+          smartHomeProjectData,
+        ].map((project: any) => ({
           ...project,
-          templates: project.templates.map(template => ({
+          templates: project.templates.map((template: any) => ({
             ...template,
             targetMetamodelId: project.targetMetamodelId,
           })),
@@ -133,6 +150,7 @@ class ExampleDataService {
     return [
       ...(smartWarehouseViewpointsData as unknown as Viewpoint[]),
       ...(activityDiagramViewpointsData as unknown as Viewpoint[]),
+      ...(smartHomeViewpointsData as unknown as Viewpoint[]),
     ];
   }
 
@@ -151,9 +169,23 @@ class ExampleDataService {
    * metamodel, semantic element, viewpoint, representation, and view IDs agree.
    */
   getSmartWarehouseBundle(): ExampleBundle {
+    return this.getBundleForMetamodel('Smart Warehouse');
+  }
+
+  /** The connected Smart Home device-placement graph, for project starter import. */
+  getSmartHomeBundle(): ExampleBundle {
+    return this.getBundleForMetamodel('Smart Home');
+  }
+
+  /** The UML activity-diagram language with its model and saved views, for project starter import. */
+  getActivityBundle(): ExampleBundle {
+    return this.getBundleForMetamodel(activityDiagramMetamodelData.name);
+  }
+
+  private getBundleForMetamodel(metamodelName: string): ExampleBundle {
     const bundle = this.getBundle();
-    const metamodel = bundle.metamodels.find(candidate => candidate.name === 'Smart Warehouse');
-    if (!metamodel) throw new Error('The Smart Warehouse metamodel fixture is unavailable');
+    const metamodel = bundle.metamodels.find(candidate => candidate.name === metamodelName);
+    if (!metamodel) throw new Error(`The ${metamodelName} metamodel fixture is unavailable`);
 
     const models = bundle.models.filter(model => (
       (model.conformsTo || model.metamodelId) === metamodel.id
@@ -176,21 +208,24 @@ class ExampleDataService {
   isExampleMetamodel(metamodelId: string): boolean {
     return (
       metamodelId === smartWarehouseMetamodelData.id ||
-      metamodelId === activityDiagramMetamodelData.id
+      metamodelId === activityDiagramMetamodelData.id ||
+      metamodelId === smartHomeMetamodelData.id
     );
   }
 
   isExampleModel(modelId: string): boolean {
     return (
       modelId === smartWarehouseModelData.id ||
-      modelId === activityDiagramModelData.id
+      modelId === activityDiagramModelData.id ||
+      modelId === smartHomeModelData.id
     );
   }
 
   isExampleView(viewId: string): boolean {
     return (
       (smartWarehouseViewsData as Array<{ id: string }>).some(v => v.id === viewId) ||
-      (activityDiagramViewsData as Array<{ id: string }>).some(v => v.id === viewId)
+      (activityDiagramViewsData as Array<{ id: string }>).some(v => v.id === viewId) ||
+      (smartHomeViewsData as Array<{ id: string }>).some(v => v.id === viewId)
     );
   }
 
@@ -201,7 +236,8 @@ class ExampleDataService {
 
   isExampleProject(projectId: string): boolean {
     return projectId === smartWarehouseProjectData.id
-      || projectId === smartWarehouseOmniverseProjectData.id;
+      || projectId === smartWarehouseOmniverseProjectData.id
+      || projectId === smartHomeProjectData.id;
   }
 }
 

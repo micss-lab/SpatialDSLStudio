@@ -96,6 +96,8 @@ export const ProjectPickerPage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const [includeSmartWarehouse, setIncludeSmartWarehouse] = useState(false);
+  const [includeSmartHome, setIncludeSmartHome] = useState(false);
+  const [includeActivity, setIncludeActivity] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -121,17 +123,19 @@ export const ProjectPickerPage: React.FC = () => {
       setError(null);
       const project = await projectService.create({ name: name.trim(), description: description.trim() || undefined });
       projectCreated = true;
-      if (includeSmartWarehouse) {
+      if (includeSmartWarehouse || includeSmartHome || includeActivity) {
         const { smartWarehouseProjectImportService } = await import(
           '../../services/smart-warehouse-project-import.service'
         );
-        await smartWarehouseProjectImportService.importInto(project.id);
+        if (includeSmartWarehouse) await smartWarehouseProjectImportService.importInto(project.id);
+        if (includeSmartHome) await smartWarehouseProjectImportService.importSmartHomeInto(project.id);
+        if (includeActivity) await smartWarehouseProjectImportService.importActivityInto(project.id);
       }
       setDialogOpen(false);
       openProject(project.id);
     } catch (createError: any) {
       setError(projectCreated
-        ? `The project was created, but the Smart Warehouse starter could not be imported: ${createError?.message || 'unknown error'}`
+        ? `The project was created, but the starter could not be imported: ${createError?.message || 'unknown error'}`
         : createError?.message || 'Unable to create project');
     } finally {
       setCreating(false);
@@ -261,6 +265,30 @@ export const ProjectPickerPage: React.FC = () => {
           />
           <Typography variant="caption" color="text.secondary" display="block">
             Imports the metamodel, model, viewpoints, saved views, and both Visual Components and Omniverse generator configurations into this project.
+          </Typography>
+          <FormControlLabel
+            control={(
+              <Switch
+                checked={includeSmartHome}
+                onChange={event => setIncludeSmartHome(event.target.checked)}
+              />
+            )}
+            label="Include Smart Home starter"
+          />
+          <Typography variant="caption" color="text.secondary" display="block">
+            Imports a smart home language with spatial rules, a five-room home with 12 devices, floor-plan and 3D views, and a device configuration generator.
+          </Typography>
+          <FormControlLabel
+            control={(
+              <Switch
+                checked={includeActivity}
+                onChange={event => setIncludeActivity(event.target.checked)}
+              />
+            )}
+            label="Include UML Activity starter"
+          />
+          <Typography variant="caption" color="text.secondary" display="block">
+            Imports the UML activity-diagram language, an order-processing model, and its two saved activity views.
           </Typography>
         </DialogContent>
         <DialogActions>
