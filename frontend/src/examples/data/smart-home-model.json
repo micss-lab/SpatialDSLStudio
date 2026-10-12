@@ -194,15 +194,15 @@
       },
       "presentation": {
         "position2D": {
-          "x": 277,
-          "y": 282
+          "x": 352,
+          "y": 272
         },
         "size2D": {
           "width": 26,
           "height": 26
         },
         "position3D": {
-          "x": 0,
+          "x": 1500,
           "y": -600,
           "z": 900
         },
@@ -228,7 +228,7 @@
       "presentation": {
         "position2D": {
           "x": 179,
-          "y": 129
+          "y": 79
         },
         "size2D": {
           "width": 22,
@@ -236,7 +236,7 @@
         },
         "position3D": {
           "x": -2000,
-          "y": 2500,
+          "y": 3500,
           "z": 2600
         },
         "size3D": {
@@ -260,8 +260,8 @@
       },
       "presentation": {
         "position2D": {
-          "x": 322.5,
-          "y": 37.5
+          "x": 318,
+          "y": 42
         },
         "size2D": {
           "width": 20,
@@ -293,8 +293,8 @@
       },
       "presentation": {
         "position2D": {
-          "x": 36.5,
-          "y": 36.5
+          "x": 42,
+          "y": 42
         },
         "size2D": {
           "width": 22,
@@ -326,7 +326,7 @@
       },
       "presentation": {
         "position2D": {
-          "x": 31,
+          "x": 42,
           "y": 155
         },
         "size2D": {
@@ -360,7 +360,7 @@
       "presentation": {
         "position2D": {
           "x": 131,
-          "y": 33
+          "y": 42
         },
         "size2D": {
           "width": 18,
@@ -393,7 +393,7 @@
       "presentation": {
         "position2D": {
           "x": 429,
-          "y": 129
+          "y": 79
         },
         "size2D": {
           "width": 22,
@@ -401,7 +401,7 @@
         },
         "position3D": {
           "x": 3000,
-          "y": 2500,
+          "y": 3500,
           "z": 2400
         },
         "size3D": {
@@ -425,7 +425,7 @@
       },
       "presentation": {
         "position2D": {
-          "x": 529,
+          "x": 520,
           "y": 181
         },
         "size2D": {
@@ -491,7 +491,7 @@
       },
       "presentation": {
         "position2D": {
-          "x": 525,
+          "x": 518,
           "y": 260
         },
         "size2D": {
@@ -525,7 +525,7 @@
       "presentation": {
         "position2D": {
           "x": 179,
-          "y": 384
+          "y": 334
         },
         "size2D": {
           "width": 22,
@@ -533,7 +533,7 @@
         },
         "position3D": {
           "x": -2000,
-          "y": -2600,
+          "y": -1600,
           "z": 2400
         },
         "size3D": {
@@ -557,7 +557,7 @@
       },
       "presentation": {
         "position2D": {
-          "x": 33,
+          "x": 42,
           "y": 431
         },
         "size2D": {
@@ -590,8 +590,8 @@
       },
       "presentation": {
         "position2D": {
-          "x": 525,
-          "y": 475
+          "x": 518,
+          "y": 468
         },
         "size2D": {
           "width": 20,

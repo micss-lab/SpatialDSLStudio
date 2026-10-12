@@ -69,11 +69,11 @@ describe('Smart Home example language', () => {
 
   it('reports a device moved out of hub range', () => {
     const moved = copy();
-    // Outside, north of the living room: 10.8 m from the hub (centre to centre, in 3D).
+    // Outside, north of the living room: 11.6 m from the hub (centre to centre, in 3D).
     byName(moved, 'CAM-LIV').presentation!.position3D = { x: -4850, y: 9000, z: 2200 };
     expect(evaluateSpatialRules(metamodel, moved).map(issue => issue.message)).toEqual([
       'Device inside a room: CAM-LIV is not inside any Room.',
-      'Device in hub range: CAM-LIV has no Hub within 10000 mm; the nearest is 10836.3 mm away.',
+      'Device in hub range: CAM-LIV has no Hub within 10000 mm; the nearest is 11585.5 mm away.',
     ]);
   });
 
@@ -114,7 +114,7 @@ describe('Smart Home example language', () => {
       expect(device.yaw).toBe(element.presentation!.rotationZ || 0);
     });
     expect(output.devices.find((device: any) => device.deviceId === 'SD-LIV')).toEqual({
-      deviceId: 'SD-LIV', type: 'SmokeDetector', room: 'Living room', x: -2, y: 2.5, z: 2.6, yaw: 0,
+      deviceId: 'SD-LIV', type: 'SmokeDetector', room: 'Living room', x: -2, y: 3.5, z: 2.6, yaw: 0,
     });
     expect(output.devices.find((device: any) => device.deviceId === 'TH-LIV')).toEqual(expect.objectContaining({
       type: 'Thermostat', z: 1.5, yaw: 90,

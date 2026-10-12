@@ -209,7 +209,7 @@ describe('headless pipeline engines', () => {
       ))!.style.name);
     });
     expect(output.devices.find((device: any) => device.deviceId === 'SD-LIV')).toEqual({
-      deviceId: 'SD-LIV', type: 'SmokeDetector', room: 'Living room', x: -2, y: 2.5, z: 2.6, yaw: 0,
+      deviceId: 'SD-LIV', type: 'SmokeDetector', room: 'Living room', x: -2, y: 3.5, z: 2.6, yaw: 0,
     });
   });
 

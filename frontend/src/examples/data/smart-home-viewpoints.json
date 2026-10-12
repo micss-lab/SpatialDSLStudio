@@ -38,7 +38,8 @@
               "fillColor": "rgba(241, 245, 249, 0.6)",
               "strokeColor": "#475569",
               "strokeWidth": 2,
-              "fontSize": 14
+              "fontSize": 14,
+              "labelPosition": "inside"
             },
             "three_d": {
               "fallbackShape": "box",
@@ -240,7 +241,6 @@
                 4,
                 4
               ],
-              "arrowHead": "none",
               "labelFormat": ""
             }
           }
@@ -278,7 +278,8 @@
               "fillColor": "rgba(241, 245, 249, 0.6)",
               "strokeColor": "#475569",
               "strokeWidth": 2,
-              "fontSize": 14
+              "fontSize": 14,
+              "labelPosition": "inside"
             },
             "three_d": {
               "fallbackShape": "box",
@@ -480,7 +481,6 @@
                 4,
                 4
               ],
-              "arrowHead": "none",
               "labelFormat": ""
             }
           }
