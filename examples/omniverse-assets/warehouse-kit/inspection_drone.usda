@@ -14,7 +14,7 @@ def Xform "InspectionDrone"
 
     def Cube "Body"
     {
-        float size = 1
+        double size = 1
         color3f[] primvars:displayColor = [(0.34, 0.16, 0.62)]
         double3 xformOp:scale = (0.55, 0.34, 0.20)
         double3 xformOp:translate = (0, 0, 0.20)
@@ -23,7 +23,7 @@ def Xform "InspectionDrone"
 
     def Cube "ArmX"
     {
-        float size = 1
+        double size = 1
         color3f[] primvars:displayColor = [(0.55, 0.38, 0.82)]
         double3 xformOp:scale = (1.0, 0.08, 0.08)
         double3 xformOp:translate = (0, 0, 0.23)
@@ -32,7 +32,7 @@ def Xform "InspectionDrone"
 
     def Cube "ArmY"
     {
-        float size = 1
+        double size = 1
         color3f[] primvars:displayColor = [(0.55, 0.38, 0.82)]
         double3 xformOp:scale = (0.08, 1.0, 0.08)
         double3 xformOp:translate = (0, 0, 0.23)
@@ -41,7 +41,7 @@ def Xform "InspectionDrone"
 
     def Cube "LandingSkidLeft"
     {
-        float size = 1
+        double size = 1
         color3f[] primvars:displayColor = [(0.16, 0.18, 0.24)]
         double3 xformOp:scale = (0.55, 0.05, 0.08)
         double3 xformOp:translate = (0, -0.27, 0.04)
@@ -50,7 +50,7 @@ def Xform "InspectionDrone"
 
     def Cube "LandingSkidRight"
     {
-        float size = 1
+        double size = 1
         color3f[] primvars:displayColor = [(0.16, 0.18, 0.24)]
         double3 xformOp:scale = (0.55, 0.05, 0.08)
         double3 xformOp:translate = (0, 0.27, 0.04)
@@ -60,8 +60,8 @@ def Xform "InspectionDrone"
     def Cylinder "RotorFront"
     {
         uniform token axis = "Z"
-        float height = 0.025
-        float radius = 0.20
+        double height = 0.025
+        double radius = 0.20
         color3f[] primvars:displayColor = [(0.10, 0.12, 0.18)]
         double3 xformOp:translate = (0.50, 0, 0.31)
         uniform token[] xformOpOrder = ["xformOp:translate"]
@@ -70,8 +70,8 @@ def Xform "InspectionDrone"
     def Cylinder "RotorBack"
     {
         uniform token axis = "Z"
-        float height = 0.025
-        float radius = 0.20
+        double height = 0.025
+        double radius = 0.20
         color3f[] primvars:displayColor = [(0.10, 0.12, 0.18)]
         double3 xformOp:translate = (-0.50, 0, 0.31)
         uniform token[] xformOpOrder = ["xformOp:translate"]
@@ -80,8 +80,8 @@ def Xform "InspectionDrone"
     def Cylinder "RotorLeft"
     {
         uniform token axis = "Z"
-        float height = 0.025
-        float radius = 0.20
+        double height = 0.025
+        double radius = 0.20
         color3f[] primvars:displayColor = [(0.10, 0.12, 0.18)]
         double3 xformOp:translate = (0, -0.50, 0.31)
         uniform token[] xformOpOrder = ["xformOp:translate"]
@@ -90,8 +90,8 @@ def Xform "InspectionDrone"
     def Cylinder "RotorRight"
     {
         uniform token axis = "Z"
-        float height = 0.025
-        float radius = 0.20
+        double height = 0.025
+        double radius = 0.20
         color3f[] primvars:displayColor = [(0.10, 0.12, 0.18)]
         double3 xformOp:translate = (0, 0.50, 0.31)
         uniform token[] xformOpOrder = ["xformOp:translate"]

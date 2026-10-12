@@ -15,7 +15,7 @@ over "F1TenthAMR"
         {
             uniform token purpose = "guide"
             token visibility = "invisible"
-            float size = 1
+            double size = 1
             custom string spatialDsl:colliderRole = "chassis"
             double3 xformOp:scale = (0.49, 0.25, 0.15)
             double3 xformOp:translate = (0, 0, 0.12)
@@ -28,7 +28,7 @@ over "F1TenthAMR"
         {
             uniform token purpose = "guide"
             token visibility = "invisible"
-            float size = 1
+            double size = 1
             custom string spatialDsl:colliderRole = "sensor-envelope"
             double3 xformOp:scale = (0.30, 0.18, 0.14)
             double3 xformOp:translate = (0.015, 0, 0.235)
@@ -42,8 +42,8 @@ over "F1TenthAMR"
             uniform token axis = "Z"
             uniform token purpose = "guide"
             token visibility = "invisible"
-            float height = 0.32
-            float radius = 0.057
+            double height = 0.32
+            double radius = 0.057
             custom string spatialDsl:colliderRole = "front-wheel-envelope"
             float3 xformOp:rotateXYZ = (90, 0, 0)
             double3 xformOp:translate = (0.174, 0, 0.058)
@@ -57,8 +57,8 @@ over "F1TenthAMR"
             uniform token axis = "Z"
             uniform token purpose = "guide"
             token visibility = "invisible"
-            float height = 0.32
-            float radius = 0.057
+            double height = 0.32
+            double radius = 0.057
             custom string spatialDsl:colliderRole = "rear-wheel-envelope"
             float3 xformOp:rotateXYZ = (90, 0, 0)
             double3 xformOp:translate = (-0.174, 0, 0.058)

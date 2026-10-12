@@ -26,8 +26,8 @@ over "F1TenthAMR" (
             uniform token axis = "Z"
             uniform token purpose = "guide"
             token visibility = "invisible"
-            float height = 0.052
-            float radius = 0.057
+            double height = 0.052
+            double radius = 0.057
             float physics:mass = 0.12
             float3 xformOp:rotateXYZ = (90, 0, 0)
             double3 xformOp:translate = (0, 0.162, 0.058)
@@ -41,8 +41,8 @@ over "F1TenthAMR" (
             uniform token axis = "Z"
             uniform token purpose = "guide"
             token visibility = "invisible"
-            float height = 0.052
-            float radius = 0.057
+            double height = 0.052
+            double radius = 0.057
             float physics:mass = 0.12
             float3 xformOp:rotateXYZ = (90, 0, 0)
             double3 xformOp:translate = (0, -0.162, 0.058)
