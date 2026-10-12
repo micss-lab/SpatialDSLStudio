@@ -10,7 +10,7 @@
       {
         "id": "a4400000-0000-4000-8000-000000000101",
         "name": "Activity Diagram",
-      "description": "Executable diagram representation for arranging activity containers, nodes, pins, and control or object flows.",
+        "description": "Executable diagram representation for arranging activity containers, nodes, pins, and control or object flows.",
         "viewpointId": "a4400000-0000-4000-8000-000000000001",
         "kind": "diagram",
         "visibleMetaClassIds": [
@@ -38,7 +38,7 @@
           "a1100000-0000-4000-8000-000000000112"
         ],
         "isDefault": true,
-      "concreteSyntaxByMetaClassId": {
+        "concreteSyntaxByMetaClassId": {
           "a1100000-0000-4000-8000-000000000111": {
             "two_d": {
               "shape": "square",
@@ -48,7 +48,8 @@
               "defaultSize": {
                 "width": 16,
                 "height": 16
-              }
+              },
+              "labelPosition": "hidden"
             }
           },
           "a1100000-0000-4000-8000-000000000112": {
@@ -60,39 +61,128 @@
               "defaultSize": {
                 "width": 16,
                 "height": 16
+              },
+              "labelPosition": "hidden"
+            }
+          },
+          "a1100000-0000-4000-8000-000000000103": {
+            "two_d": {
+              "shape": "circle",
+              "fillColor": "#000000",
+              "strokeColor": "#000000",
+              "labelPosition": "hidden",
+              "defaultSize": {
+                "width": 30,
+                "height": 30
               }
             }
-        }
-      },
-      "containerMappings": [
-        {
-          "id": "a4400000-0000-4000-8000-000000000401",
-          "containerMetaClassId": "a1100000-0000-4000-8000-000000000101",
-          "containmentReferenceId": "a1100000-0000-4000-8000-000000002101",
-          "childMetaClassIds": [
-            "a1100000-0000-4000-8000-000000000103",
-            "a1100000-0000-4000-8000-000000000104",
-            "a1100000-0000-4000-8000-000000000105",
-            "a1100000-0000-4000-8000-000000000106",
-            "a1100000-0000-4000-8000-000000000107",
-            "a1100000-0000-4000-8000-000000000108",
-            "a1100000-0000-4000-8000-000000000109"
-          ],
-          "concreteSyntax": {
+          },
+          "a1100000-0000-4000-8000-000000000104": {
+            "two_d": {
+              "shape": "circle",
+              "fillColor": "#ffffff",
+              "strokeColor": "#000000",
+              "strokeWidth": 4,
+              "labelPosition": "hidden",
+              "defaultSize": {
+                "width": 30,
+                "height": 30
+              }
+            }
+          },
+          "a1100000-0000-4000-8000-000000000105": {
             "two_d": {
               "shape": "rectangle",
-              "fillColor": "#F3E5F5",
-              "strokeColor": "#6A1B9A",
-              "strokeWidth": 2,
+              "fillColor": "#BBDEFB",
+              "strokeColor": "#1976D2",
+              "fontColor": "#0D47A1",
+              "labelPosition": "inside",
               "defaultSize": {
-                "width": 1490,
-                "height": 360
+                "width": 140,
+                "height": 60
+              }
+            }
+          },
+          "a1100000-0000-4000-8000-000000000106": {
+            "two_d": {
+              "shape": "diamond",
+              "fillColor": "#FFE082",
+              "strokeColor": "#FFA000",
+              "fontColor": "#5D4037",
+              "labelPosition": "below",
+              "defaultSize": {
+                "width": 80,
+                "height": 60
+              }
+            }
+          },
+          "a1100000-0000-4000-8000-000000000107": {
+            "two_d": {
+              "shape": "diamond",
+              "fillColor": "#FFE082",
+              "strokeColor": "#FFA000",
+              "fontColor": "#5D4037",
+              "labelPosition": "below",
+              "defaultSize": {
+                "width": 80,
+                "height": 60
+              }
+            }
+          },
+          "a1100000-0000-4000-8000-000000000108": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#000000",
+              "strokeColor": "#000000",
+              "labelPosition": "hidden",
+              "defaultSize": {
+                "width": 10,
+                "height": 100
+              }
+            }
+          },
+          "a1100000-0000-4000-8000-000000000109": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#000000",
+              "strokeColor": "#000000",
+              "labelPosition": "hidden",
+              "defaultSize": {
+                "width": 10,
+                "height": 100
               }
             }
           }
-        }
-      ],
-      "edgeMappings": [
+        },
+        "containerMappings": [
+          {
+            "id": "a4400000-0000-4000-8000-000000000401",
+            "containerMetaClassId": "a1100000-0000-4000-8000-000000000101",
+            "containmentReferenceId": "a1100000-0000-4000-8000-000000002101",
+            "childMetaClassIds": [
+              "a1100000-0000-4000-8000-000000000103",
+              "a1100000-0000-4000-8000-000000000104",
+              "a1100000-0000-4000-8000-000000000105",
+              "a1100000-0000-4000-8000-000000000106",
+              "a1100000-0000-4000-8000-000000000107",
+              "a1100000-0000-4000-8000-000000000108",
+              "a1100000-0000-4000-8000-000000000109"
+            ],
+            "concreteSyntax": {
+              "two_d": {
+                "shape": "rectangle",
+                "fillColor": "#F3E5F5",
+                "strokeColor": "#6A1B9A",
+                "strokeWidth": 2,
+                "defaultSize": {
+                  "width": 1490,
+                  "height": 360
+                }
+              }
+            }
+          }
+        ],
+        "edgeMappings": [
           {
             "id": "a4400000-0000-4000-8000-000000000201",
             "referenceId": "a1100000-0000-4000-8000-000000002201",
@@ -100,7 +190,8 @@
             "concreteSyntax": {
               "lineColor": "#263238",
               "lineWidth": 2,
-              "arrowHead": "filled"
+              "arrowHead": "filled",
+              "labelFormat": "[{guard}]"
             }
           },
           {
@@ -114,7 +205,8 @@
                 6,
                 4
               ],
-              "arrowHead": "filled"
+              "arrowHead": "filled",
+              "labelFormat": "[{guard}]"
             }
           },
           {

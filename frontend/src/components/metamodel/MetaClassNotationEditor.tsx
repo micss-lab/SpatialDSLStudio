@@ -27,6 +27,7 @@ interface MetaClassNotationEditorProps {
 }
 
 const shapeOptions = ['rectangle', 'circle', 'ellipse', 'diamond', 'triangle', 'star', 'custom-image', 'custom-3d-model'];
+const labelPositionOptions = ['below', 'inside', 'hidden'];
 const fallbackShapeOptions = ['box', 'sphere', 'cylinder'];
 const arrowOptions = ['none', 'open', 'filled', 'diamond'];
 
@@ -206,6 +207,17 @@ export const MetaClassNotationEditor: React.FC<MetaClassNotationEditorProps> = (
             onChange={(event) => updateClassNotation('two_d', 'shape', event.target.value)}
           >
             {shapeOptions.map(option => <MenuItem key={option} value={option}>{option}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <FormControl size="small">
+          <InputLabel>Label</InputLabel>
+          <Select
+            label="Label"
+            value={twoD.labelPosition || 'below'}
+            disabled={readOnly}
+            onChange={(event) => updateClassNotation('two_d', 'labelPosition', event.target.value)}
+          >
+            {labelPositionOptions.map(option => <MenuItem key={option} value={option}>{option}</MenuItem>)}
           </Select>
         </FormControl>
         <Stack direction="row" spacing={1}>

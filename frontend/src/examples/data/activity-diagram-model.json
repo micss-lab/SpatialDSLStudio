@@ -34,9 +34,9 @@
           "x": 20,
           "y": 20
         },
-      "size2D": {
-        "width": 1490,
-        "height": 360
+        "size2D": {
+          "width": 1310,
+          "height": 330
         },
         "appearance": {
           "type": "rectangle",
@@ -58,7 +58,7 @@
       },
       "presentation": {
         "position2D": {
-          "x": 50,
+          "x": 55,
           "y": 205
         },
         "size2D": {
@@ -87,7 +87,7 @@
       },
       "presentation": {
         "position2D": {
-          "x": 130,
+          "x": 120,
           "y": 190
         },
         "size2D": {
@@ -114,16 +114,16 @@
       },
       "presentation": {
         "position2D": {
-          "x": 330,
+          "x": 290,
           "y": 190
         },
         "size2D": {
-          "width": 140,
+          "width": 80,
           "height": 60
         },
         "appearance": {
-          "type": "rectangle",
-          "shape": "rectangle",
+          "type": "diamond",
+          "shape": "diamond",
           "fillColor": "#FFE082",
           "strokeColor": "#FFA000",
           "fontColor": "#5D4037"
@@ -143,8 +143,8 @@
       },
       "presentation": {
         "position2D": {
-          "x": 530,
-          "y": 90
+          "x": 470,
+          "y": 190
         },
         "size2D": {
           "width": 140,
@@ -172,8 +172,8 @@
       },
       "presentation": {
         "position2D": {
-          "x": 530,
-          "y": 290
+          "x": 470,
+          "y": 70
         },
         "size2D": {
           "width": 140,
@@ -199,19 +199,19 @@
       },
       "presentation": {
         "position2D": {
-          "x": 730,
-          "y": 110
+          "x": 675,
+          "y": 170
         },
         "size2D": {
-          "width": 130,
-          "height": 16
+          "width": 10,
+          "height": 100
         },
         "appearance": {
           "type": "rectangle",
           "shape": "rectangle",
           "fillColor": "#000000",
           "strokeColor": "#000000",
-          "fontColor": "#ffffff"
+          "fontColor": "#000000"
         }
       }
     },
@@ -228,8 +228,8 @@
       },
       "presentation": {
         "position2D": {
-          "x": 900,
-          "y": 35
+          "x": 760,
+          "y": 130
         },
         "size2D": {
           "width": 140,
@@ -257,8 +257,8 @@
       },
       "presentation": {
         "position2D": {
-          "x": 900,
-          "y": 165
+          "x": 760,
+          "y": 250
         },
         "size2D": {
           "width": 140,
@@ -284,19 +284,19 @@
       },
       "presentation": {
         "position2D": {
-          "x": 1090,
-          "y": 110
+          "x": 975,
+          "y": 170
         },
         "size2D": {
-          "width": 130,
-          "height": 16
+          "width": 10,
+          "height": 100
         },
         "appearance": {
           "type": "rectangle",
           "shape": "rectangle",
           "fillColor": "#000000",
           "strokeColor": "#000000",
-          "fontColor": "#ffffff"
+          "fontColor": "#000000"
         }
       }
     },
@@ -313,8 +313,8 @@
       },
       "presentation": {
         "position2D": {
-          "x": 1260,
-          "y": 90
+          "x": 1050,
+          "y": 190
         },
         "size2D": {
           "width": 140,
@@ -340,7 +340,7 @@
       },
       "presentation": {
         "position2D": {
-          "x": 1460,
+          "x": 1265,
           "y": 205
         },
         "size2D": {
@@ -370,7 +370,7 @@
       "presentation": {
         "attachedToElementId": "a2200000-0000-4000-8000-000000000040",
         "attachmentSide": "left",
-        "attachmentOffsetRatio": 0.5,
+        "attachmentOffsetRatio": 0.8,
         "size2D": {
           "width": 16,
           "height": 16
@@ -397,8 +397,8 @@
       },
       "presentation": {
         "attachedToElementId": "a2200000-0000-4000-8000-000000000040",
-        "attachmentSide": "right",
-        "attachmentOffsetRatio": 0.5,
+        "attachmentSide": "top",
+        "attachmentOffsetRatio": 0.8,
         "size2D": {
           "width": 16,
           "height": 16
@@ -429,12 +429,12 @@
       },
       "presentation": {
         "position2D": {
-          "x": 20,
+          "x": 700,
           "y": 400
         },
-      "size2D": {
-        "width": 740,
-        "height": 150
+        "size2D": {
+          "width": 620,
+          "height": 150
         },
         "appearance": {
           "type": "rectangle",
@@ -456,8 +456,8 @@
       },
       "presentation": {
         "position2D": {
-          "x": 130,
-          "y": 480
+          "x": 725,
+          "y": 470
         },
         "size2D": {
           "width": 30,
@@ -485,8 +485,8 @@
       },
       "presentation": {
         "position2D": {
-          "x": 230,
-          "y": 465
+          "x": 795,
+          "y": 455
         },
         "size2D": {
           "width": 150,
@@ -514,8 +514,8 @@
       },
       "presentation": {
         "position2D": {
-          "x": 450,
-          "y": 465
+          "x": 985,
+          "y": 455
         },
         "size2D": {
           "width": 170,
@@ -541,8 +541,8 @@
       },
       "presentation": {
         "position2D": {
-          "x": 690,
-          "y": 480
+          "x": 1215,
+          "y": 470
         },
         "size2D": {
           "width": 30,
@@ -669,7 +669,21 @@
       "referenceId": "a1100000-0000-4000-8000-000000002201",
       "referenceName": "flowsTo",
       "type": "flowsTo",
-      "attributes": {}
+      "attributes": {},
+      "bendPoints2D": [
+        {
+          "x": 540,
+          "y": 100
+        },
+        {
+          "x": 1280,
+          "y": 100
+        },
+        {
+          "x": 1280,
+          "y": 220
+        }
+      ]
     },
     {
       "id": "a2200000-0000-4000-8000-00000000020d",
@@ -678,7 +692,25 @@
       "referenceId": "a1100000-0000-4000-8000-000000002202",
       "referenceName": "objectFlow",
       "type": "objectFlow",
-      "attributes": {}
+      "attributes": {},
+      "bendPoints2D": [
+        {
+          "x": 190,
+          "y": 220
+        },
+        {
+          "x": 190,
+          "y": 295
+        },
+        {
+          "x": 440,
+          "y": 295
+        },
+        {
+          "x": 470,
+          "y": 238
+        }
+      ]
     },
     {
       "id": "a2200000-0000-4000-8000-00000000020e",
@@ -687,7 +719,21 @@
       "referenceId": "a1100000-0000-4000-8000-000000002202",
       "referenceName": "objectFlow",
       "type": "objectFlow",
-      "attributes": {}
+      "attributes": {},
+      "bendPoints2D": [
+        {
+          "x": 582,
+          "y": 190
+        },
+        {
+          "x": 582,
+          "y": 150
+        },
+        {
+          "x": 830,
+          "y": 160
+        }
+      ]
     },
     {
       "id": "a2200000-0000-4000-8000-00000000020f",

@@ -170,6 +170,8 @@ export interface ConcreteSyntax2D {
   fontSize?: number;
   fontFamily?: string;
   fontColor?: string;
+  /** Where the node name is drawn; default 'below'. */
+  labelPosition?: 'below' | 'inside' | 'hidden';
   defaultSize?: { width: number; height: number };
 }
 

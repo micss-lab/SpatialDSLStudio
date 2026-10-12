@@ -166,6 +166,18 @@ Representation descriptions can override:
 
 Use metaclass notation for defaults that apply everywhere. Use representation notation when one viewpoint needs a different appearance for the same semantic concept.
 
+2D node names are drawn according to `labelPosition`: `below` the shape (the
+default), `inside` it, or `hidden`. Containers always show their name on the
+title bar.
+
+Edge labels follow the edge notation's `labelFormat`. Without a format, the
+edge shows its name. A format is a template: `{name}` is the edge name and
+`{key}` reads a reference attribute, for example `[{guard}]` for UML guards. A
+format whose placeholders are all empty shows no label, so unguarded flows stay
+unlabeled. Edge ends are clipped to the drawn outline of rectangles, squares,
+circles, ellipses, and diamonds (other shapes use their bounding box), heading
+towards the first or last bend point when the edge has bends.
+
 For 3D notation, `verticalPlacement.mode` is `grounded` by default. Choose
 `adjustable` to let Modelers edit base elevation and optionally set
 `defaultBaseZMm`, `minBaseZMm`, `maxBaseZMm`, and `stepMm`. This is a general
@@ -205,7 +217,7 @@ Pin behavior:
 - the semantic owner reference is persisted on the pin model element
 - moving the owner moves attached pins through projection
 - dragging a pin stores `attachedToElementId`, `attachmentSide`, and `attachmentOffsetRatio`
-- edges connected to pins anchor to the pin center
+- edges connected to pins end on the pin border
 - invalid pin/owner/side combinations are rejected by frontend checks and backend validation
 
 ## Examples
@@ -218,7 +230,7 @@ aerial representation gives `InspectionDrone` adjustable placement from 0 to
 10,000 mm with a 3,000 mm creation default and 100 mm step. Its two saved drone
 instances demonstrate landed Z=0 and airborne Z=4,500 mm placement.
 
-The UML Activity example includes a `UML Activity` viewpoint with an executable `Activity Diagram` representation, containment-driven activity containers, semantic input/output pins, object flows, and an editable `Activity Node Inventory` table.
+The UML Activity example includes a `UML Activity` viewpoint with an executable `Activity Diagram` representation, containment-driven activity containers, semantic input/output pins, object flows, and an editable `Activity Node Inventory` table. Its notation draws decision and merge nodes as diamonds, fork and join nodes as thin vertical bars (a black rectangle with a 10 x 100 default size), action names inside the action, and only guard labels on flows. The bundled views are laid out left to right without edge crossings.
 
 ## Compatibility
 
