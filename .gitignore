@@ -41,3 +41,7 @@ spatialdsl_deploy.key
 # Claude Code
 .claude/
 CLAUDE.md
+
+# Benchmark outputs and the local Python environment
+benchmarks/results/
+benchmarks/.venv/

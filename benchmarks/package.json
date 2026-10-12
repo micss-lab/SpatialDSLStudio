@@ -1,0 +1,10 @@
+{
+  "name": "spatialdsl-benchmarks",
+  "private": true,
+  "description": "Unattended evaluation scripts for SpatialDSL Studio (scalability and generation fidelity).",
+  "scripts": {
+    "scalability": "../backend/node_modules/.bin/ts-node --transpile-only --project ../backend/tsconfig.json scalability.ts",
+    "fidelity:generate": "../backend/node_modules/.bin/ts-node --transpile-only --project ../backend/tsconfig.json fidelity-generate.ts",
+    "fidelity": ".venv/bin/python fidelity.py"
+  }
+}
