@@ -68,7 +68,8 @@ Ecore support is intended for common single-package EMF models. SpatialDSL Studi
 - OCL constraints stored as Ecore annotations
 - spatial rules stored as the `EPackage` annotation `spatialdsl/spatialRules` (class names resolved on import)
 
-Known lossy or unsupported areas:
+Known lossy or unsupported areas (the full construct-by-construct table is in
+[Sirius File Compatibility](../reference/sirius-file-compatibility.md#ecore-and-xmi-constructs)):
 
 - reference attributes are not part of standard Ecore `EReference` and are dropped on Ecore export with a warning
 - cross-package references and custom `EDataType` handling are limited
