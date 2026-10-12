@@ -75,6 +75,13 @@ jest.mock('../../services/metamodel/exampleData.service', () => ({
       views: [{ id: 'building-view', name: 'Floor Plan', modelId: 'building-model', elements: [] }],
       projects: [{ id: 'building-generator', name: 'Commissioning', targetMetamodelId: 'building-metamodel', templates: [] }],
     })),
+    getActivityBundle: jest.fn(() => ({
+      metamodels: [{ id: 'activity-metamodel', name: 'UMLActivityDiagramMM', uri: 'urn:activity', prefix: 'act', conformsTo: 'legacy-core', classes: [] }],
+      models: [{ id: 'activity-model', name: 'Orders', metamodelId: 'activity-metamodel', conformsTo: 'activity-metamodel', elements: [], connections: [] }],
+      viewpoints: [{ id: 'activity-viewpoint', name: 'UML Activity', metamodelId: 'activity-metamodel', representationDescriptions: [] }],
+      views: [{ id: 'activity-view', name: 'Order Processing Flow', modelId: 'activity-model', elements: [] }],
+      projects: [],
+    })),
   },
 }));
 
@@ -86,6 +93,7 @@ const mockApiClient = apiClient as jest.Mocked<typeof apiClient>;
 const mockExampleDataService = exampleDataService as jest.Mocked<typeof exampleDataService>;
 const starterBundle = mockExampleDataService.getSmartWarehouseBundle();
 const buildingBundle = mockExampleDataService.getSmartBuildingBundle();
+const activityBundle = mockExampleDataService.getActivityBundle();
 
 describe('Smart Warehouse project starter import', () => {
   beforeEach(() => {
@@ -93,6 +101,7 @@ describe('Smart Warehouse project starter import', () => {
     jest.clearAllMocks();
     mockExampleDataService.getSmartWarehouseBundle.mockReturnValue(starterBundle);
     mockExampleDataService.getSmartBuildingBundle.mockReturnValue(buildingBundle);
+    mockExampleDataService.getActivityBundle.mockReturnValue(activityBundle);
     mockApiClient.getProjectId.mockImplementation(() => mockProjectId);
     mockApiClient.setProjectId.mockImplementation((projectId: string | null) => {
       mockProjectId = projectId;
@@ -154,6 +163,14 @@ describe('Smart Warehouse project starter import', () => {
       spatialRules: [expect.objectContaining({ id: 'rule-1', kind: 'noOverlap' })],
     }));
     expect(mockApiClient.post).toHaveBeenCalledWith('/codegen/projects', expect.objectContaining({ id: 'building-generator' }));
+  });
+
+  it('imports the UML Activity starter with its saved views', async () => {
+    const summary = await smartWarehouseProjectImportService.importActivityInto('activity-project');
+
+    expect(summary).toEqual({ metamodels: 1, models: 1, viewpoints: 1, views: 1, generatorConfigurations: 0 });
+    expect(mockApiClient.post).toHaveBeenCalledWith('/metamodels', expect.objectContaining({ id: 'activity-metamodel', conformsTo: 'core-1' }));
+    expect(mockApiClient.post).toHaveBeenCalledWith('/diagrams', expect.objectContaining({ id: 'activity-view' }));
   });
 
   it('restores the prior API scope if an artifact import fails', async () => {

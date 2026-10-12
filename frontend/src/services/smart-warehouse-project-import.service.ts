@@ -23,8 +23,8 @@ const existingIds = <T extends { id: string }>(items: T[]): Set<string> => (
 );
 
 /**
- * Installs a connected example starter graph (Smart Warehouse by default, or
- * Smart Building) into one newly created Studio Project. The operation is
+ * Installs a connected example starter graph (Smart Warehouse by default,
+ * Smart Building, or UML Activity) into one newly created Studio Project. The operation is
  * idempotent by stable remapped artifact ID, which also makes retrying a
  * partially interrupted import safe.
  */
@@ -35,6 +35,10 @@ class SmartWarehouseProjectImportService {
 
   async importSmartBuildingInto(projectId: string): Promise<SmartWarehouseImportSummary> {
     return this.importBundleInto(projectId, exampleDataService.getSmartBuildingBundle());
+  }
+
+  async importActivityInto(projectId: string): Promise<SmartWarehouseImportSummary> {
+    return this.importBundleInto(projectId, exampleDataService.getActivityBundle());
   }
 
   private async importBundleInto(projectId: string, bundle: ExampleBundle): Promise<SmartWarehouseImportSummary> {

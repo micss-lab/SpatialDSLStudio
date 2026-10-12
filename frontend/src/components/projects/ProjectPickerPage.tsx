@@ -97,6 +97,7 @@ export const ProjectPickerPage: React.FC = () => {
   const [creating, setCreating] = useState(false);
   const [includeSmartWarehouse, setIncludeSmartWarehouse] = useState(false);
   const [includeSmartBuilding, setIncludeSmartBuilding] = useState(false);
+  const [includeActivity, setIncludeActivity] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -122,12 +123,13 @@ export const ProjectPickerPage: React.FC = () => {
       setError(null);
       const project = await projectService.create({ name: name.trim(), description: description.trim() || undefined });
       projectCreated = true;
-      if (includeSmartWarehouse || includeSmartBuilding) {
+      if (includeSmartWarehouse || includeSmartBuilding || includeActivity) {
         const { smartWarehouseProjectImportService } = await import(
           '../../services/smart-warehouse-project-import.service'
         );
         if (includeSmartWarehouse) await smartWarehouseProjectImportService.importInto(project.id);
         if (includeSmartBuilding) await smartWarehouseProjectImportService.importSmartBuildingInto(project.id);
+        if (includeActivity) await smartWarehouseProjectImportService.importActivityInto(project.id);
       }
       setDialogOpen(false);
       openProject(project.id);
@@ -275,6 +277,18 @@ export const ProjectPickerPage: React.FC = () => {
           />
           <Typography variant="caption" color="text.secondary" display="block">
             Imports a sensor-deployment language with spatial rules, a building model, floor-plan and 3D views, and a device commissioning generator.
+          </Typography>
+          <FormControlLabel
+            control={(
+              <Switch
+                checked={includeActivity}
+                onChange={event => setIncludeActivity(event.target.checked)}
+              />
+            )}
+            label="Include UML Activity starter"
+          />
+          <Typography variant="caption" color="text.secondary" display="block">
+            Imports the UML activity-diagram language, an order-processing model, and its two saved activity views.
           </Typography>
         </DialogContent>
         <DialogActions>

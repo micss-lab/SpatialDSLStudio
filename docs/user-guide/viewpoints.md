@@ -220,7 +220,7 @@ instances demonstrate landed Z=0 and airborne Z=4,500 mm placement.
 
 The Smart Building example includes a `Building Operations` viewpoint with a `Floor Plan` diagram (rooms, corridor, devices, and dashed radio links to gateways), a `Device Placement 3D` diagram in which rooms are grounded floor slabs and devices have adjustable mounting heights, and an editable `Device Inventory` table.
 
-The UML Activity example includes a `UML Activity` viewpoint with an executable `Activity Diagram` representation, containment-driven activity containers, semantic input/output pins, object flows, and an editable `Activity Node Inventory` table.
+The UML Activity example (project starter "Include UML Activity starter") includes a `UML Activity` viewpoint with an executable `Activity Diagram` representation, containment-driven activity containers, semantic input/output pins, object flows, and an editable `Activity Node Inventory` table.
 
 ## Compatibility
 

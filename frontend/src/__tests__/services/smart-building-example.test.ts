@@ -131,6 +131,15 @@ describe('Smart Building example language', () => {
     expect(evaluateSpatialRules(remappedMetamodel, bundle.models[0])).toEqual([]);
   });
 
+  it('bundles the UML Activity example as a starter as well', () => {
+    const bundle = exampleDataService.getActivityBundle();
+    expect(bundle.metamodels.map(item => item.name)).toEqual(['UMLActivityDiagramMM']);
+    expect(bundle.models).toHaveLength(1);
+    expect(bundle.viewpoints).toHaveLength(1);
+    expect(bundle.views.map(view => view.name)).toEqual(['Order Processing Flow', 'Happy Path (In Stock)']);
+    expect(bundle.projects).toHaveLength(0);
+  });
+
   it('ships the commissioning generator next to the other codegen examples', () => {
     const shipped = JSON.parse(fs.readFileSync(
       path.resolve(process.cwd(), '..', 'examples', 'codegen-projects', 'smart-building-commissioning-project.json'),

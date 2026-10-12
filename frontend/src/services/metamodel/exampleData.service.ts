@@ -177,6 +177,11 @@ class ExampleDataService {
     return this.getBundleForMetamodel('Smart Building');
   }
 
+  /** The UML activity-diagram language with its model and saved views, for project starter import. */
+  getActivityBundle(): ExampleBundle {
+    return this.getBundleForMetamodel(activityDiagramMetamodelData.name);
+  }
+
   private getBundleForMetamodel(metamodelName: string): ExampleBundle {
     const bundle = this.getBundle();
     const metamodel = bundle.metamodels.find(candidate => candidate.name === metamodelName);
