@@ -167,6 +167,53 @@ describe('MetamodelEvolutionService', () => {
     expect(allowed.blockers).toEqual([]);
   });
 
+  it('blocks removing a class that a spatial rule still references', async () => {
+    const stationClass = { ...currentMetamodel.classes[0], id: 'station-class', name: 'Station', attributes: [] };
+    const rule = {
+      id: 'rule-1',
+      name: 'Robots near stations',
+      kind: 'maxDistance' as const,
+      sourceClassId: 'robot-class',
+      targetClassId: 'station-class',
+      distanceMm: 5000,
+      severity: 'error' as const,
+    };
+    prismaMock.metamodel.findFirst.mockResolvedValue({
+      ...metamodelRow,
+      classes: [...currentMetamodel.classes, stationClass],
+      spatialRules: [rule],
+    } as any);
+
+    const report = await metamodelEvolutionService.preview(projectId, metamodelId, {
+      ...currentMetamodel,
+      spatialRules: [rule],
+    });
+
+    expect(report.changes).toEqual([expect.objectContaining({ kind: 'class-removed', classId: 'station-class', breaking: true })]);
+    expect(report.blockers).toContain(
+      'Spatial rule Robots near stations references removed class Station; update or delete the rule before applying this evolution'
+    );
+
+    const withoutRule = await metamodelEvolutionService.preview(projectId, metamodelId, currentMetamodel);
+    expect(withoutRule.blockers).toEqual([]);
+  });
+
+  it('keeps the fingerprint of rule-free metamodels and changes it when rules change', async () => {
+    const plain = await metamodelEvolutionService.preview(projectId, metamodelId, currentMetamodel);
+    const emptyRules = await metamodelEvolutionService.preview(projectId, metamodelId, { ...currentMetamodel, spatialRules: [] });
+    const withRule = await metamodelEvolutionService.preview(projectId, metamodelId, {
+      ...currentMetamodel,
+      spatialRules: [{
+        id: 'rule-1', name: 'Robots apart', kind: 'noOverlap', sourceClassId: 'robot-class',
+        targetClassId: 'robot-class', severity: 'error',
+      }],
+    });
+
+    expect(emptyRules.targetHash).toBe(plain.targetHash);
+    expect(plain.sourceHash).toBe(plain.targetHash);
+    expect(withRule.targetHash).not.toBe(plain.targetHash);
+  });
+
   it('rejects a stale expected source hash before creating a recovery checkpoint', async () => {
     const checkpointSpy = jest.spyOn(projectCheckpointService, 'create');
 

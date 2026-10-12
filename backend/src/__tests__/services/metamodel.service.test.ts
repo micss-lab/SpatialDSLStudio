@@ -31,6 +31,7 @@ const mockMetamodelRow = {
   classes: [],
   enums: [],
   constraints: [],
+  spatialRules: [],
   conformsToId: 'pkg-uuid-1',
   userId: 'user-uuid-1',
   projectId: null,
@@ -213,6 +214,49 @@ describe('MetamodelService', () => {
       expect(prismaMock.metamodel.create).not.toHaveBeenCalled();
     });
 
+    it('persists valid spatial rules and returns them', async () => {
+      prismaMock.ePackage.findFirst.mockResolvedValue({
+        id: 'pkg-uuid-1', name: 'Ecore', nsURI: 'http://ecore', nsPrefix: 'ecore', classes: [],
+        userId: 'user-uuid-1', projectId: null, createdAt: new Date(), updatedAt: new Date(),
+      });
+      const classes = [{ id: 'rack', name: 'Rack', eClass: '', abstract: false, superTypes: [], attributes: [], references: [] }];
+      const spatialRules = [{
+        id: 'rule-1', name: 'Racks apart', kind: 'minClearance' as const, sourceClassId: 'rack',
+        targetClassId: 'rack', distanceMm: 1500, severity: 'error' as const,
+      }];
+      prismaMock.metamodel.create.mockResolvedValue({ ...mockMetamodelRow, classes, spatialRules } as any);
+
+      const result = await metamodelService.create(
+        { id: 'mm-uuid-1', name: 'TestMetamodel', uri: 'http://example.com/mm', prefix: 'tm', conformsTo: 'pkg-uuid-1', classes, spatialRules },
+        'user-uuid-1',
+        'DSL_DESIGNER'
+      );
+
+      expect(prismaMock.metamodel.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ spatialRules }),
+      });
+      expect(result.spatialRules).toEqual(spatialRules);
+    });
+
+    it('rejects spatial rules that miss a distance or reference unknown classes', async () => {
+      prismaMock.ePackage.findFirst.mockResolvedValue({
+        id: 'pkg-uuid-1', name: 'Ecore', nsURI: 'http://ecore', nsPrefix: 'ecore', classes: [],
+        userId: 'user-uuid-1', projectId: null, createdAt: new Date(), updatedAt: new Date(),
+      });
+      const classes = [{ id: 'rack', name: 'Rack', eClass: '', abstract: false, superTypes: [], attributes: [], references: [] }];
+      const base = { id: 'mm-uuid-1', name: 'TestMetamodel', uri: 'http://example.com/mm', prefix: 'tm', conformsTo: 'pkg-uuid-1', classes };
+
+      await expect(metamodelService.create({
+        ...base,
+        spatialRules: [{ id: 'rule-1', name: 'Gap', kind: 'minClearance', sourceClassId: 'rack', targetClassId: 'rack', severity: 'error' }],
+      }, 'user-uuid-1', 'DSL_DESIGNER')).rejects.toThrow('spatialRules[0].distanceMm is required for minClearance');
+      await expect(metamodelService.create({
+        ...base,
+        spatialRules: [{ id: 'rule-1', name: 'Apart', kind: 'noOverlap', sourceClassId: 'rack', targetClassId: 'ghost', severity: 'error' }],
+      }, 'user-uuid-1', 'DSL_DESIGNER')).rejects.toThrow('spatialRules[0].targetClassId references unknown metaclass ghost');
+      expect(prismaMock.metamodel.create).not.toHaveBeenCalled();
+    });
+
     it('throws 403 for MODELER role', async () => {
       await expect(
         metamodelService.create(
@@ -289,6 +333,30 @@ describe('MetamodelService', () => {
       );
 
       expect(result.name).toBe('Updated Metamodel');
+    });
+
+    it('validates updated spatial rules against the stored classes', async () => {
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: true });
+      prismaMock.metamodel.findUnique.mockResolvedValue({
+        ...mockMetamodelRow,
+        classes: [{ id: 'rack', name: 'Rack', abstract: false, superTypes: [], attributes: [], references: [] }],
+      } as any);
+      const spatialRules = [{
+        id: 'rule-1', name: 'Racks apart', kind: 'noOverlap' as const, sourceClassId: 'rack',
+        targetClassId: 'rack', severity: 'error' as const,
+      }];
+      prismaMock.metamodel.update.mockResolvedValue({ ...mockMetamodelRow, spatialRules } as any);
+
+      const result = await metamodelService.update('mm-uuid-1', { spatialRules }, 'user-uuid-1', 'DSL_DESIGNER');
+      expect(prismaMock.metamodel.update).toHaveBeenCalledWith({
+        where: { id: 'mm-uuid-1' },
+        data: { spatialRules },
+      });
+      expect(result.spatialRules).toEqual(spatialRules);
+
+      await expect(metamodelService.update('mm-uuid-1', {
+        spatialRules: [{ ...spatialRules[0], sourceClassId: 'conveyor' }],
+      }, 'user-uuid-1', 'DSL_DESIGNER')).rejects.toThrow('spatialRules[0].sourceClassId references unknown metaclass conveyor');
     });
 
     it('rejects a metamodel update whose default elevation is outside its bounds', async () => {
@@ -462,22 +530,29 @@ describe('MetamodelService', () => {
         hasAccess: true,
         isOwner: true,
       });
+      const keptRule = { id: 'rule-2', name: 'Kept', kind: 'noOverlap', sourceClassId: 'cls-2', targetClassId: 'cls-2', severity: 'error' };
       prismaMock.metamodel.findFirst.mockResolvedValue({
         ...mockMetamodelRow,
-        classes: [{ id: 'cls-1', name: 'ClassToDelete' }],
+        classes: [{ id: 'cls-1', name: 'ClassToDelete' }, { id: 'cls-2', name: 'Kept' }],
+        spatialRules: [
+          { id: 'rule-1', name: 'Dropped', kind: 'noOverlap', sourceClassId: 'cls-1', targetClassId: 'cls-2', severity: 'error' },
+          keptRule,
+        ],
       });
       prismaMock.metamodel.update.mockResolvedValue({
         ...mockMetamodelRow,
-        classes: [],
+        classes: [{ id: 'cls-2', name: 'Kept' }],
+        spatialRules: [keptRule],
       });
 
       const result = await metamodelService.deleteClass('mm-uuid-1', 'cls-1', 'user-uuid-1', 'DSL_DESIGNER');
 
       expect(prismaMock.metamodel.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: { classes: [] },
+          data: { classes: [{ id: 'cls-2', name: 'Kept' }], spatialRules: [keptRule] },
         })
       );
+      expect(result.spatialRules).toEqual([keptRule]);
     });
   });
 });

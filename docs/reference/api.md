@@ -130,6 +130,9 @@ Base: `/api/metamodels`
 - `POST /:id/constraints`
 - `POST /:id/classes/:classId/constraints`
 
+`POST /` and `PUT /:id` accept an optional `spatialRules` array. Each rule is validated (kind, required
+distance, severity, and source and target classes that exist in the metamodel); an invalid rule returns 400.
+
 Metamodel evolution (project-scoped mount only):
 
 - `POST /:id/evolution/preview`

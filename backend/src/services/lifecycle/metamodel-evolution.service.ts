@@ -14,6 +14,7 @@ import {
   MetamodelMigrationRule,
   ModelElement,
   ProjectArtifactRef,
+  SpatialRule,
 } from '../../../../shared/types';
 import { validateConcreteSyntaxVerticalPlacement } from '../../../../shared/spatial';
 import { contentHash, stableStringify } from './canonical';
@@ -54,6 +55,7 @@ const toMetamodel = (row: any): Metamodel => ({
   enums: asArray(row.enums),
   conformsTo: row.conformsToId,
   constraints: asArray(row.constraints),
+  spatialRules: asArray(row.spatialRules),
 });
 
 const metamodelFingerprint = (metamodel: Metamodel): string => contentHash({
@@ -67,6 +69,8 @@ const metamodelFingerprint = (metamodel: Metamodel): string => contentHash({
   classes: metamodel.classes,
   enums: metamodel.enums || [],
   constraints: metamodel.constraints || [],
+  // Omitted when empty so fingerprints of rule-free metamodels are unchanged.
+  spatialRules: metamodel.spatialRules && metamodel.spatialRules.length > 0 ? metamodel.spatialRules : undefined,
 });
 
 const matchesAttributeValue = (value: unknown, attribute: Record<string, any>): boolean => {
@@ -369,6 +373,18 @@ class MetamodelEvolutionService {
       }
     });
 
+    const nextClassNames = new Map(next.classes.map(metaClass => [metaClass.id, metaClass.name]));
+    const currentClassNames = new Map(context.current.classes.map(metaClass => [metaClass.id, metaClass.name]));
+    asArray<SpatialRule>(next.spatialRules).forEach(rule => {
+      [rule?.sourceClassId, rule?.targetClassId].forEach(classId => {
+        if (typeof classId !== 'string' || nextClassNames.has(classId)) return;
+        const removedName = currentClassNames.get(classId);
+        blockers.push(removedName
+          ? `Spatial rule ${rule.name} references removed class ${removedName}; update or delete the rule before applying this evolution`
+          : `Spatial rule ${rule?.name || rule?.id} references unknown class ${classId}`);
+      });
+    });
+
     const allElements = context.models.flatMap(model => asArray<ModelElement>(model.elements));
     for (const change of changes) {
       const elements = allElements.filter(element => element.modelElementId === change.classId);
@@ -621,6 +637,7 @@ class MetamodelEvolutionService {
             classes: next.classes as any,
             enums: (next.enums || []) as any,
             constraints: (next.constraints || []) as any,
+            spatialRules: (next.spatialRules || []) as any,
           },
         });
 

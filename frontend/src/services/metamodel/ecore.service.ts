@@ -6,6 +6,7 @@ import {
   MetaEnum,
   MetaReference,
   Metamodel,
+  SpatialRule,
 } from '../../models/types';
 import { metamodelService } from './metamodel.service';
 import { v4 as uuidv4 } from 'uuid';
@@ -34,6 +35,9 @@ export interface EcoreImportResult {
 
 const ECORE_NS = 'http://www.eclipse.org/emf/2002/Ecore';
 const OCL_SOURCE = 'http://www.eclipse.org/emf/2002/Ecore/OCL';
+// Spatial rules travel as one EPackage annotation detail per rule, keyed by
+// rule name, whose value is a JSON object naming classes instead of IDs.
+const SPATIAL_RULES_SOURCE = 'spatialdsl/spatialRules';
 
 class EcoreService {
   metamodelToEcore(metamodelId: string): string | null {
@@ -57,6 +61,8 @@ class EcoreService {
   name="${this.escapeXml(metamodel.name)}"
   nsPrefix="${this.escapeXml(metamodel.prefix)}"
   nsURI="${this.escapeXml(metamodel.uri)}">`;
+
+      ecoreContent += this.generateSpatialRulesAnnotationXml(metamodel);
 
       for (const metaclass of metamodel.classes) {
         ecoreContent += this.generateEClassXml(metaclass, metamodel);
@@ -99,6 +105,72 @@ class EcoreService {
 
     eClassXml += '\n  </eClassifiers>';
     return eClassXml;
+  }
+
+  private generateSpatialRulesAnnotationXml(metamodel: Metamodel): string {
+    const classNames = new Map(metamodel.classes.map(cls => [cls.id, cls.name]));
+    const details = (metamodel.spatialRules || [])
+      .filter(rule => classNames.has(rule.sourceClassId) && classNames.has(rule.targetClassId))
+      .map(rule => {
+        const value = JSON.stringify({
+          kind: rule.kind,
+          source: classNames.get(rule.sourceClassId),
+          target: classNames.get(rule.targetClassId),
+          distanceMm: rule.distanceMm,
+          mode: rule.mode,
+          severity: rule.severity,
+          message: rule.message,
+          enabled: rule.enabled,
+        });
+        return `\n    <details key="${this.escapeXml(rule.name)}" value="${this.escapeXml(value)}"/>`;
+      });
+    if (details.length === 0) return '';
+    return `\n  <eAnnotations source="${SPATIAL_RULES_SOURCE}">${details.join('')}\n  </eAnnotations>`;
+  }
+
+  private parseSpatialRules(
+    ePackage: Element,
+    nameToClassId: Map<string, string>,
+    warnings: EcoreImportWarning[]
+  ): SpatialRule[] {
+    const rules: SpatialRule[] = [];
+    Array.from(ePackage.children)
+      .filter(child => child.localName === 'eAnnotations' && child.getAttribute('source') === SPATIAL_RULES_SOURCE)
+      .flatMap(annotation => Array.from(annotation.children).filter(child => child.localName === 'details'))
+      .forEach(detail => {
+        const name = detail.getAttribute('key') || 'Spatial rule';
+        try {
+          const parsed = JSON.parse(detail.getAttribute('value') || '{}');
+          const sourceClassId = nameToClassId.get(parsed.source);
+          const targetClassId = nameToClassId.get(parsed.target);
+          if (!sourceClassId || !targetClassId) {
+            warnings.push({
+              type: 'skipped-annotation',
+              message: `Skipped spatial rule ${name}; its classes could not be resolved.`,
+              details: [`${parsed.source} -> ${parsed.target}`],
+            });
+            return;
+          }
+          rules.push({
+            id: uuidv4(),
+            name,
+            kind: parsed.kind,
+            sourceClassId,
+            targetClassId,
+            ...(parsed.distanceMm !== undefined && { distanceMm: parsed.distanceMm }),
+            ...(parsed.mode !== undefined && { mode: parsed.mode }),
+            severity: parsed.severity || 'error',
+            ...(parsed.message !== undefined && { message: parsed.message }),
+            ...(parsed.enabled !== undefined && { enabled: parsed.enabled }),
+          });
+        } catch {
+          warnings.push({
+            type: 'skipped-annotation',
+            message: `Skipped spatial rule ${name}; its value is not valid JSON.`,
+          });
+        }
+      });
+    return rules;
   }
 
   private generateOclAnnotationXml(constraint: Constraint): string {
@@ -332,6 +404,12 @@ class EcoreService {
       });
 
       this.resolveOpposites(newMetamodel.id, warnings);
+
+      const spatialRules = this.parseSpatialRules(ePackage, nameToClassId, warnings);
+      const importedMetamodel = metamodelService.getMetamodelById(newMetamodel.id);
+      if (spatialRules.length > 0 && importedMetamodel) {
+        metamodelService.updateMetamodel(newMetamodel.id, { ...importedMetamodel, spatialRules });
+      }
       return { metamodelId: newMetamodel.id, warnings };
     } catch (error) {
       console.error('Error importing Ecore:', error);

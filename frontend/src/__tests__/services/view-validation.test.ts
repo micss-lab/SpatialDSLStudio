@@ -69,6 +69,23 @@ describe('viewValidationService', () => {
     ])).toBe('error');
   });
 
+  it('marks both elements of a spatial-rule pair and keeps the issue when only one is visible', () => {
+    const pairIssue: ValidationIssue = {
+      severity: 'error',
+      message: 'No overlap: Conveyor overlaps Rack.',
+      elementId: 'conveyor-hidden',
+      relatedElementIds: ['robot-1'],
+      constraintId: 'spatial-rule-1',
+    };
+    (modelService.validateModel as jest.Mock).mockReturnValue({ valid: false, issues: [pairIssue] });
+
+    const result = viewValidationService.validateDiagram(diagram);
+
+    expect(result.issues).toEqual([pairIssue]);
+    expect(viewValidationService.findElementForIssue(diagram, pairIssue)?.id).toBe('view-node-1');
+    expect(viewValidationService.getElementSeverity(diagram, diagram.elements[0], [pairIssue])).toBe('error');
+  });
+
   it('warns without overwriting when an elevated element opens in a grounded representation', () => {
     (modelService.validateModel as jest.Mock).mockReturnValue({ valid: true, issues: [] });
     (modelService.getModelById as jest.Mock).mockReturnValue({

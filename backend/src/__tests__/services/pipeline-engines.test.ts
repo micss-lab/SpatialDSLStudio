@@ -5,6 +5,7 @@ import { codeGenerationEngine } from '../../services/pipeline/code-generation.en
 import { modelValidationEngine } from '../../services/pipeline/model-validation.engine';
 import { testExecutionEngine } from '../../services/pipeline/test-execution.engine';
 import { transformationEngine } from '../../services/pipeline/transformation.engine';
+import { evaluateSpatialRules } from '../../../../shared/spatial-rules';
 
 const projectId = 'project-uuid-1';
 
@@ -90,6 +91,69 @@ describe('headless pipeline engines', () => {
       'Robot.target targets missing element missing-station',
       'elements[robot-1].presentation.position3D.z must be a finite number',
     ]));
+  });
+
+  it('reports metamodel spatial rules with the same issues as the shared evaluator', () => {
+    const withRules: Metamodel = {
+      ...metamodel,
+      spatialRules: [{
+        id: 'robots-apart',
+        name: 'Robots apart',
+        kind: 'noOverlap',
+        sourceClassId: 'robot-class',
+        targetClassId: 'robot-class',
+        severity: 'error',
+      }, {
+        id: 'robot-spacing',
+        name: 'Robot spacing',
+        kind: 'minClearance',
+        sourceClassId: 'robot-class',
+        targetClassId: 'robot-class',
+        distanceMm: 500,
+        mode: 'plan',
+        severity: 'warning',
+      }],
+    };
+    const fleet = model();
+    fleet.elements[0].presentation = {
+      position3D: { x: 0, y: 0, z: 0 },
+      size3D: { widthMm: 2000, heightMm: 500, depthMm: 1000 },
+    };
+    fleet.elements.push({
+      id: 'robot-2',
+      modelElementId: 'robot-class',
+      style: { name: 'Beta' },
+      references: {},
+      presentation: {
+        position3D: { x: 0, y: 800, z: 0 },
+        size3D: { widthMm: 2000, heightMm: 500, depthMm: 1000 },
+        rotationZ: 90,
+      },
+    });
+
+    const result = modelValidationEngine.validate(fleet, withRules);
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toEqual(evaluateSpatialRules(withRules, fleet));
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        severity: 'error',
+        message: 'Robots apart: Alpha overlaps Beta.',
+        elementId: 'robot-1',
+        relatedElementIds: ['robot-2'],
+        constraintId: 'robots-apart',
+      }),
+      expect.objectContaining({
+        severity: 'warning',
+        message: 'Robot spacing: Alpha is 0 mm from Beta; at least 500 mm is required.',
+        constraintId: 'robot-spacing',
+      }),
+    ]);
+
+    const beta = fleet.elements.find(element => element.id === 'robot-2')!;
+    beta.presentation!.rotationZ = 0;
+    beta.presentation!.position3D = { x: 0, y: 1000, z: 0 };
+    expect(modelValidationEngine.validate(fleet, withRules)).toEqual({ valid: true, issues: [] });
   });
 
   it('generates deterministic files with model/spatial context and helper support', () => {

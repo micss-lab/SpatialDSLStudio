@@ -318,7 +318,9 @@
       "name": "Conveyor",
       "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
       "abstract": false,
-      "superTypes": [],
+      "superTypes": [
+        "10000000-0000-4000-8000-00000000010d"
+      ],
       "attributes": [
         {
           "id": "9c10c38d-dc96-471d-9697-3cb2a64e07ad",
@@ -390,7 +392,9 @@
       "name": "ChargingStation",
       "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
       "abstract": false,
-      "superTypes": [],
+      "superTypes": [
+        "10000000-0000-4000-8000-00000000010d"
+      ],
       "attributes": [
         {
           "id": "4ba9d4f0-ac22-4663-8957-23427c62547a",
@@ -493,7 +497,7 @@
           "containment": false,
           "cardinality": {
             "lowerBound": 0,
-            "upperBound": -1
+            "upperBound": "*"
           },
           "allowSelfReference": false,
           "attributes": []
@@ -506,7 +510,7 @@
           "containment": false,
           "cardinality": {
             "lowerBound": 0,
-            "upperBound": -1
+            "upperBound": "*"
           },
           "allowSelfReference": false,
           "attributes": []
@@ -646,7 +650,9 @@
       "name": "StorageRack",
       "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
       "abstract": false,
-      "superTypes": [],
+      "superTypes": [
+        "10000000-0000-4000-8000-00000000010d"
+      ],
       "attributes": [
         {
           "id": "attr-rack-name",
@@ -691,7 +697,9 @@
       "name": "Dock",
       "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
       "abstract": false,
-      "superTypes": [],
+      "superTypes": [
+        "10000000-0000-4000-8000-00000000010d"
+      ],
       "attributes": [
         {
           "id": "attr-dock-name",
@@ -802,8 +810,63 @@
           "type": "javascript"
         }
       ]
+    },
+    {
+      "id": "10000000-0000-4000-8000-00000000010d",
+      "name": "FixedEquipment",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": true,
+      "superTypes": [],
+      "attributes": [],
+      "references": [],
+      "position": {
+        "x": 980,
+        "y": 400
+      }
     }
   ],
   "conformsTo": "8b8a9170-bd78-4e15-80dd-e018f295e8cc",
-  "constraints": []
+  "constraints": [],
+  "spatialRules": [
+    {
+      "id": "10000000-0000-4000-8000-000000000301",
+      "name": "Fixed equipment must not overlap",
+      "kind": "noOverlap",
+      "sourceClassId": "10000000-0000-4000-8000-00000000010d",
+      "targetClassId": "10000000-0000-4000-8000-00000000010d",
+      "mode": "plan",
+      "severity": "error"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000302",
+      "name": "Storage rack aisle width",
+      "kind": "minClearance",
+      "sourceClassId": "10000000-0000-4000-8000-00000000010a",
+      "targetClassId": "10000000-0000-4000-8000-00000000010a",
+      "distanceMm": 1500,
+      "mode": "plan",
+      "severity": "error",
+      "message": "{source} leaves less than {distance} mm of aisle to {target}."
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000303",
+      "name": "Charging station on a pathway",
+      "kind": "adjacentTo",
+      "sourceClassId": "10000000-0000-4000-8000-000000000105",
+      "targetClassId": "10000000-0000-4000-8000-000000000106",
+      "distanceMm": 500,
+      "mode": "plan",
+      "severity": "warning"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000304",
+      "name": "Drone clearance from racks",
+      "kind": "minClearance",
+      "sourceClassId": "10000000-0000-4000-8000-00000000010c",
+      "targetClassId": "10000000-0000-4000-8000-00000000010a",
+      "distanceMm": 1000,
+      "mode": "volume",
+      "severity": "error"
+    }
+  ]
 }

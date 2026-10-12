@@ -313,6 +313,9 @@ model Metamodel {
   // Global constraints (OCL and JavaScript)
   constraints Json @default("[]")
 
+  // Declarative spatial rules over placed instances (SpatialRule[])
+  spatialRules Json @default("[]")
+
   // Foreign key to meta-metamodel package
   conformsToId String
   conformsTo   EPackage @relation(fields: [conformsToId], references: [id])

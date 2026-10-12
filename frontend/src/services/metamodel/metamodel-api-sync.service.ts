@@ -25,6 +25,7 @@ export function syncMetamodelToAPI(
     classes: metamodel.classes,
     enums: metamodel.enums || [],
     constraints: metamodel.constraints,
+    spatialRules: metamodel.spatialRules || [],
   };
 
   // Check if there's a pending save for this metamodel, wait for it first
@@ -91,6 +92,7 @@ export function saveMetamodelToAPI(
     classes: metamodel.classes,
     enums: metamodel.enums || [],
     constraints: metamodel.constraints,
+    spatialRules: metamodel.spatialRules || [],
   };
 
   const savePromise = (async () => {

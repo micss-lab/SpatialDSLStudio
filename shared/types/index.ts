@@ -358,6 +358,31 @@ export interface JSConstraint {
 
 export type Constraint = OCLConstraint | JSConstraint;
 
+// ============ Spatial Rule Types ============
+
+export type SpatialRuleKind = 'noOverlap' | 'minClearance' | 'maxDistance' | 'within' | 'adjacentTo';
+
+/**
+ * Declarative spatial rule, part of the language definition. Rules quantify
+ * over placed instances of a source and a target metaclass (subtypes
+ * included); see shared/spatial-rules.ts for the exact semantics.
+ */
+export interface SpatialRule {
+  id: string;
+  name: string;
+  kind: SpatialRuleKind;
+  sourceClassId: string;
+  targetClassId: string;
+  /** Required for minClearance, maxDistance, adjacentTo; the margin for within (default 0). */
+  distanceMm?: number;
+  /** Plan-view footprint or full volume; default 'volume'. */
+  mode?: 'plan' | 'volume';
+  severity: 'error' | 'warning' | 'info';
+  message?: string;
+  /** Default true. */
+  enabled?: boolean;
+}
+
 // ============ Metamodel Types ============
 
 export interface MetamodelElement {
@@ -422,6 +447,7 @@ export interface Metamodel extends MetamodelElement {
   enums?: MetaEnum[];
   conformsTo: string;
   constraints?: Constraint[];
+  spatialRules?: SpatialRule[];
 }
 
 export interface ConcreteSyntax2D {
@@ -906,6 +932,8 @@ export interface ValidationIssue {
   severity: 'error' | 'warning' | 'info';
   message: string;
   elementId?: string;
+  /** Further elements the issue concerns, for example the other element of an overlapping pair. */
+  relatedElementIds?: string[];
   location?: string;
   constraintId?: string;
 }
@@ -997,6 +1025,7 @@ export interface CreateMetamodelRequest {
   classes?: MetaClass[];
   enums?: MetaEnum[];
   constraints?: Constraint[];
+  spatialRules?: SpatialRule[];
 }
 
 export interface UpdateMetamodelRequest {
@@ -1007,6 +1036,7 @@ export interface UpdateMetamodelRequest {
   classes?: MetaClass[];
   enums?: MetaEnum[];
   constraints?: Constraint[];
+  spatialRules?: SpatialRule[];
 }
 
 export interface CreateModelRequest {

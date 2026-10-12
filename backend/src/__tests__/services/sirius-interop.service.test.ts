@@ -876,6 +876,30 @@ describe('SiriusInteropService .aird export', () => {
     expect(edges[0].points).toEqual([{ x: 180, y: 140 }, { x: 480, y: 260 }]);
   });
 
+  it('carries spatial rules as an EPackage annotation in the exported Ecore', async () => {
+    modelServiceMock.getById.mockResolvedValue(mockModel);
+    metamodelServiceMock.getById.mockResolvedValue({
+      ...mockMetamodel,
+      spatialRules: [{
+        id: 'rule-1', name: 'Children apart', kind: 'minClearance', sourceClassId: 'cls-child',
+        targetClassId: 'cls-child', distanceMm: 500, mode: 'plan', severity: 'error',
+      }],
+    });
+
+    const result = await siriusInteropService.exportProject({ metamodelId: 'metamodel-1', modelId: 'model-1' }, 'user-1');
+    const zip = await JSZip.loadAsync(result.content, { base64: true });
+    const ecore = await zip.file('model/minimal.ecore')!.async('text');
+
+    expect(ecore).toContain('<eAnnotations source="spatialdsl/spatialRules">');
+    expect(ecore).toContain(
+      '<details key="Children apart" value="{&quot;kind&quot;:&quot;minClearance&quot;,&quot;source&quot;:&quot;Child&quot;,&quot;target&quot;:&quot;Child&quot;,&quot;distanceMm&quot;:500,&quot;mode&quot;:&quot;plan&quot;,&quot;severity&quot;:&quot;error&quot;}"/>'
+    );
+    expect(result.report.supported).toBe(true);
+    expect(result.report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'SPATIALDSL_SPATIAL_RULES_ANNOTATED', severity: 'info' }),
+    ]));
+  });
+
   it('exports a complete Sirius project ZIP with consistent cross-resource references', async () => {
     modelServiceMock.getById.mockResolvedValue({
       ...mockModel,
