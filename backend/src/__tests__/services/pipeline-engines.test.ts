@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { mockReset } from 'jest-mock-extended';
 import { Metamodel, Model } from '../../../../shared/types';
 import { prismaMock } from '../helpers/prisma.mock';
@@ -6,9 +8,12 @@ import { modelValidationEngine } from '../../services/pipeline/model-validation.
 import { testExecutionEngine } from '../../services/pipeline/test-execution.engine';
 import { transformationEngine } from '../../services/pipeline/transformation.engine';
 import { evaluateSpatialRules } from '../../../../shared/spatial-rules';
-import smartHomeMetamodel from '../../../../frontend/src/examples/data/smart-home-metamodel.json';
-import smartHomeModel from '../../../../frontend/src/examples/data/smart-home-model.json';
-import smartHomeProject from '../../../../examples/codegen-projects/smart-home-device-configuration-project.json';
+
+// Example files are read at run time rather than imported: the backend build
+// compiles src/ (tests included) in an image without frontend/ or examples/.
+const readRepoJson = (relativePath: string): unknown => JSON.parse(
+  fs.readFileSync(path.resolve(__dirname, '../../../..', relativePath), 'utf8')
+);
 
 const projectId = 'project-uuid-1';
 
@@ -181,14 +186,17 @@ describe('headless pipeline engines', () => {
   });
 
   it('validates and generates the Smart Home example with room names and elevations', () => {
-    const homeMetamodel = smartHomeMetamodel as unknown as Metamodel;
-    const homeModel = smartHomeModel as unknown as Model;
+    const homeMetamodel = readRepoJson('frontend/src/examples/data/smart-home-metamodel.json') as Metamodel;
+    const homeModel = readRepoJson('frontend/src/examples/data/smart-home-model.json') as Model;
+    const homeProject = readRepoJson('examples/codegen-projects/smart-home-device-configuration-project.json') as {
+      templates: Parameters<typeof codeGenerationEngine.generate>[2];
+    };
     expect(modelValidationEngine.validate(homeModel, homeMetamodel)).toEqual({ valid: true, issues: [] });
 
     const [file] = codeGenerationEngine.generate(
       homeModel,
       homeMetamodel,
-      smartHomeProject.templates as any
+      homeProject.templates
     );
     const output = JSON.parse(file.content);
     expect(file.filename).toBe('device-configuration.json');
