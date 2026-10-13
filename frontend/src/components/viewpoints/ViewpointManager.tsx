@@ -87,6 +87,7 @@ const shapeOptions = [
   'custom-image',
   'custom-3d-model',
 ];
+const labelPositionOptions = ['below', 'inside', 'hidden'];
 const fallbackShapeOptions = ['box', 'sphere', 'cylinder'];
 const arrowOptions = ['none', 'open', 'filled', 'diamond'];
 const toolTypeOptions: Array<{ value: string; label: string; target: 'node' | 'edge' | 'none' }> = [
@@ -1746,6 +1747,12 @@ const RepresentationEditor: React.FC<RepresentationEditorProps> = ({
                   <InputLabel>Shape</InputLabel>
                   <Select label="Shape" value={classSyntax.two_d?.shape || 'rectangle'} disabled={readOnly} onChange={event => updateClass2D('shape', event.target.value)}>
                     {shapeOptions.map(shape => <MenuItem key={shape} value={shape}>{shape}</MenuItem>)}
+                  </Select>
+                </FormControl>
+                <FormControl size="small">
+                  <InputLabel>Label</InputLabel>
+                  <Select label="Label" value={classSyntax.two_d?.labelPosition || 'below'} disabled={readOnly} onChange={event => updateClass2D('labelPosition', event.target.value)}>
+                    {labelPositionOptions.map(option => <MenuItem key={option} value={option}>{option}</MenuItem>)}
                   </Select>
                 </FormControl>
                 <Stack direction="row" spacing={1}>

@@ -29,8 +29,8 @@
       "a2200000-0000-4000-8000-000000000120"
     ],
     "gridSettings": {
-      "sizeX": 1600,
-      "sizeY": 700
+      "sizeX": 1360,
+      "sizeY": 580
     },
     "schemaVersion": 2,
     "migrationWarnings": []
@@ -59,8 +59,8 @@
       "a2200000-0000-4000-8000-0000000000d0"
     ],
     "gridSettings": {
-      "sizeX": 1600,
-      "sizeY": 500
+      "sizeX": 1360,
+      "sizeY": 380
     },
     "schemaVersion": 2,
     "migrationWarnings": []

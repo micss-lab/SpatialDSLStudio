@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Stage, Layer, Rect, Text, Group, Line, Circle, Image, Label, Tag, Arrow } from 'react-konva';
+import { Stage, Layer, Rect, Text, Group, Line, Circle, Ellipse, Image, Label, Tag, Arrow } from 'react-konva';
 import { 
   Box, 
   Typography, 
@@ -24,6 +24,7 @@ import RuleVisualizationPanel from './RuleVisualizationPanel';
 import ViewValidationPanel from './ViewValidationPanel';
 import { useDiagramData, useElementSelection } from './shared/hooks';
 import { 
+  formatEdgeLabel,
   getAppearanceSettings, 
   getElementDisplayName,
   getAttachedNodePosition,
@@ -32,6 +33,10 @@ import {
   getElementCenter,
   getFillColor,
   getNearestAttachmentOnBoundary,
+  getPolylineMidpoint,
+  getSelfReferencePath,
+  getShapeBoundaryPoint,
+  getShapeGeometry,
   getStrokeColor,
   getStrokeWidth
 } from './2d/utils/appearanceUtils';
@@ -41,6 +46,8 @@ import type { PinCreationOption } from '../../services/diagram/diagram.service';
 interface DiagramEditorProps {
   diagramId: string;
 }
+
+const NODE_LABEL_MIN_WIDTH = 140;
 
 const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
   // Load diagram data using shared hook
@@ -289,15 +296,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
               // Create edge with bend points if it's a self-reference
               if (targetElement.id === edgeStartElement.id) {
                 // For self-references, we'll add default bend points to make it visually clear
-                const offsetX = 40; // Horizontal offset for the bend point
-                const offsetY = 40; // Vertical offset for the bend point
-                
-                // Calculate bend points based on element's position and size
-                const bendPoints = [
-                  { x: edgeStartElement.x! + edgeStartElement.width! / 2 + offsetX, y: edgeStartElement.y! }, 
-                  { x: edgeStartElement.x! + edgeStartElement.width! / 2 + offsetX, y: edgeStartElement.y! + edgeStartElement.height! + offsetY },
-                  { x: edgeStartElement.x! + edgeStartElement.width! / 2, y: edgeStartElement.y! + edgeStartElement.height! + offsetY }
-                ];
+                const bendPoints = getSelfReferencePath(edgeStartElement);
                 
                 modelService.setModelElementReference(
                   diagram.modelId,
@@ -396,15 +395,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
       // Get source element to calculate bend points
       const sourceElement = diagram?.elements.find(e => e.id === sourceId);
       if (sourceElement) {
-        const offsetX = 40; // Horizontal offset for the bend point
-        const offsetY = 40; // Vertical offset for the bend point
-        
-        // Calculate bend points based on element's position and size
-        bendPoints = [
-          { x: sourceElement.x! + sourceElement.width! / 2 + offsetX, y: sourceElement.y! }, 
-          { x: sourceElement.x! + sourceElement.width! / 2 + offsetX, y: sourceElement.y! + sourceElement.height! + offsetY },
-          { x: sourceElement.x! + sourceElement.width! / 2, y: sourceElement.y! + sourceElement.height! + offsetY }
-        ];
+        bendPoints = getSelfReferencePath(sourceElement);
       }
     }
     
@@ -1175,6 +1166,30 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
           />
         );
       
+      case 'ellipse':
+        return (
+          <Ellipse
+            x={width / 2}
+            y={height / 2}
+            radiusX={width / 2}
+            radiusY={height / 2}
+            fill={fillColor}
+            stroke={strokeColor}
+            strokeWidth={strokeWidth}
+          />
+        );
+
+      case 'diamond':
+        return (
+          <Line
+            points={[width / 2, 0, width, height / 2, width / 2, height, 0, height / 2]}
+            closed
+            fill={fillColor}
+            stroke={strokeColor}
+            strokeWidth={strokeWidth}
+          />
+        );
+
       case 'triangle':
         return (
           <Line
@@ -1360,6 +1375,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
     
     // Get appearance settings
     const appearance = getAppearanceSettings(element, model);
+    const labelPosition = appearance.labelPosition || 'below';
     
     // Create highlight effect styles
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1415,17 +1431,21 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
           />
         )}
         
-        {/* Add label */}
-        <Text
-          width={width}
-          align="center"
-          text={getElementDisplayName(element, model)}
-          fontSize={appearance.fontSize || 12}
-          fontFamily={appearance.fontFamily || 'Arial'}
-          fill={appearance.fontColor || 'black'}
-          y={isContainer ? 3 : height + 5}
-          padding={2}
-        />
+        {/* Node name: containers on their title bar, other nodes below (default), inside, or hidden */}
+        {(isContainer || labelPosition !== 'hidden') && (
+          <Text
+            x={isContainer || labelPosition === 'inside' ? 0 : (width - Math.max(width, NODE_LABEL_MIN_WIDTH)) / 2}
+            width={isContainer || labelPosition === 'inside' ? width : Math.max(width, NODE_LABEL_MIN_WIDTH)}
+            align="center"
+            text={getElementDisplayName(element, model)}
+            fontSize={appearance.fontSize || 12}
+            fontFamily={appearance.fontFamily || 'Arial'}
+            fill={appearance.fontColor || 'black'}
+            y={isContainer ? 3 : labelPosition === 'inside' ? 0 : height + 5}
+            {...(!isContainer && labelPosition === 'inside' ? { height, verticalAlign: 'middle' } : {})}
+            padding={2}
+          />
+        )}
 
         {validationSeverity && (
           <Group name={`validation-marker-${element.id}`} listening={false}>
@@ -1471,23 +1491,20 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
       return null;
     }
     
-    const sourceModelElementId = getLinkedModelElementId(sourceElement);
-    const targetModelElementId = getLinkedModelElementId(targetElement);
-    const sourceIsPin = diagramService.isPinElementInView(diagramId, sourceModelElementId);
-    const targetIsPin = diagramService.isPinElementInView(diagramId, targetModelElementId);
-    const endpoints = getEdgeEndpointPair(sourceElement, targetElement, sourceIsPin, targetIsPin);
-    
-    // Use provided edge points or calculate defaults
-    const points = (Array.isArray(element.points) && element.points.length >= 2)
-      ? [
-          endpoints.source,
-          ...element.points.slice(1, -1),
-          endpoints.target
-        ]
-      : [
-          endpoints.source,
-          endpoints.target
-        ];
+    // Stored edge paths keep placeholder ends (see DiagramElement.points); only the
+    // inner points are bends.
+    const bendPoints = Array.isArray(element.points) && element.points.length > 2
+      ? element.points.slice(1, -1)
+      : [];
+    // Clip both ends (pins included) to the drawn node outline, heading
+    // towards the adjacent bend point or the other node.
+    const endpoints = getEdgeEndpointPair(sourceElement, targetElement, false, false, {
+      sourceShape: getAppearanceSettings(sourceElement, model).shape,
+      targetShape: getAppearanceSettings(targetElement, model).shape,
+      sourceToward: bendPoints[0],
+      targetToward: bendPoints[bendPoints.length - 1],
+    });
+    const points = [endpoints.source, ...bendPoints, endpoints.target];
     
     // Flatten points for Konva Line
     const flattenedPoints = points.flatMap(point => [point.x, point.y]);
@@ -1508,6 +1525,8 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
       x: (points[0].x + points[points.length - 1].x) / 2,
       y: (points[0].y + points[points.length - 1].y) / 2,
     };
+    const labelText = formatEdgeLabel(appearance.labelFormat, element.style?.name, element.referenceAttributes);
+    const labelPoint = getPolylineMidpoint(points);
     
     return (
       <Group
@@ -1519,7 +1538,6 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
           points={flattenedPoints}
           stroke={lineColor}
           strokeWidth={lineWidth}
-          tension={0.5}
           dash={appearance.lineDash}
         />
         
@@ -1561,11 +1579,11 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
           </Group>
         )}
         
-        {/* Edge label if there's a name to display */}
-        {element.style?.name && (
+        {/* Edge label from the notation's labelFormat, or the edge name */}
+        {labelText && (
           <Label
-            x={(points[0].x + points[points.length-1].x) / 2 - 30}
-            y={(points[0].y + points[points.length-1].y) / 2 - 10}
+            x={labelPoint.x - (labelText.length * 6 + 4) / 2}
+            y={labelPoint.y - 9}
           >
             <Tag
               fill="white"
@@ -1576,7 +1594,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
               shadowOpacity={0.3}
             />
             <Text
-              text={element.style.name}
+              text={labelText}
               padding={2}
               fontSize={11}
               fontFamily="Arial"
@@ -1591,10 +1609,15 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
   const renderTempEdge = () => {
     if (!isDrawingEdge || !edgeStartElement) return null;
     
-    const edgeStartCenter = getElementCenter(edgeStartElement);
+    // Start on the source outline, heading to the first bend or the cursor.
+    const nextPoint = tempEdgePoints && tempEdgePoints.length > 0 ? tempEdgePoints[0] : mousePos;
+    const edgeStart = getShapeBoundaryPoint(
+      getShapeGeometry(edgeStartElement, getAppearanceSettings(edgeStartElement, model).shape),
+      nextPoint
+    );
     
     // Create points array starting with the source element
-    const points = [edgeStartCenter.x, edgeStartCenter.y];
+    const points = [edgeStart.x, edgeStart.y];
     
     // Add any temporary bend points
     if (tempEdgePoints && tempEdgePoints.length > 0) {
@@ -1742,8 +1765,10 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
           y={stagePosition.y}
         >
           <Layer>
+            {/* Containers first so their fill does not hide the edges between their children */}
+            {diagram.elements.filter(element => element.type === 'node' && element.containerMappingId).map(renderNode)}
             {diagram.elements.filter(element => element.type === 'edge').map(renderEdge)}
-            {diagram.elements.filter(element => element.type === 'node').map(renderNode)}
+            {diagram.elements.filter(element => element.type === 'node' && !element.containerMappingId).map(renderNode)}
             {renderTempEdge()}
           </Layer>
         </Stage>

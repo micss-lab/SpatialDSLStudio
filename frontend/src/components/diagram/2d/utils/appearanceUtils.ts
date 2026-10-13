@@ -21,6 +21,7 @@ export interface AppearanceSettings {
   fontSize?: number;
   fontFamily?: string;
   fontColor?: string;
+  labelPosition?: 'below' | 'inside' | 'hidden';
   lineWidth?: number;
   lineColor?: string;
   lineDash?: number[];
@@ -213,33 +214,156 @@ export const getAttachedNodePosition = (
   };
 };
 
+type BoundaryKind = 'box' | 'ellipse' | 'diamond';
+
+export interface ShapeGeometry2D {
+  kind: BoundaryKind;
+  center: Point2D;
+  halfWidth: number;
+  halfHeight: number;
+}
+
+/**
+ * Outline the 2D renderer draws for a node shape, in diagram coordinates.
+ * Squares are drawn width x width from the top-left corner and circles use
+ * the smaller side as diameter; unknown shapes fall back to the bounding box.
+ */
+export const getShapeGeometry = (element: DiagramElement, shape?: string): ShapeGeometry2D => {
+  const bounds = getElementBounds(element);
+  if (shape === 'square') {
+    const half = bounds.width / 2;
+    return { kind: 'box', center: { x: bounds.x + half, y: bounds.y + half }, halfWidth: half, halfHeight: half };
+  }
+  const center = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+  if (shape === 'circle') {
+    const radius = Math.min(bounds.width, bounds.height) / 2;
+    return { kind: 'ellipse', center, halfWidth: radius, halfHeight: radius };
+  }
+  if (shape === 'ellipse') {
+    return { kind: 'ellipse', center, halfWidth: bounds.width / 2, halfHeight: bounds.height / 2 };
+  }
+  if (shape === 'diamond') {
+    return { kind: 'diamond', center, halfWidth: bounds.width / 2, halfHeight: bounds.height / 2 };
+  }
+  return { kind: 'box', center, halfWidth: bounds.width / 2, halfHeight: bounds.height / 2 };
+};
+
+/**
+ * Point where the ray from the shape's centre towards `toward` leaves the
+ * shape outline (ray-box, ray-ellipse, or ray-rhombus intersection).
+ */
+export const getShapeBoundaryPoint = (geometry: ShapeGeometry2D, toward: Point2D): Point2D => {
+  const dx = toward.x - geometry.center.x;
+  const dy = toward.y - geometry.center.y;
+  if ((dx === 0 && dy === 0) || geometry.halfWidth <= 0 || geometry.halfHeight <= 0) return geometry.center;
+  const rx = Math.abs(dx) / geometry.halfWidth;
+  const ry = Math.abs(dy) / geometry.halfHeight;
+  const scale = geometry.kind === 'ellipse'
+    ? 1 / Math.sqrt(rx * rx + ry * ry)
+    : geometry.kind === 'diamond'
+      ? 1 / (rx + ry)
+      : 1 / Math.max(rx, ry);
+  return { x: geometry.center.x + dx * scale, y: geometry.center.y + dy * scale };
+};
+
+export interface EdgeEndpointOptions {
+  /** Resolved node shapes; endpoints are clipped to these outlines. */
+  sourceShape?: string;
+  targetShape?: string;
+  /** Point the source end heads towards, normally the first bend point. */
+  sourceToward?: Point2D;
+  /** Point the target end comes from, normally the last bend point. */
+  targetToward?: Point2D;
+}
+
+/**
+ * Edge endpoints on the node outlines. Each end is clipped along the segment
+ * towards its adjacent point: the first or last bend point when the edge has
+ * bends, otherwise the other node's centre. The `*UsesCenter` flags keep the
+ * older behaviour of anchoring an end at the node centre.
+ */
 export const getEdgeEndpointPair = (
   sourceElement: DiagramElement,
   targetElement: DiagramElement,
   sourceUsesCenter: boolean = false,
-  targetUsesCenter: boolean = false
+  targetUsesCenter: boolean = false,
+  options: EdgeEndpointOptions = {}
 ): { source: Point2D; target: Point2D } => {
-  const sourceBounds = getElementBounds(sourceElement);
-  const targetBounds = getElementBounds(targetElement);
-  const sourceCenter = getElementCenter(sourceElement);
-  const targetCenter = getElementCenter(targetElement);
-  const angle = Math.atan2(targetCenter.y - sourceCenter.y, targetCenter.x - sourceCenter.x);
-
-  const sourceRadius = Math.min(sourceBounds.width, sourceBounds.height) / 2;
-  const targetRadius = Math.min(targetBounds.width, targetBounds.height) / 2;
+  const sourceGeometry = getShapeGeometry(sourceElement, options.sourceShape);
+  const targetGeometry = getShapeGeometry(targetElement, options.targetShape);
+  // Coinciding centres give no direction; leave on the right and arrive on the left.
+  const awayFrom = (center: Point2D, toward: Point2D, dx: number): Point2D => (
+    toward.x === center.x && toward.y === center.y ? { x: center.x + dx, y: center.y } : toward
+  );
+  const sourceToward = awayFrom(sourceGeometry.center, options.sourceToward || targetGeometry.center, 1);
+  const targetToward = awayFrom(targetGeometry.center, options.targetToward || sourceGeometry.center, -1);
 
   return {
-    source: sourceUsesCenter
-      ? sourceCenter
-      : {
-        x: sourceCenter.x + Math.cos(angle) * sourceRadius,
-        y: sourceCenter.y + Math.sin(angle) * sourceRadius,
-      },
-    target: targetUsesCenter
-      ? targetCenter
-      : {
-        x: targetCenter.x - Math.cos(angle) * targetRadius,
-        y: targetCenter.y - Math.sin(angle) * targetRadius,
-      },
+    source: sourceUsesCenter ? sourceGeometry.center : getShapeBoundaryPoint(sourceGeometry, sourceToward),
+    target: targetUsesCenter ? targetGeometry.center : getShapeBoundaryPoint(targetGeometry, targetToward),
   };
+};
+
+/**
+ * Edge label text. A notation `labelFormat` is a template: `{name}` is the
+ * edge name and `{key}` a reference attribute such as `{guard}`. A template
+ * whose placeholders all resolve to empty values yields no label. Without a
+ * format, the edge name is shown.
+ */
+export const formatEdgeLabel = (
+  labelFormat: string | undefined,
+  name: string | undefined,
+  attributes: Record<string, unknown> = {}
+): string | undefined => {
+  if (labelFormat === undefined) return name || undefined;
+  let placeholders = 0;
+  let resolved = 0;
+  const text = labelFormat.replace(/\{([^{}]+)\}/g, (_match, key: string) => {
+    placeholders += 1;
+    const value = key === 'name' ? name : attributes[key];
+    const textValue = value === undefined || value === null ? '' : String(value);
+    if (textValue) resolved += 1;
+    return textValue;
+  });
+  if (placeholders > 0 && resolved === 0) return undefined;
+  return text.trim() || undefined;
+};
+
+/** Midpoint along a polyline, measured by length. */
+export const getPolylineMidpoint = (points: Point2D[]): Point2D => {
+  if (points.length === 0) return { x: 0, y: 0 };
+  const lengths = points.slice(1).map((point, index) => Math.hypot(point.x - points[index].x, point.y - points[index].y));
+  let remaining = lengths.reduce((sum, length) => sum + length, 0) / 2;
+  for (let index = 0; index < lengths.length; index += 1) {
+    if (remaining <= lengths[index] && lengths[index] > 0) {
+      const ratio = remaining / lengths[index];
+      return {
+        x: points[index].x + (points[index + 1].x - points[index].x) * ratio,
+        y: points[index].y + (points[index + 1].y - points[index].y) * ratio,
+      };
+    }
+    remaining -= lengths[index];
+  }
+  return points[points.length - 1];
+};
+
+/**
+ * Default path of a self-reference edge, in the stored edge-path form
+ * `[source placeholder, ...bend points, target placeholder]`: a loop out of the
+ * top edge, around the right side, and back into the bottom edge.
+ */
+export const getSelfReferencePath = (element: DiagramElement): Point2D[] => {
+  const x = element.x || 0;
+  const y = element.y || 0;
+  const width = element.width || 0;
+  const height = element.height || 0;
+  const center = { x: x + width / 2, y: y + height / 2 };
+  const offset = 40;
+  return [
+    center,
+    { x: x + width / 2 + offset, y },
+    { x: x + width / 2 + offset, y: y + height + offset },
+    { x: x + width / 2, y: y + height + offset },
+    center,
+  ];
 };

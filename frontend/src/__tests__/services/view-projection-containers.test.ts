@@ -180,13 +180,13 @@ describe('view projection container mappings', () => {
 
     expect(orderProcessing).toEqual(expect.objectContaining({
       containerMappingId: 'a4400000-0000-4000-8000-000000000401',
-      width: 1490,
-      height: 360,
+      width: 1310,
+      height: 330,
     }));
     expect(start?.parentId).toBe(orderProcessing?.id);
     expect(shipping).toEqual(expect.objectContaining({
       containerMappingId: 'a4400000-0000-4000-8000-000000000401',
-      width: 740,
+      width: 620,
       height: 150,
     }));
     expect(prepareShipment?.parentId).toBe(shipping?.id);
