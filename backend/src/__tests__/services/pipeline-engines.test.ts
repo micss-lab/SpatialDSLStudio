@@ -211,6 +211,15 @@ describe('headless pipeline engines', () => {
     expect(output.devices.find((device: any) => device.deviceId === 'SD-LIV')).toEqual({
       deviceId: 'SD-LIV', type: 'SmokeDetector', room: 'Living room', x: -2, y: 3.5, z: 2.6, yaw: 0,
     });
+
+    // Names with quotes, backslashes, or newlines still give valid JSON.
+    const awkwardModel = JSON.parse(JSON.stringify(homeModel)) as Model;
+    const named = (name: string) => awkwardModel.elements.find(candidate => candidate.style.name === name)!;
+    named('SD-LIV').style.deviceId = 'SD "LIV" \\ 1\nB';
+    named('Living room').style.name = 'Living "room"';
+    const [awkwardFile] = codeGenerationEngine.generate(awkwardModel, homeMetamodel, homeProject.templates);
+    expect(JSON.parse(awkwardFile.content).devices.find((device: any) => device.deviceId === 'SD "LIV" \\ 1\nB'))
+      .toEqual(expect.objectContaining({ room: 'Living "room"' }));
   });
 
   it('rejects generated path traversal', () => {

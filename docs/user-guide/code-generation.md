@@ -121,6 +121,7 @@ Common helper examples in UI:
 - `usdIdentifier` (portable OpenUSD prim identifier)
 - `meters` / `halfMeters` (millimeter model values to metres)
 - `javaString` (quoted, escaped Java string literal)
+- `json` (a JSON value: strings become quoted, escaped JSON strings; missing values `null`)
 
 The editor also includes autocompletion support for template authoring.
 

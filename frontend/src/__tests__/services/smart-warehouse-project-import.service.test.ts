@@ -122,6 +122,7 @@ describe('Smart Warehouse project starter import', () => {
 
   it('imports the complete connected graph into one scoped project and restores the prior scope', async () => {
     const summary = await smartWarehouseProjectImportService.importInto('smart-project');
+    expect(mockExampleDataService.getSmartWarehouseBundle).toHaveBeenCalledWith('smart-project');
 
     expect(summary).toEqual({
       metamodels: 1,
@@ -153,6 +154,7 @@ describe('Smart Warehouse project starter import', () => {
 
   it('imports the Smart Home starter, spatial rules included, into one scoped project', async () => {
     const summary = await smartWarehouseProjectImportService.importSmartHomeInto('home-project');
+    expect(mockExampleDataService.getSmartHomeBundle).toHaveBeenCalledWith('home-project');
 
     expect(summary).toEqual({ metamodels: 1, models: 1, viewpoints: 1, views: 1, generatorConfigurations: 1 });
     expect(mockApiClient.setProjectId).toHaveBeenNthCalledWith(1, 'home-project');
@@ -167,6 +169,7 @@ describe('Smart Warehouse project starter import', () => {
 
   it('imports the UML Activity starter with its saved views', async () => {
     const summary = await smartWarehouseProjectImportService.importActivityInto('activity-project');
+    expect(mockExampleDataService.getActivityBundle).toHaveBeenCalledWith('activity-project');
 
     expect(summary).toEqual({ metamodels: 1, models: 1, viewpoints: 1, views: 1, generatorConfigurations: 0 });
     expect(mockApiClient.post).toHaveBeenCalledWith('/metamodels', expect.objectContaining({ id: 'activity-metamodel', conformsTo: 'core-1' }));

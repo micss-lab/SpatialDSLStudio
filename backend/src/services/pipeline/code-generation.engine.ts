@@ -62,7 +62,7 @@ export class CodeGenerationEngine {
     engine.registerHelper('or', (...args: unknown[]) => args.slice(0, -1).some(Boolean));
     engine.registerHelper('not', (value: unknown) => !value);
     engine.registerHelper('concat', (...args: unknown[]) => args.slice(0, -1).join(''));
-    engine.registerHelper('json', (value: unknown) => JSON.stringify(value));
+    engine.registerHelper('json', (value: unknown) => JSON.stringify(value === undefined ? null : value));
     engine.registerHelper('quote', (value: unknown) => typeof value === 'string' ? JSON.stringify(value) : value);
     engine.registerHelper('javaString', (value: unknown) => JSON.stringify(String(value ?? '')));
     engine.registerHelper('meters', (value: unknown) => Number.isFinite(Number(value)) ? Number(value) / 1000 : 0);

@@ -30,15 +30,15 @@ const existingIds = <T extends { id: string }>(items: T[]): Set<string> => (
  */
 class SmartWarehouseProjectImportService {
   async importInto(projectId: string): Promise<SmartWarehouseImportSummary> {
-    return this.importBundleInto(projectId, exampleDataService.getSmartWarehouseBundle());
+    return this.importBundleInto(projectId, exampleDataService.getSmartWarehouseBundle(projectId));
   }
 
   async importSmartHomeInto(projectId: string): Promise<SmartWarehouseImportSummary> {
-    return this.importBundleInto(projectId, exampleDataService.getSmartHomeBundle());
+    return this.importBundleInto(projectId, exampleDataService.getSmartHomeBundle(projectId));
   }
 
   async importActivityInto(projectId: string): Promise<SmartWarehouseImportSummary> {
-    return this.importBundleInto(projectId, exampleDataService.getActivityBundle());
+    return this.importBundleInto(projectId, exampleDataService.getActivityBundle(projectId));
   }
 
   private async importBundleInto(projectId: string, bundle: ExampleBundle): Promise<SmartWarehouseImportSummary> {

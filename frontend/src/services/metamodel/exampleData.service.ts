@@ -74,16 +74,20 @@ const remapNode = (node: any, idMap: Map<string, string>): any => {
  * the first account to seed would own the database rows and every later
  * account's copy would silently conflict with them (see issue #27). The
  * getters therefore serve a bundle remapped to fresh UUIDs, computed once per
- * session so cross-references between artifacts stay consistent.
+ * session so cross-references between artifacts stay consistent. Starter
+ * imports get their own remapped bundle per project, because artifact IDs are
+ * global keys and the same starter may be imported into several projects.
  *
  * Views are projections of the model; they do not own element instances,
  * only `includedElementIds` referencing model elements.
  */
 class ExampleDataService {
-  private bundle: ExampleBundle | null = null;
+  /** Remapped bundles by scope: '' for the session, otherwise a project ID. */
+  private bundles = new Map<string, ExampleBundle>();
 
-  private getBundle(): ExampleBundle {
-    if (!this.bundle) {
+  private getBundle(scope: string = ''): ExampleBundle {
+    let bundle = this.bundles.get(scope);
+    if (!bundle) {
       const raw = {
         metamodels: [smartWarehouseMetamodelData, activityDiagramMetamodelData, smartHomeMetamodelData],
         models: [smartWarehouseModelData, activityDiagramModelData, smartHomeModelData],
@@ -115,9 +119,10 @@ class ExampleDataService {
       const idMap = new Map<string, string>();
       ids.forEach(id => idMap.set(id, uuidv4()));
 
-      this.bundle = remapNode(raw, idMap) as ExampleBundle;
+      bundle = remapNode(raw, idMap) as ExampleBundle;
+      this.bundles.set(scope, bundle);
     }
-    return this.bundle;
+    return bundle;
   }
 
   getExampleMetamodels(): Metamodel[] {
@@ -167,23 +172,25 @@ class ExampleDataService {
    * Return the connected Smart Warehouse artifact graph for project-scoped
    * starter import. Every artifact comes from the same remapped bundle, so all
    * metamodel, semantic element, viewpoint, representation, and view IDs agree.
+   * With a project ID, the IDs are fresh for that project and stable across
+   * calls for it, so a retried import reuses them.
    */
-  getSmartWarehouseBundle(): ExampleBundle {
-    return this.getBundleForMetamodel('Smart Warehouse');
+  getSmartWarehouseBundle(projectId?: string): ExampleBundle {
+    return this.getBundleForMetamodel('Smart Warehouse', projectId);
   }
 
   /** The connected Smart Home device-placement graph, for project starter import. */
-  getSmartHomeBundle(): ExampleBundle {
-    return this.getBundleForMetamodel('Smart Home');
+  getSmartHomeBundle(projectId?: string): ExampleBundle {
+    return this.getBundleForMetamodel('Smart Home', projectId);
   }
 
   /** The UML activity-diagram language with its model and saved views, for project starter import. */
-  getActivityBundle(): ExampleBundle {
-    return this.getBundleForMetamodel(activityDiagramMetamodelData.name);
+  getActivityBundle(projectId?: string): ExampleBundle {
+    return this.getBundleForMetamodel(activityDiagramMetamodelData.name, projectId);
   }
 
-  private getBundleForMetamodel(metamodelName: string): ExampleBundle {
-    const bundle = this.getBundle();
+  private getBundleForMetamodel(metamodelName: string, projectId?: string): ExampleBundle {
+    const bundle = this.getBundle(projectId ? `project:${projectId}` : '');
     const metamodel = bundle.metamodels.find(candidate => candidate.name === metamodelName);
     if (!metamodel) throw new Error(`The ${metamodelName} metamodel fixture is unavailable`);
 

@@ -121,6 +121,21 @@ describe('Smart Home example language', () => {
     }));
   });
 
+  it('keeps the device list valid JSON when names contain quotes, backslashes, or newlines', () => {
+    new CodegenHandlebarsService().registerAllHelpers();
+    const awkward = copy();
+    byName(awkward, 'SD-LIV').style.deviceId = 'SD "LIV" \\ 1\nB';
+    byName(awkward, 'Living room').style.name = 'Living "room"';
+    const diagram: Diagram = { id: 'configuration', name: 'Configuration', modelId: awkward.id, elements: [] };
+    const context = new CodegenContextBuilderService().prepareMultiElementContext(awkward.elements, diagram, metamodel);
+    const template = (smartHomeProject as any).templates[0];
+    const output = JSON.parse(Handlebars.compile(template.templateContent, { noEscape: true })(context));
+
+    expect(output.devices.find((device: any) => device.deviceId === 'SD "LIV" \\ 1\nB')).toEqual(expect.objectContaining({
+      room: 'Living "room"',
+    }));
+  });
+
   it('is bundled as a project starter with consistently remapped ids', () => {
     const bundle = exampleDataService.getSmartHomeBundle();
     expect(bundle.metamodels).toHaveLength(1);
@@ -135,6 +150,19 @@ describe('Smart Home example language', () => {
     expect(bundle.projects[0].targetMetamodelId).toBe(remappedMetamodel.id);
     expect(validateSpatialRules(remappedMetamodel.spatialRules, remappedMetamodel)).toEqual([]);
     expect(evaluateSpatialRules(remappedMetamodel, bundle.models[0])).toEqual([]);
+  });
+
+  it('gives each project its own starter ids, stable for retries in that project', () => {
+    const first = exampleDataService.getSmartHomeBundle('project-a');
+    const retry = exampleDataService.getSmartHomeBundle('project-a');
+    const second = exampleDataService.getSmartHomeBundle('project-b');
+
+    expect(retry).toEqual(first);
+    expect(second.metamodels[0].id).not.toBe(first.metamodels[0].id);
+    expect(second.models[0].elements.map(element => element.id))
+      .not.toEqual(expect.arrayContaining([first.models[0].elements[0].id]));
+    expect(exampleDataService.getSmartHomeBundle().metamodels[0].id).not.toBe(first.metamodels[0].id);
+    expect(evaluateSpatialRules(second.metamodels[0], second.models[0])).toEqual([]);
   });
 
   it('bundles the UML Activity example as a starter as well', () => {
