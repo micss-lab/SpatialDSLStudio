@@ -359,6 +359,30 @@ describe('MetamodelService', () => {
       }, 'user-uuid-1', 'DSL_DESIGNER')).rejects.toThrow('spatialRules[0].sourceClassId references unknown metaclass conveyor');
     });
 
+    it('rejects a classes-only update that would leave a stored spatial rule dangling', async () => {
+      sharingServiceMock.checkAccess.mockResolvedValue({ hasAccess: true, isOwner: true });
+      const rack = { id: 'rack', name: 'Rack', eClass: 'EClass', abstract: false, superTypes: [], attributes: [], references: [] };
+      const zone = { ...rack, id: 'zone', name: 'Zone' };
+      prismaMock.metamodel.findUnique.mockResolvedValue({
+        ...mockMetamodelRow,
+        classes: [rack, zone],
+        spatialRules: [{
+          id: 'rule-1', name: 'Racks in zones', kind: 'within', sourceClassId: 'rack', targetClassId: 'zone', severity: 'error',
+        }],
+      } as any);
+
+      await expect(metamodelService.update('mm-uuid-1', { classes: [rack] }, 'user-uuid-1', 'DSL_DESIGNER'))
+        .rejects.toThrow('spatialRules[0].targetClassId references unknown metaclass zone');
+      expect(prismaMock.metamodel.update).not.toHaveBeenCalled();
+
+      prismaMock.metamodel.update.mockResolvedValue({ ...mockMetamodelRow, classes: [rack, zone] } as any);
+      await metamodelService.update('mm-uuid-1', { classes: [rack, zone] }, 'user-uuid-1', 'DSL_DESIGNER');
+      expect(prismaMock.metamodel.update).toHaveBeenCalledWith({
+        where: { id: 'mm-uuid-1' },
+        data: { classes: [rack, zone] },
+      });
+    });
+
     it('rejects a metamodel update whose default elevation is outside its bounds', async () => {
       sharingServiceMock.checkAccess.mockResolvedValue({
         hasAccess: true,

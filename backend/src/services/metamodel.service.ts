@@ -213,11 +213,16 @@ class MetamodelService {
     if (data.classes !== undefined) {
       this.assertValidClassesVerticalPlacement(data.classes);
     }
-    if (data.spatialRules !== undefined) {
-      const classes = data.classes !== undefined
-        ? data.classes
-        : (await prisma.metamodel.findUnique({ where: { id }, select: { classes: true } }))?.classes;
-      this.assertValidSpatialRules(data.spatialRules, classes);
+    if (data.spatialRules !== undefined || data.classes !== undefined) {
+      // Check the rules that will be stored against the classes that will be stored, so a
+      // classes-only update cannot leave a rule pointing at a removed class.
+      const stored = data.spatialRules !== undefined && data.classes !== undefined
+        ? undefined
+        : await prisma.metamodel.findUnique({ where: { id }, select: { classes: true, spatialRules: true } });
+      this.assertValidSpatialRules(
+        data.spatialRules !== undefined ? data.spatialRules : stored?.spatialRules ?? [],
+        data.classes !== undefined ? data.classes : stored?.classes
+      );
     }
 
     const metamodel = await prisma.metamodel.update({
