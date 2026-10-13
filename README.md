@@ -40,7 +40,7 @@ You can:
 - Build code generation projects with templates
 - Manage access with roles and resource sharing
 
-SpatialDSL Studio is Sirius-inspired, not a drop-in replacement for Sirius Desktop projects. Ecore/XMI semantic interchange is supported with limits; an initial `.odesign` validate/import/export subset covers basic diagram descriptions and returns compatibility reports, and an initial `.aird` import subset turns Sirius diagram representations into SpatialDSL views (`.aird` export is not implemented). See [Sirius Desktop Compatibility](docs/reference/sirius-compatibility.md).
+SpatialDSL Studio is Sirius-inspired, not a drop-in replacement for Sirius Desktop projects. Ecore/XMI semantic interchange is supported with limits; an initial `.odesign` validate/import/export subset covers basic diagram descriptions and returns compatibility reports, an initial `.aird` import/export subset round-trips Sirius diagram representations (GMF node bounds, nesting, and edge waypoints) with SpatialDSL views, and a complete single-model Sirius project can be exported as a ZIP. See [Sirius Desktop Compatibility](docs/reference/sirius-compatibility.md).
 
 ## Multi-Layer Architecture
 

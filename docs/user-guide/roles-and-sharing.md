@@ -26,6 +26,14 @@ Roles from lowest to highest:
 
 Higher roles include lower-role capabilities, with feature-specific restrictions where applicable.
 
+New accounts start with the platform role `VIEWER`. This does not stop a new
+user from working: any signed-in user can create a project, becomes its `OWNER`,
+and has every project capability inside it (author metamodels and spatial rules,
+build models and views, generate code, take checkpoints, and invite members).
+The platform role below applies to resources outside one's own projects and to
+platform administration. See [Project Lifecycle](project-lifecycle.md) for
+project roles.
+
 ## High-level capability matrix
 
 ### VIEWER

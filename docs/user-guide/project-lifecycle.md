@@ -29,7 +29,8 @@ Project membership decides what you can do:
 These project roles are separate from the platform-wide role. Being a platform
 `ADMIN` gives you owner-level access to any project; being a platform
 `DSL_DESIGNER` does not, on its own, let you into a project you are not a member
-of.
+of. Conversely, a platform `VIEWER` (the role of a newly registered account)
+becomes `OWNER` of every project it creates and has full rights there.
 
 Archiving a project makes it read-only rather than deleting it. Reads still
 work; writes are refused until the project is restored.

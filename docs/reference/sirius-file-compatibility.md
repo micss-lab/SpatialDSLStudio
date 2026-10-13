@@ -74,6 +74,45 @@ segments. Exporters must generate stable relative paths.
 | `.representation/*.srm` | Deferred | Detect references to lazy representation resources and report them as deferred or unresolved if the referenced file is missing. |
 | project `.zip` | Supported import wrapper and full single-model export | Export includes `.project`, `.ecore`, semantic `.xmi`, `.odesign`, `representations.aird`, and a compatibility report with consistent relative references. Import validates paths before delegating contained resources. |
 
+## Ecore and XMI Constructs
+
+The table lists what the `.ecore` and semantic `.xmi` import and export
+(`frontend/src/services/metamodel/ecore.service.ts`,
+`frontend/src/services/model/model-xmi-import.service.ts`,
+`frontend/src/services/model/model-xmi-export.service.ts`, and the `.ecore` and
+`.xmi` writers of the Sirius project export) handle. "Report" means the
+construct is skipped and named in the import or export warnings rather than
+silently dropped.
+
+| Construct | Import | Export | Notes |
+| --- | --- | --- | --- |
+| Single `EPackage` (`name`, `nsURI`, `nsPrefix`) | Supported | Supported | The first `EPackage` in the file is imported. |
+| Nested `eSubpackages` / multi-package resources | Not supported | Not supported | Only the root package's classifiers are read; references into other packages are reported as `cross-package-reference`. |
+| `EClass` with `abstract` | Supported | Supported | |
+| `EClass` with `interface="true"` | Imported as a class | Not written | The interface flag is not represented. |
+| `eSuperTypes` (multiple inheritance) | Supported | Supported | Unresolved supertypes are reported. |
+| `EAttribute` with `EString`, `EBoolean`, `EDate`, `EInt`, `ELong`, `EFloat`, `EDouble` | Supported | Supported | Numeric types import as `number` and export as `EDouble`. |
+| `EAttribute` with a custom `EDataType` | Report | Not applicable | Falls back to `string` with a `custom-datatype-fallback` warning. |
+| `EEnum` and `eLiterals` (`name`, `value`, `literal`) | Supported | Supported | Enum-typed attributes resolve to the imported enum. |
+| `lowerBound` / `upperBound` on attributes | Supported | Supported | `lowerBound > 0` means required; `upperBound = -1` means many-valued. |
+| `defaultValueLiteral` | Supported | Supported | |
+| `EReference` with `containment`, `lowerBound`, `upperBound` | Supported | Supported | |
+| `eOpposite` | Supported | Supported | Unresolved opposites are reported. |
+| References to classifiers in other resources | Report | Not applicable | Reported as `unresolved-reference` or `cross-package-reference`. |
+| `EOperation`, `eParameters` | Not supported | Not supported | Ignored on import. |
+| Generics (`eGenericType`, `eTypeParameters`) | Not supported | Not supported | Ignored on import. |
+| Feature flags (`transient`, `volatile`, `derived`, `changeable`, `unsettable`, `iD`, `ordered`, `unique`, `resolveProxies`) | Not supported | Not written | EMF defaults apply when the export is loaded. |
+| `EAnnotation` with source `http://www.eclipse.org/emf/2002/Ecore/OCL` on an `EClass` | Supported | Supported | Imported as OCL constraints of the class. |
+| `EAnnotation` with source `spatialdsl/spatialRules` on the `EPackage` | Supported | Supported | Spatial rules; class names are resolved on import, unresolved rules are reported. |
+| Other `EAnnotation` sources | Report on classes | Not written | Reported as `skipped-annotation` when attached to a class; other package-level annotations are ignored. |
+| Reference attributes (attributes on a SpatialDSL reference) | Not applicable | Report | Ecore has no slot for them; reported as `dropped-reference-attributes`. |
+| XMI `xmi:id` | Supported | Supported | Valid, unique ids are kept; invalid or duplicate ids are replaced and reported. |
+| XMI containment nesting and `xsi:type` for subclasses | Supported | Supported | |
+| XMI non-containment references (fragment paths or `xmi:id`) | Supported | Supported | Unresolved references are reported. |
+| XMI references into other resources (`file.xmi#...`) | Report | Not written | Multi-resource XMI is not supported. |
+| XMI values of many-valued `EAttribute`s | Not supported | Not supported | Written as one joined string and read back as a single value. |
+| SpatialDSL presentation (2D/3D placement) and edge bend points | Not applicable | Report | Not part of semantic XMI; the Sirius project export keeps placement in `spatialdsl-presentation.json`. |
+
 ## `.odesign` Supported Subset
 
 The first `.odesign` implementation should support:
