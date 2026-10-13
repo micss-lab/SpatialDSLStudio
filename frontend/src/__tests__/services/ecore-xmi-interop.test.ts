@@ -227,6 +227,103 @@ describe('Ecore interop', () => {
   });
 });
 
+describe('Ecore spatial rules annotation', () => {
+  it('exports spatial rules as an EPackage annotation and imports them against the new class ids', () => {
+    const source = mockCreateMetamodel('Plant');
+    const rack = mockAddMetaClass(source.id, 'StorageRack')!;
+    const zone = mockAddMetaClass(source.id, 'Zone', true)!;
+    mockUpdateMetamodel(source.id, {
+      ...mockGetMetamodelById(source.id)!,
+      spatialRules: [
+        {
+          id: 'rule-aisle', name: 'Aisle width', kind: 'minClearance', sourceClassId: rack.id,
+          targetClassId: rack.id, distanceMm: 1500, mode: 'plan', severity: 'error', message: '{source} is close',
+        },
+        {
+          id: 'rule-zone', name: 'Inside a zone', kind: 'within', sourceClassId: rack.id,
+          targetClassId: zone.id, severity: 'warning', enabled: false,
+        },
+      ],
+    });
+
+    const exported = ecoreService.metamodelToEcore(source.id)!;
+    expect(exported).toContain('<eAnnotations source="spatialdsl/spatialRules">');
+    expect(exported).toContain('<details key="Aisle width" value="{&quot;kind&quot;:&quot;minClearance&quot;');
+    expect(exported.indexOf('spatialdsl/spatialRules')).toBeLessThan(exported.indexOf('<eClassifiers'));
+
+    const result = ecoreService.importFromEcoreWithReport(exported);
+    const imported = mockGetMetamodelById(result.metamodelId!)!;
+    const importedRack = imported.classes.find(cls => cls.name === 'StorageRack')!;
+    const importedZone = imported.classes.find(cls => cls.name === 'Zone')!;
+
+    expect(result.warnings).toEqual([]);
+    expect(imported.spatialRules).toEqual([
+      expect.objectContaining({
+        name: 'Aisle width', kind: 'minClearance', sourceClassId: importedRack.id, targetClassId: importedRack.id,
+        distanceMm: 1500, mode: 'plan', severity: 'error', message: '{source} is close',
+      }),
+      expect.objectContaining({
+        name: 'Inside a zone', kind: 'within', sourceClassId: importedRack.id, targetClassId: importedZone.id,
+        severity: 'warning', enabled: false,
+      }),
+    ]);
+  });
+
+  it('skips spatial rules whose classes are missing from the imported package', () => {
+    const ecore = `<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0"
+  xmlns:xmi="http://www.omg.org/XMI"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+  name="plant" nsURI="http://example.org/plant" nsPrefix="plant">
+  <eAnnotations source="spatialdsl/spatialRules">
+    <details key="Dangling" value="{&quot;kind&quot;:&quot;noOverlap&quot;,&quot;source&quot;:&quot;Gone&quot;,&quot;target&quot;:&quot;Gone&quot;,&quot;severity&quot;:&quot;error&quot;}"/>
+  </eAnnotations>
+  <eClassifiers xsi:type="ecore:EClass" name="Rack"/>
+</ecore:EPackage>`;
+
+    const result = ecoreService.importFromEcoreWithReport(ecore);
+    expect(result.warnings).toEqual([expect.objectContaining({
+      type: 'skipped-annotation',
+      message: 'Skipped spatial rule Dangling; its classes could not be resolved.',
+    })]);
+    expect(mockGetMetamodelById(result.metamodelId!)!.spatialRules).toBeUndefined();
+  });
+
+  it('skips spatial rules that resolve but are not valid rules', () => {
+    const ecore = `<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0"
+  xmlns:xmi="http://www.omg.org/XMI"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+  name="plant" nsURI="http://example.org/plant" nsPrefix="plant">
+  <eAnnotations source="spatialdsl/spatialRules">
+    <details key="Bogus" value="{&quot;kind&quot;:&quot;bogus&quot;,&quot;source&quot;:&quot;Rack&quot;,&quot;target&quot;:&quot;Rack&quot;}"/>
+    <details key="No gap" value="{&quot;kind&quot;:&quot;minClearance&quot;,&quot;source&quot;:&quot;Rack&quot;,&quot;target&quot;:&quot;Rack&quot;}"/>
+    <details key="Apart" value="{&quot;kind&quot;:&quot;noOverlap&quot;,&quot;source&quot;:&quot;Rack&quot;,&quot;target&quot;:&quot;Rack&quot;}"/>
+  </eAnnotations>
+  <eClassifiers xsi:type="ecore:EClass" name="Rack"/>
+</ecore:EPackage>`;
+
+    const result = ecoreService.importFromEcoreWithReport(ecore);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        type: 'skipped-annotation',
+        message: 'Skipped spatial rule Bogus; it is not a valid spatial rule.',
+        details: [expect.stringContaining('kind')],
+      }),
+      expect.objectContaining({
+        type: 'skipped-annotation',
+        message: 'Skipped spatial rule No gap; it is not a valid spatial rule.',
+        details: ['spatialRule.distanceMm is required for minClearance'],
+      }),
+    ]);
+    expect(mockGetMetamodelById(result.metamodelId!)!.spatialRules).toEqual([
+      expect.objectContaining({ name: 'Apart', kind: 'noOverlap' }),
+    ]);
+  });
+});
+
 describe('Model XMI interop', () => {
   it('imports a Library XMI model and exports namespace-stable XMI', () => {
     const metamodelId = ecoreService.importFromEcore(readFixture('library.ecore'));

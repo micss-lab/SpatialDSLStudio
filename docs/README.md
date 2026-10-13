@@ -13,6 +13,7 @@ Use this page to find the right documentation based on your goal.
 ### I want to use the application
 
 - [Metamodels](user-guide/metamodels.md)
+- [Spatial Rules](user-guide/spatial-rules.md)
 - [Models](user-guide/models.md)
 - [Views (2D and 3D)](user-guide/diagrams.md)
 - [Viewpoints and Representation Descriptions](user-guide/viewpoints.md)
@@ -46,15 +47,16 @@ Recommended reading path for first-time onboarding:
 
 1. getting-started/local-setup.md
 2. user-guide/metamodels.md
-3. user-guide/models.md
-4. user-guide/viewpoints.md
-5. user-guide/diagrams.md
-6. user-guide/transformations.md
-7. user-guide/code-generation.md
-8. user-guide/visual-components-code-generation.md
-9. user-guide/omniverse-code-generation.md
-10. user-guide/end-to-end-omniverse.md
-11. user-guide/project-lifecycle.md
-12. reference/sirius-compatibility.md
-13. reference/sirius-file-compatibility.md
-14. reference/architecture.md
+3. user-guide/spatial-rules.md
+4. user-guide/models.md
+5. user-guide/viewpoints.md
+6. user-guide/diagrams.md
+7. user-guide/transformations.md
+8. user-guide/code-generation.md
+9. user-guide/visual-components-code-generation.md
+10. user-guide/omniverse-code-generation.md
+11. user-guide/end-to-end-omniverse.md
+12. user-guide/project-lifecycle.md
+13. reference/sirius-compatibility.md
+14. reference/sirius-file-compatibility.md
+15. reference/architecture.md

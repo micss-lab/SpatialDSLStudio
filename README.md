@@ -30,6 +30,7 @@ A full-stack model-driven engineering platform for designing domain-specific lan
 You can:
 
 - Define metamodels (classes, attributes, references, constraints)
+- Declare spatial rules (no overlap, minimum clearance, maximum distance, within, adjacent to) as part of the language, checked in the editor and the headless pipeline
 - Import and export common EMF Ecore metamodels and XMI instance models
 - Create models that conform to those metamodels
 - Define Sirius-style viewpoints and diagram representation descriptions

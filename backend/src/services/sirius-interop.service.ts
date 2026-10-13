@@ -590,6 +590,34 @@ class SiriusInteropService {
       `    nsURI="${this.escapeXml(metamodel.uri)}">`,
     ];
 
+    const classNames = new Map(metamodel.classes.map(metaClass => [metaClass.id, metaClass.name]));
+    const spatialRules = (metamodel.spatialRules || []).filter(rule => (
+      classNames.has(rule.sourceClassId) && classNames.has(rule.targetClassId)
+    ));
+    if (spatialRules.length > 0) {
+      // One detail per rule, keyed by rule name; the JSON value names classes instead of IDs.
+      lines.push('  <eAnnotations source="spatialdsl/spatialRules">');
+      spatialRules.forEach(rule => {
+        const value = JSON.stringify({
+          kind: rule.kind,
+          source: classNames.get(rule.sourceClassId),
+          target: classNames.get(rule.targetClassId),
+          distanceMm: rule.distanceMm,
+          mode: rule.mode,
+          severity: rule.severity,
+          message: rule.message,
+          enabled: rule.enabled,
+        });
+        lines.push(`    <details key="${this.escapeXml(rule.name)}" value="${this.escapeXml(value)}"/>`);
+      });
+      lines.push('  </eAnnotations>');
+      this.addWarning(report, 'warnings', {
+        severity: 'info',
+        code: 'SPATIALDSL_SPATIAL_RULES_ANNOTATED',
+        message: `${spatialRules.length} spatial rule(s) are carried as the EPackage annotation spatialdsl/spatialRules; Sirius and EMF do not evaluate them.`,
+      });
+    }
+
     metamodel.classes.forEach(metaClass => {
       const superTypes = (metaClass.superTypes || [])
         .map(id => metamodel.classes.find(candidate => candidate.id === id))

@@ -122,6 +122,7 @@ Key fields:
 - `classes` (JSON)
 - `enums` (JSON)
 - `constraints` (JSON)
+- `spatialRules` (JSON, `SpatialRule[]`; see [Spatial Rules](../user-guide/spatial-rules.md))
 - `conformsToId` (EPackage FK)
 - `userId`
 

@@ -28,6 +28,9 @@ const nullableJson = (value: unknown): Prisma.InputJsonValue | typeof Prisma.Jso
   value === null || value === undefined ? Prisma.JsonNull : value as Prisma.InputJsonValue
 );
 
+const nonEmptyArray = (value: unknown): unknown[] | undefined => (
+  Array.isArray(value) && value.length > 0 ? value : undefined
+);
 const sortRefs = (values: ProjectArtifactRef[]): ProjectArtifactRef[] => (
   [...values].sort((left, right) => artifactKey(left).localeCompare(artifactKey(right)))
 );
@@ -172,6 +175,9 @@ class ProjectCheckpointService {
       classes: row.classes,
       enums: row.enums,
       constraints: row.constraints,
+      // Omitted when empty so checkpoints taken before spatial rules existed
+      // keep verifying against the same content hash.
+      spatialRules: nonEmptyArray(row.spatialRules),
       conformsToId: row.conformsToId,
       userId: row.userId,
     }, requireDependency(
@@ -467,6 +473,7 @@ class ProjectCheckpointService {
           classes: data.classes as any,
           enums: data.enums as any,
           constraints: data.constraints as any,
+          spatialRules: (data.spatialRules ?? []) as any,
           conformsToId: data.conformsToId,
           userId: data.userId,
           projectId,

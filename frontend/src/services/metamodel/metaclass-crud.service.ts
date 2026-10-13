@@ -118,6 +118,11 @@ export function deleteMetaClass(
     cls.references = cls.references.filter(ref => ref.target !== classId);
     cls.superTypes = cls.superTypes.filter(st => st !== classId);
   });
+  if (metamodel.spatialRules) {
+    metamodel.spatialRules = metamodel.spatialRules.filter(rule => (
+      rule.sourceClassId !== classId && rule.targetClassId !== classId
+    ));
+  }
 
   return initialLength !== metamodel.classes.length;
 }

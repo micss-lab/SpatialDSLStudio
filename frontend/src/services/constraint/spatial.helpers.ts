@@ -1,5 +1,13 @@
 import { ModelElement } from '../../models/types';
-import { normalizePosition3D } from '../spatial';
+import {
+  elementBox,
+  normalizePosition3D,
+  planEnvelope,
+  planGap,
+  planOverlap,
+  volumeGap,
+  volumeOverlap,
+} from '../spatial';
 
 /**
  * Spatial presentation fields exposed to constraint evaluation contexts.
@@ -36,119 +44,71 @@ export interface SpatialBounds {
 
 /**
  * Axis-aligned 3D bounds in domain coordinates and millimeters.
- * X/Y are centred on position3D; Z is a base elevation.
+ * Z is a base elevation, so the vertical interval is [z, z + depthMm].
  */
 export interface SpatialBounds3D extends SpatialBounds {
   minZ: number;
   maxZ: number;
 }
 
-// rotationZ is intentionally ignored by boundsOf/overlaps/clearance below: these
-// helpers work on axis-aligned boxes (AABB) only. Rotated-bounds support can
-// follow once the coordinate contract this builds on has settled further.
+// The predicates below honour rotationZ: each element is the oriented
+// rectangle widthMm x heightMm centred on position3D and turned by its yaw
+// (counter-clockwise seen from above), extruded over [z, z + depthMm].
+// boundsOf and bounds3DOf return the axis-aligned envelope of that rotated
+// footprint, which is useful as an envelope but not for exact tests.
 
 /**
- * Axis-aligned bounding box for an element, centered on its position3D.
+ * Axis-aligned envelope of the element's rotated footprint.
  * Returns undefined if position3D or size3D is missing.
  */
 export function boundsOf(element: ModelElement): SpatialBounds | undefined {
-  const rawPosition3D = element.presentation?.position3D;
-  const size3D = element.presentation?.size3D;
-  if (!rawPosition3D || !size3D) return undefined;
-  const position3D = normalizePosition3D(rawPosition3D);
-  if (!position3D) return undefined;
-
-  const halfWidth = size3D.widthMm / 2;
-  const halfHeight = size3D.heightMm / 2;
-  return {
-    minX: position3D.x - halfWidth,
-    minY: position3D.y - halfHeight,
-    maxX: position3D.x + halfWidth,
-    maxY: position3D.y + halfHeight,
-  };
+  const box = elementBox(element);
+  return box ? planEnvelope(box) : undefined;
 }
 
 /**
- * Axis-aligned volume for an element. The persisted elevation is the object's
- * base, so the vertical interval is [z, z + depthMm]. rotationZ is ignored.
+ * Axis-aligned envelope of the element's rotated volume. The persisted
+ * elevation is the object's base, so the vertical interval is [z, z + depthMm].
  */
 export function bounds3DOf(element: ModelElement): SpatialBounds3D | undefined {
-  const rawPosition3D = element.presentation?.position3D;
-  const size3D = element.presentation?.size3D;
-  if (!rawPosition3D || !size3D) return undefined;
-
-  const position3D = normalizePosition3D(rawPosition3D);
-  if (!position3D) return undefined;
-  const halfWidth = size3D.widthMm / 2;
-  const halfHeight = size3D.heightMm / 2;
-  return {
-    minX: position3D.x - halfWidth,
-    minY: position3D.y - halfHeight,
-    minZ: position3D.z,
-    maxX: position3D.x + halfWidth,
-    maxY: position3D.y + halfHeight,
-    maxZ: position3D.z + size3D.depthMm,
-  };
+  const box = elementBox(element);
+  return box ? { ...planEnvelope(box), minZ: box.minZ, maxZ: box.maxZ } : undefined;
 }
 
 /**
- * True if the two elements' AABBs intersect. Touching edges do not count as overlapping.
+ * True if the two elements' rotated footprints intersect in plan view.
+ * Touching edges do not count as overlapping.
  */
 export function overlaps(a: ModelElement, b: ModelElement): boolean {
-  const boxA = boundsOf(a);
-  const boxB = boundsOf(b);
-  if (!boxA || !boxB) return false;
-
-  return (
-    boxA.minX < boxB.maxX &&
-    boxA.maxX > boxB.minX &&
-    boxA.minY < boxB.maxY &&
-    boxA.maxY > boxB.minY
-  );
+  const boxA = elementBox(a);
+  const boxB = elementBox(b);
+  return Boolean(boxA && boxB && planOverlap(boxA, boxB));
 }
 
-/** True when the two 3D AABBs overlap. Touching faces do not overlap. */
+/** True when the two rotated volumes overlap. Touching faces do not overlap. */
 export function overlaps3D(a: ModelElement, b: ModelElement): boolean {
-  const boxA = bounds3DOf(a);
-  const boxB = bounds3DOf(b);
-  if (!boxA || !boxB) return false;
-
-  return (
-    boxA.minX < boxB.maxX &&
-    boxA.maxX > boxB.minX &&
-    boxA.minY < boxB.maxY &&
-    boxA.maxY > boxB.minY &&
-    boxA.minZ < boxB.maxZ &&
-    boxA.maxZ > boxB.minZ
-  );
+  const boxA = elementBox(a);
+  const boxB = elementBox(b);
+  return Boolean(boxA && boxB && volumeOverlap(boxA, boxB));
 }
 
 /**
- * Gap distance between the two elements' AABBs. Zero when they overlap or touch.
+ * Plan-view gap between the two rotated footprints. Zero when they overlap or touch.
  * Returns Infinity if either element is missing bounds data.
  */
 export function clearance(a: ModelElement, b: ModelElement): number {
-  const boxA = boundsOf(a);
-  const boxB = boundsOf(b);
-  if (!boxA || !boxB) return Infinity;
-
-  const dx = Math.max(boxA.minX - boxB.maxX, boxB.minX - boxA.maxX, 0);
-  const dy = Math.max(boxA.minY - boxB.maxY, boxB.minY - boxA.maxY, 0);
-  return Math.sqrt(dx * dx + dy * dy);
+  const boxA = elementBox(a);
+  const boxB = elementBox(b);
+  return boxA && boxB ? planGap(boxA, boxB) : Infinity;
 }
 
-
 /**
- * Euclidean gap between two 3D AABBs. Returns zero for overlap/touching and
- * Infinity when either element has no spatial volume.
+ * Euclidean gap between two rotated volumes: sqrt(planGap^2 + verticalGap^2).
+ * Returns zero for overlap/touching and Infinity when either element has no
+ * spatial volume.
  */
 export function clearance3D(a: ModelElement, b: ModelElement): number {
-  const boxA = bounds3DOf(a);
-  const boxB = bounds3DOf(b);
-  if (!boxA || !boxB) return Infinity;
-
-  const dx = Math.max(boxA.minX - boxB.maxX, boxB.minX - boxA.maxX, 0);
-  const dy = Math.max(boxA.minY - boxB.maxY, boxB.minY - boxA.maxY, 0);
-  const dz = Math.max(boxA.minZ - boxB.maxZ, boxB.minZ - boxA.maxZ, 0);
-  return Math.sqrt(dx * dx + dy * dy + dz * dz);
+  const boxA = elementBox(a);
+  const boxB = elementBox(b);
+  return boxA && boxB ? volumeGap(boxA, boxB) : Infinity;
 }

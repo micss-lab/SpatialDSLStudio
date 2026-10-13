@@ -5,6 +5,7 @@ import {
   MetaClass, 
   MetaEnum,
   Constraint,
+  SpatialRule,
   CreateMetamodelRequest,
   UpdateMetamodelRequest,
   UserRole,
@@ -13,6 +14,7 @@ import {
 import { sharingService } from './sharing.service';
 import { canPerformOperation } from '../middleware/permissions';
 import { validateConcreteSyntaxVerticalPlacement } from '../../../shared/spatial';
+import { validateSpatialRules } from '../../../shared/spatial-rules';
 
 // Extended metamodel type with permission info
 export interface MetamodelWithPermission extends Metamodel, ResourceWithPermission {}
@@ -32,6 +34,14 @@ class MetamodelService {
     classes.forEach((metaClass, index) => (
       this.assertValidClassVerticalPlacement(metaClass, `${path}[${index}]`)
     ));
+  }
+
+  /** Spatial rules must be well formed and reference classes of the same metamodel. */
+  private assertValidSpatialRules(spatialRules: unknown, classes: unknown): void {
+    const errors = validateSpatialRules(spatialRules, {
+      classes: Array.isArray(classes) ? classes as MetaClass[] : [],
+    });
+    if (errors.length > 0) throw new ApiError(400, errors[0]);
   }
 
   /**
@@ -153,6 +163,9 @@ class MetamodelService {
     }
 
     this.assertValidClassesVerticalPlacement(data.classes || []);
+    if (data.spatialRules !== undefined) {
+      this.assertValidSpatialRules(data.spatialRules, data.classes || []);
+    }
 
     const metamodel = await prisma.metamodel.create({
       data: {
@@ -165,6 +178,7 @@ class MetamodelService {
         classes: (data.classes || []) as any,
         enums: (data.enums || []) as any,
         constraints: (data.constraints || []) as any,
+        spatialRules: (data.spatialRules || []) as any,
         conformsToId: data.conformsTo,
         userId,
         projectId,
@@ -199,6 +213,17 @@ class MetamodelService {
     if (data.classes !== undefined) {
       this.assertValidClassesVerticalPlacement(data.classes);
     }
+    if (data.spatialRules !== undefined || data.classes !== undefined) {
+      // Check the rules that will be stored against the classes that will be stored, so a
+      // classes-only update cannot leave a rule pointing at a removed class.
+      const stored = data.spatialRules !== undefined && data.classes !== undefined
+        ? undefined
+        : await prisma.metamodel.findUnique({ where: { id }, select: { classes: true, spatialRules: true } });
+      this.assertValidSpatialRules(
+        data.spatialRules !== undefined ? data.spatialRules : stored?.spatialRules ?? [],
+        data.classes !== undefined ? data.classes : stored?.classes
+      );
+    }
 
     const metamodel = await prisma.metamodel.update({
       where: { id },
@@ -210,6 +235,7 @@ class MetamodelService {
         ...(data.classes !== undefined && { classes: data.classes as any }),
         ...(data.enums !== undefined && { enums: data.enums as any }),
         ...(data.constraints !== undefined && { constraints: data.constraints as any }),
+        ...(data.spatialRules !== undefined && { spatialRules: data.spatialRules as any }),
       },
     });
 
@@ -376,10 +402,14 @@ class MetamodelService {
     }
 
     const classes = ((metamodel.classes as unknown as MetaClass[]) || []).filter(c => c.id !== classId);
+    // Rules over a deleted class can no longer be evaluated.
+    const spatialRules = ((metamodel.spatialRules as unknown as SpatialRule[]) || []).filter(rule => (
+      rule.sourceClassId !== classId && rule.targetClassId !== classId
+    ));
 
     const updated = await prisma.metamodel.update({
       where: { id: metamodelId },
-      data: { classes: classes as any },
+      data: { classes: classes as any, spatialRules: spatialRules as any },
     });
 
     return this.mapToMetamodel(updated);
@@ -461,6 +491,7 @@ class MetamodelService {
       classes: (mm.classes as unknown as MetaClass[]) || [],
       enums: (mm.enums as unknown as MetaEnum[]) || [],
       constraints: (mm.constraints as unknown as Constraint[]) || [],
+      spatialRules: (mm.spatialRules as unknown as SpatialRule[]) || [],
       conformsTo: mm.conformsToId,
     };
   }
