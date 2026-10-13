@@ -83,6 +83,11 @@ export class CodegenHandlebarsService {
     // JSON string escaping is also valid for Java string literals for the
     // model data emitted by the bundled generators. The helper includes the
     // surrounding quotes and prevents names from breaking generated source.
+    // A JSON value: strings become escaped string literals, missing values null.
+    Handlebars.registerHelper('json', function(value) {
+      return JSON.stringify(value === undefined ? null : value);
+    });
+
     Handlebars.registerHelper('javaString', function(value) {
       return JSON.stringify(String(value ?? ''));
     });

@@ -10,6 +10,11 @@ import activityDiagramMetamodelData from '../../examples/data/activity-diagram-m
 import activityDiagramModelData from '../../examples/data/activity-diagram-model.json';
 import activityDiagramViewsData from '../../examples/data/activity-diagram-views.json';
 import activityDiagramViewpointsData from '../../examples/data/activity-diagram-viewpoints.json';
+import smartHomeMetamodelData from '../../examples/data/smart-home-metamodel.json';
+import smartHomeModelData from '../../examples/data/smart-home-model.json';
+import smartHomeViewsData from '../../examples/data/smart-home-views.json';
+import smartHomeViewpointsData from '../../examples/data/smart-home-viewpoints.json';
+import smartHomeProjectData from '../../examples/data/smart-home-project.json';
 
 export interface ExampleBundle {
   metamodels: Metamodel[];
@@ -69,24 +74,40 @@ const remapNode = (node: any, idMap: Map<string, string>): any => {
  * the first account to seed would own the database rows and every later
  * account's copy would silently conflict with them (see issue #27). The
  * getters therefore serve a bundle remapped to fresh UUIDs, computed once per
- * session so cross-references between artifacts stay consistent.
+ * session so cross-references between artifacts stay consistent. Starter
+ * imports get their own remapped bundle per project, because artifact IDs are
+ * global keys and the same starter may be imported into several projects.
  *
  * Views are projections of the model; they do not own element instances,
  * only `includedElementIds` referencing model elements.
  */
 class ExampleDataService {
-  private bundle: ExampleBundle | null = null;
+  /** Remapped bundles by scope: '' for the session, otherwise a project ID. */
+  private bundles = new Map<string, ExampleBundle>();
 
-  private getBundle(): ExampleBundle {
-    if (!this.bundle) {
+  private getBundle(scope: string = ''): ExampleBundle {
+    let bundle = this.bundles.get(scope);
+    if (!bundle) {
       const raw = {
-        metamodels: [smartWarehouseMetamodelData, activityDiagramMetamodelData],
-        models: [smartWarehouseModelData, activityDiagramModelData],
-        views: [...(smartWarehouseViewsData as unknown[]), ...(activityDiagramViewsData as unknown[])],
-        viewpoints: [...(smartWarehouseViewpointsData as unknown[]), ...(activityDiagramViewpointsData as unknown[])],
-        projects: [smartWarehouseProjectData, smartWarehouseOmniverseProjectData].map(project => ({
+        metamodels: [smartWarehouseMetamodelData, activityDiagramMetamodelData, smartHomeMetamodelData],
+        models: [smartWarehouseModelData, activityDiagramModelData, smartHomeModelData],
+        views: [
+          ...(smartWarehouseViewsData as unknown[]),
+          ...(activityDiagramViewsData as unknown[]),
+          ...(smartHomeViewsData as unknown[]),
+        ],
+        viewpoints: [
+          ...(smartWarehouseViewpointsData as unknown[]),
+          ...(activityDiagramViewpointsData as unknown[]),
+          ...(smartHomeViewpointsData as unknown[]),
+        ],
+        projects: [
+          smartWarehouseProjectData,
+          smartWarehouseOmniverseProjectData,
+          smartHomeProjectData,
+        ].map((project: any) => ({
           ...project,
-          templates: project.templates.map(template => ({
+          templates: project.templates.map((template: any) => ({
             ...template,
             targetMetamodelId: project.targetMetamodelId,
           })),
@@ -98,9 +119,10 @@ class ExampleDataService {
       const idMap = new Map<string, string>();
       ids.forEach(id => idMap.set(id, uuidv4()));
 
-      this.bundle = remapNode(raw, idMap) as ExampleBundle;
+      bundle = remapNode(raw, idMap) as ExampleBundle;
+      this.bundles.set(scope, bundle);
     }
-    return this.bundle;
+    return bundle;
   }
 
   getExampleMetamodels(): Metamodel[] {
@@ -133,6 +155,7 @@ class ExampleDataService {
     return [
       ...(smartWarehouseViewpointsData as unknown as Viewpoint[]),
       ...(activityDiagramViewpointsData as unknown as Viewpoint[]),
+      ...(smartHomeViewpointsData as unknown as Viewpoint[]),
     ];
   }
 
@@ -149,11 +172,27 @@ class ExampleDataService {
    * Return the connected Smart Warehouse artifact graph for project-scoped
    * starter import. Every artifact comes from the same remapped bundle, so all
    * metamodel, semantic element, viewpoint, representation, and view IDs agree.
+   * With a project ID, the IDs are fresh for that project and stable across
+   * calls for it, so a retried import reuses them.
    */
-  getSmartWarehouseBundle(): ExampleBundle {
-    const bundle = this.getBundle();
-    const metamodel = bundle.metamodels.find(candidate => candidate.name === 'Smart Warehouse');
-    if (!metamodel) throw new Error('The Smart Warehouse metamodel fixture is unavailable');
+  getSmartWarehouseBundle(projectId?: string): ExampleBundle {
+    return this.getBundleForMetamodel('Smart Warehouse', projectId);
+  }
+
+  /** The connected Smart Home device-placement graph, for project starter import. */
+  getSmartHomeBundle(projectId?: string): ExampleBundle {
+    return this.getBundleForMetamodel('Smart Home', projectId);
+  }
+
+  /** The UML activity-diagram language with its model and saved views, for project starter import. */
+  getActivityBundle(projectId?: string): ExampleBundle {
+    return this.getBundleForMetamodel(activityDiagramMetamodelData.name, projectId);
+  }
+
+  private getBundleForMetamodel(metamodelName: string, projectId?: string): ExampleBundle {
+    const bundle = this.getBundle(projectId ? `project:${projectId}` : '');
+    const metamodel = bundle.metamodels.find(candidate => candidate.name === metamodelName);
+    if (!metamodel) throw new Error(`The ${metamodelName} metamodel fixture is unavailable`);
 
     const models = bundle.models.filter(model => (
       (model.conformsTo || model.metamodelId) === metamodel.id
@@ -176,21 +215,24 @@ class ExampleDataService {
   isExampleMetamodel(metamodelId: string): boolean {
     return (
       metamodelId === smartWarehouseMetamodelData.id ||
-      metamodelId === activityDiagramMetamodelData.id
+      metamodelId === activityDiagramMetamodelData.id ||
+      metamodelId === smartHomeMetamodelData.id
     );
   }
 
   isExampleModel(modelId: string): boolean {
     return (
       modelId === smartWarehouseModelData.id ||
-      modelId === activityDiagramModelData.id
+      modelId === activityDiagramModelData.id ||
+      modelId === smartHomeModelData.id
     );
   }
 
   isExampleView(viewId: string): boolean {
     return (
       (smartWarehouseViewsData as Array<{ id: string }>).some(v => v.id === viewId) ||
-      (activityDiagramViewsData as Array<{ id: string }>).some(v => v.id === viewId)
+      (activityDiagramViewsData as Array<{ id: string }>).some(v => v.id === viewId) ||
+      (smartHomeViewsData as Array<{ id: string }>).some(v => v.id === viewId)
     );
   }
 
@@ -201,7 +243,8 @@ class ExampleDataService {
 
   isExampleProject(projectId: string): boolean {
     return projectId === smartWarehouseProjectData.id
-      || projectId === smartWarehouseOmniverseProjectData.id;
+      || projectId === smartWarehouseOmniverseProjectData.id
+      || projectId === smartHomeProjectData.id;
   }
 }
 

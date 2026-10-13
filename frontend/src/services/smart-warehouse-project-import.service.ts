@@ -7,7 +7,7 @@ import {
   Viewpoint,
 } from '../models/types';
 import { apiClient, API_ENDPOINTS } from './core';
-import { exampleDataService } from './metamodel/exampleData.service';
+import { ExampleBundle, exampleDataService } from './metamodel/exampleData.service';
 import { normalizeModelElementSpatial } from './spatial';
 
 export interface SmartWarehouseImportSummary {
@@ -23,17 +23,29 @@ const existingIds = <T extends { id: string }>(items: T[]): Set<string> => (
 );
 
 /**
- * Installs the connected Smart Warehouse starter graph into one newly created
- * Studio Project. The operation is idempotent by stable remapped artifact ID,
- * which also makes retrying a partially interrupted import safe.
+ * Installs a connected example starter graph (Smart Warehouse by default, Smart
+ * Home, or UML Activity) into one newly created Studio Project. The operation is
+ * idempotent by stable remapped artifact ID, which also makes retrying a
+ * partially interrupted import safe.
  */
 class SmartWarehouseProjectImportService {
   async importInto(projectId: string): Promise<SmartWarehouseImportSummary> {
+    return this.importBundleInto(projectId, exampleDataService.getSmartWarehouseBundle(projectId));
+  }
+
+  async importSmartHomeInto(projectId: string): Promise<SmartWarehouseImportSummary> {
+    return this.importBundleInto(projectId, exampleDataService.getSmartHomeBundle(projectId));
+  }
+
+  async importActivityInto(projectId: string): Promise<SmartWarehouseImportSummary> {
+    return this.importBundleInto(projectId, exampleDataService.getActivityBundle(projectId));
+  }
+
+  private async importBundleInto(projectId: string, bundle: ExampleBundle): Promise<SmartWarehouseImportSummary> {
     const previousProjectId = apiClient.getProjectId();
     apiClient.setProjectId(projectId);
 
     try {
-      const bundle = exampleDataService.getSmartWarehouseBundle();
       const corePackage = await apiClient.get<EPackage>(API_ENDPOINTS.EPACKAGES_CORE);
       const ePackageClassId = corePackage.classes.find(candidate => candidate.name === 'EPackage')?.id;
 

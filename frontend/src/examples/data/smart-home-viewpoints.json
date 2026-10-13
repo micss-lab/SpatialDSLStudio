@@ -1,0 +1,512 @@
+[
+  {
+    "id": "c4400000-0000-4000-8000-000000000001",
+    "name": "Home Layout",
+    "description": "Floor-plan and 3D placement views of the smart home devices.",
+    "metamodelId": "c1100000-0000-4000-8000-000000000100",
+    "isDefault": true,
+    "sharedConcreteSyntaxByMetaClassId": {},
+    "representationDescriptions": [
+      {
+        "id": "c4400000-0000-4000-8000-000000000101",
+        "name": "Floor Plan",
+        "description": "Plan view of the rooms, the devices, and their links to the hub.",
+        "viewpointId": "c4400000-0000-4000-8000-000000000001",
+        "kind": "diagram",
+        "visibleMetaClassIds": [
+          "c1100000-0000-4000-8000-000000000102",
+          "c1100000-0000-4000-8000-000000000104",
+          "c1100000-0000-4000-8000-000000000105",
+          "c1100000-0000-4000-8000-000000000106",
+          "c1100000-0000-4000-8000-000000000107",
+          "c1100000-0000-4000-8000-000000000108",
+          "c1100000-0000-4000-8000-000000000109"
+        ],
+        "creatableMetaClassIds": [
+          "c1100000-0000-4000-8000-000000000102",
+          "c1100000-0000-4000-8000-000000000104",
+          "c1100000-0000-4000-8000-000000000105",
+          "c1100000-0000-4000-8000-000000000106",
+          "c1100000-0000-4000-8000-000000000107",
+          "c1100000-0000-4000-8000-000000000108",
+          "c1100000-0000-4000-8000-000000000109"
+        ],
+        "concreteSyntaxByMetaClassId": {
+          "c1100000-0000-4000-8000-000000000102": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "rgba(241, 245, 249, 0.6)",
+              "strokeColor": "#475569",
+              "strokeWidth": 2,
+              "fontSize": 14,
+              "labelPosition": "inside"
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#CBD5E1",
+              "defaultSizeMm": {
+                "widthMm": 4000,
+                "heightMm": 4000,
+                "depthMm": 20
+              },
+              "verticalPlacement": {
+                "mode": "grounded"
+              }
+            }
+          },
+          "c1100000-0000-4000-8000-000000000104": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#BBF7D0",
+              "strokeColor": "#15803D",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 26,
+                "height": 26
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#16A34A",
+              "defaultSizeMm": {
+                "widthMm": 160,
+                "heightMm": 160,
+                "depthMm": 40
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 900,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 3000,
+                "stepMm": 50
+              }
+            }
+          },
+          "c1100000-0000-4000-8000-000000000105": {
+            "two_d": {
+              "shape": "circle",
+              "fillColor": "#FECACA",
+              "strokeColor": "#B91C1C",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 22,
+                "height": 22
+              }
+            },
+            "three_d": {
+              "fallbackShape": "cylinder",
+              "fallbackColor": "#DC2626",
+              "defaultSizeMm": {
+                "widthMm": 120,
+                "heightMm": 120,
+                "depthMm": 50
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 2400,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 3000,
+                "stepMm": 50
+              }
+            }
+          },
+          "c1100000-0000-4000-8000-000000000106": {
+            "two_d": {
+              "shape": "triangle",
+              "fillColor": "#FED7AA",
+              "strokeColor": "#C2410C",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 20,
+                "height": 20
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#EA580C",
+              "defaultSizeMm": {
+                "widthMm": 80,
+                "heightMm": 60,
+                "depthMm": 80
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 2100,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 3000,
+                "stepMm": 50
+              }
+            }
+          },
+          "c1100000-0000-4000-8000-000000000107": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#E9D5FF",
+              "strokeColor": "#7E22CE",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 20,
+                "height": 20
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#9333EA",
+              "defaultSizeMm": {
+                "widthMm": 90,
+                "heightMm": 30,
+                "depthMm": 90
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 1500,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 3000,
+                "stepMm": 50
+              }
+            }
+          },
+          "c1100000-0000-4000-8000-000000000108": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#BFDBFE",
+              "strokeColor": "#1D4ED8",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 22,
+                "height": 22
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#2563EB",
+              "defaultSizeMm": {
+                "widthMm": 120,
+                "heightMm": 80,
+                "depthMm": 80
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 2200,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 3000,
+                "stepMm": 50
+              }
+            }
+          },
+          "c1100000-0000-4000-8000-000000000109": {
+            "two_d": {
+              "shape": "circle",
+              "fillColor": "#FEF08A",
+              "strokeColor": "#A16207",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 18,
+                "height": 18
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#CA8A04",
+              "defaultSizeMm": {
+                "widthMm": 60,
+                "heightMm": 60,
+                "depthMm": 60
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 300,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 3000,
+                "stepMm": 50
+              }
+            }
+          }
+        },
+        "edgeMappings": [
+          {
+            "id": "c4400000-0000-4000-8000-000000000201",
+            "referenceId": "c1100000-0000-4000-8000-000000003008",
+            "referenceName": "hub",
+            "concreteSyntax": {
+              "lineColor": "#16A34A",
+              "lineWidth": 1,
+              "lineDash": [
+                4,
+                4
+              ],
+              "labelFormat": ""
+            }
+          }
+        ],
+        "isDefault": true
+      },
+      {
+        "id": "c4400000-0000-4000-8000-000000000102",
+        "name": "Device Placement 3D",
+        "description": "Rooms as thin floor slabs with devices at their mounting heights; device elevation is adjustable, rooms are grounded.",
+        "viewpointId": "c4400000-0000-4000-8000-000000000001",
+        "kind": "diagram",
+        "visibleMetaClassIds": [
+          "c1100000-0000-4000-8000-000000000102",
+          "c1100000-0000-4000-8000-000000000104",
+          "c1100000-0000-4000-8000-000000000105",
+          "c1100000-0000-4000-8000-000000000106",
+          "c1100000-0000-4000-8000-000000000107",
+          "c1100000-0000-4000-8000-000000000108",
+          "c1100000-0000-4000-8000-000000000109"
+        ],
+        "creatableMetaClassIds": [
+          "c1100000-0000-4000-8000-000000000102",
+          "c1100000-0000-4000-8000-000000000104",
+          "c1100000-0000-4000-8000-000000000105",
+          "c1100000-0000-4000-8000-000000000106",
+          "c1100000-0000-4000-8000-000000000107",
+          "c1100000-0000-4000-8000-000000000108",
+          "c1100000-0000-4000-8000-000000000109"
+        ],
+        "concreteSyntaxByMetaClassId": {
+          "c1100000-0000-4000-8000-000000000102": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "rgba(241, 245, 249, 0.6)",
+              "strokeColor": "#475569",
+              "strokeWidth": 2,
+              "fontSize": 14,
+              "labelPosition": "inside"
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#CBD5E1",
+              "defaultSizeMm": {
+                "widthMm": 4000,
+                "heightMm": 4000,
+                "depthMm": 20
+              },
+              "verticalPlacement": {
+                "mode": "grounded"
+              }
+            }
+          },
+          "c1100000-0000-4000-8000-000000000104": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#BBF7D0",
+              "strokeColor": "#15803D",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 26,
+                "height": 26
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#16A34A",
+              "defaultSizeMm": {
+                "widthMm": 160,
+                "heightMm": 160,
+                "depthMm": 40
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 900,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 3000,
+                "stepMm": 50
+              }
+            }
+          },
+          "c1100000-0000-4000-8000-000000000105": {
+            "two_d": {
+              "shape": "circle",
+              "fillColor": "#FECACA",
+              "strokeColor": "#B91C1C",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 22,
+                "height": 22
+              }
+            },
+            "three_d": {
+              "fallbackShape": "cylinder",
+              "fallbackColor": "#DC2626",
+              "defaultSizeMm": {
+                "widthMm": 120,
+                "heightMm": 120,
+                "depthMm": 50
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 2400,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 3000,
+                "stepMm": 50
+              }
+            }
+          },
+          "c1100000-0000-4000-8000-000000000106": {
+            "two_d": {
+              "shape": "triangle",
+              "fillColor": "#FED7AA",
+              "strokeColor": "#C2410C",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 20,
+                "height": 20
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#EA580C",
+              "defaultSizeMm": {
+                "widthMm": 80,
+                "heightMm": 60,
+                "depthMm": 80
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 2100,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 3000,
+                "stepMm": 50
+              }
+            }
+          },
+          "c1100000-0000-4000-8000-000000000107": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#E9D5FF",
+              "strokeColor": "#7E22CE",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 20,
+                "height": 20
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#9333EA",
+              "defaultSizeMm": {
+                "widthMm": 90,
+                "heightMm": 30,
+                "depthMm": 90
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 1500,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 3000,
+                "stepMm": 50
+              }
+            }
+          },
+          "c1100000-0000-4000-8000-000000000108": {
+            "two_d": {
+              "shape": "rectangle",
+              "fillColor": "#BFDBFE",
+              "strokeColor": "#1D4ED8",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 22,
+                "height": 22
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#2563EB",
+              "defaultSizeMm": {
+                "widthMm": 120,
+                "heightMm": 80,
+                "depthMm": 80
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 2200,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 3000,
+                "stepMm": 50
+              }
+            }
+          },
+          "c1100000-0000-4000-8000-000000000109": {
+            "two_d": {
+              "shape": "circle",
+              "fillColor": "#FEF08A",
+              "strokeColor": "#A16207",
+              "strokeWidth": 2,
+              "fontSize": 10,
+              "defaultSize": {
+                "width": 18,
+                "height": 18
+              }
+            },
+            "three_d": {
+              "fallbackShape": "box",
+              "fallbackColor": "#CA8A04",
+              "defaultSizeMm": {
+                "widthMm": 60,
+                "heightMm": 60,
+                "depthMm": 60
+              },
+              "verticalPlacement": {
+                "mode": "adjustable",
+                "defaultBaseZMm": 300,
+                "minBaseZMm": 0,
+                "maxBaseZMm": 3000,
+                "stepMm": 50
+              }
+            }
+          }
+        },
+        "edgeMappings": [
+          {
+            "id": "c4400000-0000-4000-8000-000000000202",
+            "referenceId": "c1100000-0000-4000-8000-000000003008",
+            "referenceName": "hub",
+            "concreteSyntax": {
+              "lineColor": "#16A34A",
+              "lineWidth": 1,
+              "lineDash": [
+                4,
+                4
+              ],
+              "labelFormat": ""
+            }
+          }
+        ],
+        "isDefault": false
+      },
+      {
+        "id": "c4400000-0000-4000-8000-000000000103",
+        "name": "Device Inventory",
+        "description": "Editable device list.",
+        "viewpointId": "c4400000-0000-4000-8000-000000000001",
+        "kind": "table",
+        "visibleMetaClassIds": [
+          "c1100000-0000-4000-8000-000000000104",
+          "c1100000-0000-4000-8000-000000000105",
+          "c1100000-0000-4000-8000-000000000106",
+          "c1100000-0000-4000-8000-000000000107",
+          "c1100000-0000-4000-8000-000000000108",
+          "c1100000-0000-4000-8000-000000000109"
+        ],
+        "creatableMetaClassIds": [],
+        "tableColumns": [
+          "name",
+          "deviceId"
+        ]
+      }
+    ]
+  }
+]

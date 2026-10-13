@@ -121,6 +121,7 @@ Common helper examples in UI:
 - `usdIdentifier` (portable OpenUSD prim identifier)
 - `meters` / `halfMeters` (millimeter model values to metres)
 - `javaString` (quoted, escaped Java string literal)
+- `json` (a JSON value: strings become quoted, escaped JSON strings; missing values `null`)
 
 The editor also includes autocompletion support for template authoring.
 
@@ -129,6 +130,11 @@ Multi-element contexts retain raw semantic reference IDs and also expose
 generated runtime identifiers. Smart Warehouse robots and conveyors receive
 deterministic `Robot{n}` / `Conveyor{n}` OPC IDs, allowing separate templates to
 generate consistent source, XML, and USD layers without hard-coded UUIDs.
+The headless pipeline's generation engine exposes the same `resolvedReferences`
+target summaries (`id`, `name`, `className`), so a template such as
+`{{resolvedReferences.room.name}}` renders identically in the browser
+and in pipeline runs. The browser-only runtime identifiers above are not
+available there.
 
 ## Generated outputs
 

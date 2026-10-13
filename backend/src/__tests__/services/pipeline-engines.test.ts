@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { mockReset } from 'jest-mock-extended';
 import { Metamodel, Model } from '../../../../shared/types';
 import { prismaMock } from '../helpers/prisma.mock';
@@ -6,6 +8,12 @@ import { modelValidationEngine } from '../../services/pipeline/model-validation.
 import { testExecutionEngine } from '../../services/pipeline/test-execution.engine';
 import { transformationEngine } from '../../services/pipeline/transformation.engine';
 import { evaluateSpatialRules } from '../../../../shared/spatial-rules';
+
+// Example files are read at run time rather than imported: the backend build
+// compiles src/ (tests included) in an image without frontend/ or examples/.
+const readRepoJson = (relativePath: string): unknown => JSON.parse(
+  fs.readFileSync(path.resolve(__dirname, '../../../..', relativePath), 'utf8')
+);
 
 const projectId = 'project-uuid-1';
 
@@ -175,6 +183,43 @@ describe('headless pipeline engines', () => {
       content: 'count=1;z=3',
     }));
     expect(first[0].contentHash).toMatch(/^sha256:/);
+  });
+
+  it('validates and generates the Smart Home example with room names and elevations', () => {
+    const homeMetamodel = readRepoJson('frontend/src/examples/data/smart-home-metamodel.json') as Metamodel;
+    const homeModel = readRepoJson('frontend/src/examples/data/smart-home-model.json') as Model;
+    const homeProject = readRepoJson('examples/codegen-projects/smart-home-device-configuration-project.json') as {
+      templates: Parameters<typeof codeGenerationEngine.generate>[2];
+    };
+    expect(modelValidationEngine.validate(homeModel, homeMetamodel)).toEqual({ valid: true, issues: [] });
+
+    const [file] = codeGenerationEngine.generate(
+      homeModel,
+      homeMetamodel,
+      homeProject.templates
+    );
+    const output = JSON.parse(file.content);
+    expect(file.filename).toBe('device-configuration.json');
+    expect(output.devices).toHaveLength(13);
+    output.devices.forEach((device: any) => {
+      const element = homeModel.elements.find(candidate => candidate.style.deviceId === device.deviceId)!;
+      expect(device.z).toBeCloseTo(element.presentation!.position3D!.z / 1000, 9);
+      expect(device.room).toBe(homeModel.elements.find(candidate => (
+        candidate.id === element.references.room
+      ))!.style.name);
+    });
+    expect(output.devices.find((device: any) => device.deviceId === 'SD-LIV')).toEqual({
+      deviceId: 'SD-LIV', type: 'SmokeDetector', room: 'Living room', x: -2, y: 3.5, z: 2.6, yaw: 0,
+    });
+
+    // Names with quotes, backslashes, or newlines still give valid JSON.
+    const awkwardModel = JSON.parse(JSON.stringify(homeModel)) as Model;
+    const named = (name: string) => awkwardModel.elements.find(candidate => candidate.style.name === name)!;
+    named('SD-LIV').style.deviceId = 'SD "LIV" \\ 1\nB';
+    named('Living room').style.name = 'Living "room"';
+    const [awkwardFile] = codeGenerationEngine.generate(awkwardModel, homeMetamodel, homeProject.templates);
+    expect(JSON.parse(awkwardFile.content).devices.find((device: any) => device.deviceId === 'SD "LIV" \\ 1\nB'))
+      .toEqual(expect.objectContaining({ room: 'Living "room"' }));
   });
 
   it('rejects generated path traversal', () => {

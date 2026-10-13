@@ -129,6 +129,35 @@ The bundled Smart Warehouse metamodel declares an abstract `FixedEquipment` supe
 To see a violation, open a warehouse view in 3D, move or rotate one conveyor into the other, and refresh
 the validation panel.
 
+## Example: Smart Home
+
+The Smart Home example (project starter "Include Smart Home starter") places devices in a small home. A
+`Home` contains `Room` elements and devices. `Hub`, `SmokeDetector`, `MotionSensor`, `Thermostat`,
+`Camera`, and `SmartPlug` specialize the abstract `Device`, so one rule covers every kind of device. Each
+device references its room and its hub. The bundled model has five rooms (hallway, living room, kitchen,
+bedroom, bathroom), one hub, and 12 further devices, and satisfies all four rules.
+
+| Rule | Kind | Source | Target | Distance | Mode | Severity |
+| --- | --- | --- | --- | --- | --- | --- |
+| Rooms do not overlap | `noOverlap` | Room | Room | | plan | error |
+| Device inside a room | `within` | Device | Room | 0 mm | plan | error |
+| Smoke detector away from walls | `within` | SmokeDetector | Room | 300 mm | plan | error |
+| Device in hub range | `maxDistance` | Device | Hub | 10,000 mm | volume | error |
+
+The distances illustrate the rule kinds; they are not taken from building codes or product
+specifications. The hub is a device as well, so it must be inside a room, and it is in range of itself.
+
+Its representations keep rooms grounded as thin floor slabs and give devices adjustable elevation with
+per-class defaults (hub 900 mm, smoke detector 2,400 mm, motion sensor 2,100 mm, thermostat 1,500 mm,
+camera 2,200 mm, smart plug 300 mm; 0 to 3,000 mm). The "Smart Home Device Configuration" generator
+writes `device-configuration.json` with each device's ID, type, room, position in metres (`z` is its
+mounting height), and yaw.
+
+To see a violation, open the `Device Placement 3D` view, switch to 3D, and move the living-room smoke
+detector `SD-LIV` toward the hallway: with its Y position below 860 mm it is closer than 300 mm to the
+living-room wall, and at 500 mm it sits on the wall and is inside no room. Refresh the validation panel
+to see the rule errors.
+
 ## Escape hatch: OCL and JavaScript helpers
 
 JavaScript and OCL constraints can call the same geometry through a `spatial` namespace:

@@ -1,0 +1,355 @@
+{
+  "id": "c1100000-0000-4000-8000-000000000100",
+  "name": "Smart Home",
+  "eClass": "e7d0d970-9abd-4218-9ef9-9789e7b8862c",
+  "description": "Smart home device placement: rooms, a hub, and smoke detectors, motion sensors, thermostats, cameras, and smart plugs at their mounting heights.",
+  "uri": "http://www.spatialdsl.studio/examples/smart-home",
+  "prefix": "smarthome",
+  "conformsTo": "8b8a9170-bd78-4e15-80dd-e018f295e8cc",
+  "classes": [
+    {
+      "id": "c1100000-0000-4000-8000-000000000101",
+      "name": "Home",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "c1100000-0000-4000-8000-000000001001",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "defaultValue": ""
+        }
+      ],
+      "references": [
+        {
+          "id": "c1100000-0000-4000-8000-000000003002",
+          "name": "rooms",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "c1100000-0000-4000-8000-000000000102",
+          "containment": true,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": "*"
+          },
+          "allowSelfReference": false,
+          "isMultiValued": true
+        },
+        {
+          "id": "c1100000-0000-4000-8000-000000003003",
+          "name": "devices",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "c1100000-0000-4000-8000-000000000103",
+          "containment": true,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": "*"
+          },
+          "allowSelfReference": false,
+          "isMultiValued": true
+        }
+      ],
+      "position": {
+        "x": 60,
+        "y": 60
+      }
+    },
+    {
+      "id": "c1100000-0000-4000-8000-000000000102",
+      "name": "Room",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "c1100000-0000-4000-8000-000000001004",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "defaultValue": ""
+        }
+      ],
+      "references": [],
+      "position": {
+        "x": 60,
+        "y": 300
+      },
+      "concreteSyntax": {
+        "three_d": {
+          "fallbackShape": "box",
+          "defaultSizeMm": {
+            "widthMm": 4000,
+            "heightMm": 4000,
+            "depthMm": 20
+          }
+        }
+      }
+    },
+    {
+      "id": "c1100000-0000-4000-8000-000000000103",
+      "name": "Device",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": true,
+      "superTypes": [],
+      "attributes": [
+        {
+          "id": "c1100000-0000-4000-8000-000000001005",
+          "name": "name",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "defaultValue": ""
+        },
+        {
+          "id": "c1100000-0000-4000-8000-000000001006",
+          "name": "deviceId",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "string",
+          "required": true,
+          "many": false,
+          "defaultValue": ""
+        }
+      ],
+      "references": [
+        {
+          "id": "c1100000-0000-4000-8000-000000003007",
+          "name": "room",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "c1100000-0000-4000-8000-000000000102",
+          "containment": false,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": false,
+          "isMultiValued": false
+        },
+        {
+          "id": "c1100000-0000-4000-8000-000000003008",
+          "name": "hub",
+          "eClass": "f18712c7-fb6e-411b-89e6-050e8dfb653c",
+          "target": "c1100000-0000-4000-8000-000000000104",
+          "containment": false,
+          "cardinality": {
+            "lowerBound": 0,
+            "upperBound": 1
+          },
+          "allowSelfReference": false,
+          "isMultiValued": false
+        }
+      ],
+      "position": {
+        "x": 520,
+        "y": 300
+      }
+    },
+    {
+      "id": "c1100000-0000-4000-8000-000000000104",
+      "name": "Hub",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [
+        "c1100000-0000-4000-8000-000000000103"
+      ],
+      "attributes": [
+        {
+          "id": "c1100000-0000-4000-8000-000000001009",
+          "name": "radioRangeMm",
+          "eClass": "3fb0f71e-0335-4f2f-9973-2fc29f9e9570",
+          "type": "number",
+          "required": false,
+          "many": false,
+          "defaultValue": 10000
+        }
+      ],
+      "references": [],
+      "position": {
+        "x": 160,
+        "y": 560
+      },
+      "concreteSyntax": {
+        "three_d": {
+          "fallbackShape": "box",
+          "defaultSizeMm": {
+            "widthMm": 160,
+            "heightMm": 160,
+            "depthMm": 40
+          }
+        }
+      }
+    },
+    {
+      "id": "c1100000-0000-4000-8000-000000000105",
+      "name": "SmokeDetector",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [
+        "c1100000-0000-4000-8000-000000000103"
+      ],
+      "attributes": [],
+      "references": [],
+      "position": {
+        "x": 340,
+        "y": 560
+      },
+      "concreteSyntax": {
+        "three_d": {
+          "fallbackShape": "cylinder",
+          "defaultSizeMm": {
+            "widthMm": 120,
+            "heightMm": 120,
+            "depthMm": 50
+          }
+        }
+      }
+    },
+    {
+      "id": "c1100000-0000-4000-8000-000000000106",
+      "name": "MotionSensor",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [
+        "c1100000-0000-4000-8000-000000000103"
+      ],
+      "attributes": [],
+      "references": [],
+      "position": {
+        "x": 520,
+        "y": 560
+      },
+      "concreteSyntax": {
+        "three_d": {
+          "fallbackShape": "box",
+          "defaultSizeMm": {
+            "widthMm": 80,
+            "heightMm": 60,
+            "depthMm": 80
+          }
+        }
+      }
+    },
+    {
+      "id": "c1100000-0000-4000-8000-000000000107",
+      "name": "Thermostat",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [
+        "c1100000-0000-4000-8000-000000000103"
+      ],
+      "attributes": [],
+      "references": [],
+      "position": {
+        "x": 700,
+        "y": 560
+      },
+      "concreteSyntax": {
+        "three_d": {
+          "fallbackShape": "box",
+          "defaultSizeMm": {
+            "widthMm": 90,
+            "heightMm": 30,
+            "depthMm": 90
+          }
+        }
+      }
+    },
+    {
+      "id": "c1100000-0000-4000-8000-000000000108",
+      "name": "Camera",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [
+        "c1100000-0000-4000-8000-000000000103"
+      ],
+      "attributes": [],
+      "references": [],
+      "position": {
+        "x": 880,
+        "y": 560
+      },
+      "concreteSyntax": {
+        "three_d": {
+          "fallbackShape": "box",
+          "defaultSizeMm": {
+            "widthMm": 120,
+            "heightMm": 80,
+            "depthMm": 80
+          }
+        }
+      }
+    },
+    {
+      "id": "c1100000-0000-4000-8000-000000000109",
+      "name": "SmartPlug",
+      "eClass": "53878be3-9d42-44c7-96cd-fec1b366e70b",
+      "abstract": false,
+      "superTypes": [
+        "c1100000-0000-4000-8000-000000000103"
+      ],
+      "attributes": [],
+      "references": [],
+      "position": {
+        "x": 1060,
+        "y": 560
+      },
+      "concreteSyntax": {
+        "three_d": {
+          "fallbackShape": "box",
+          "defaultSizeMm": {
+            "widthMm": 60,
+            "heightMm": 60,
+            "depthMm": 60
+          }
+        }
+      }
+    }
+  ],
+  "constraints": [],
+  "spatialRules": [
+    {
+      "id": "c1100000-0000-4000-8000-000000000301",
+      "name": "Rooms do not overlap",
+      "kind": "noOverlap",
+      "sourceClassId": "c1100000-0000-4000-8000-000000000102",
+      "targetClassId": "c1100000-0000-4000-8000-000000000102",
+      "mode": "plan",
+      "severity": "error"
+    },
+    {
+      "id": "c1100000-0000-4000-8000-000000000302",
+      "name": "Device inside a room",
+      "kind": "within",
+      "sourceClassId": "c1100000-0000-4000-8000-000000000103",
+      "targetClassId": "c1100000-0000-4000-8000-000000000102",
+      "mode": "plan",
+      "severity": "error"
+    },
+    {
+      "id": "c1100000-0000-4000-8000-000000000303",
+      "name": "Smoke detector away from walls",
+      "kind": "within",
+      "sourceClassId": "c1100000-0000-4000-8000-000000000105",
+      "targetClassId": "c1100000-0000-4000-8000-000000000102",
+      "distanceMm": 300,
+      "mode": "plan",
+      "severity": "error",
+      "message": "{source} must be at least {distance} mm inside a room."
+    },
+    {
+      "id": "c1100000-0000-4000-8000-000000000304",
+      "name": "Device in hub range",
+      "kind": "maxDistance",
+      "sourceClassId": "c1100000-0000-4000-8000-000000000103",
+      "targetClassId": "c1100000-0000-4000-8000-000000000104",
+      "distanceMm": 10000,
+      "mode": "volume",
+      "severity": "error"
+    }
+  ]
+}

@@ -1,0 +1,615 @@
+{
+  "id": "c2200000-0000-4000-8000-000000000001",
+  "name": "Example Home Devices",
+  "metamodelId": "c1100000-0000-4000-8000-000000000100",
+  "conformsTo": "c1100000-0000-4000-8000-000000000100",
+  "description": "Five rooms, one hub, and 12 devices at their mounting heights.",
+  "elements": [
+    {
+      "id": "c2200000-0000-4000-8000-000000000100",
+      "modelElementId": "c1100000-0000-4000-8000-000000000101",
+      "style": {
+        "name": "Example Home"
+      },
+      "references": {
+        "rooms": [
+          "c2200000-0000-4000-8000-000000000101",
+          "c2200000-0000-4000-8000-000000000102",
+          "c2200000-0000-4000-8000-000000000103",
+          "c2200000-0000-4000-8000-000000000104",
+          "c2200000-0000-4000-8000-000000000105"
+        ],
+        "devices": [
+          "c2200000-0000-4000-8000-000000000201",
+          "c2200000-0000-4000-8000-000000000202",
+          "c2200000-0000-4000-8000-000000000203",
+          "c2200000-0000-4000-8000-000000000204",
+          "c2200000-0000-4000-8000-000000000205",
+          "c2200000-0000-4000-8000-000000000206",
+          "c2200000-0000-4000-8000-000000000207",
+          "c2200000-0000-4000-8000-000000000208",
+          "c2200000-0000-4000-8000-000000000209",
+          "c2200000-0000-4000-8000-00000000020a",
+          "c2200000-0000-4000-8000-00000000020b",
+          "c2200000-0000-4000-8000-00000000020c",
+          "c2200000-0000-4000-8000-00000000020d"
+        ]
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-000000000101",
+      "modelElementId": "c1100000-0000-4000-8000-000000000102",
+      "style": {
+        "name": "Hallway"
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 40,
+          "y": 240
+        },
+        "size2D": {
+          "width": 500,
+          "height": 60
+        },
+        "position3D": {
+          "x": 0,
+          "y": -100,
+          "z": 0
+        },
+        "size3D": {
+          "widthMm": 10000,
+          "heightMm": 1200,
+          "depthMm": 20
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-000000000102",
+      "modelElementId": "c1100000-0000-4000-8000-000000000102",
+      "style": {
+        "name": "Living room"
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 40,
+          "y": 40
+        },
+        "size2D": {
+          "width": 300,
+          "height": 200
+        },
+        "position3D": {
+          "x": -2000,
+          "y": 2500,
+          "z": 0
+        },
+        "size3D": {
+          "widthMm": 6000,
+          "heightMm": 4000,
+          "depthMm": 20
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-000000000103",
+      "modelElementId": "c1100000-0000-4000-8000-000000000102",
+      "style": {
+        "name": "Kitchen"
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 340,
+          "y": 40
+        },
+        "size2D": {
+          "width": 200,
+          "height": 200
+        },
+        "position3D": {
+          "x": 3000,
+          "y": 2500,
+          "z": 0
+        },
+        "size3D": {
+          "widthMm": 4000,
+          "heightMm": 4000,
+          "depthMm": 20
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-000000000104",
+      "modelElementId": "c1100000-0000-4000-8000-000000000102",
+      "style": {
+        "name": "Bedroom"
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 40,
+          "y": 300
+        },
+        "size2D": {
+          "width": 300,
+          "height": 190
+        },
+        "position3D": {
+          "x": -2000,
+          "y": -2600,
+          "z": 0
+        },
+        "size3D": {
+          "widthMm": 6000,
+          "heightMm": 3800,
+          "depthMm": 20
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-000000000105",
+      "modelElementId": "c1100000-0000-4000-8000-000000000102",
+      "style": {
+        "name": "Bathroom"
+      },
+      "references": {},
+      "presentation": {
+        "position2D": {
+          "x": 340,
+          "y": 300
+        },
+        "size2D": {
+          "width": 200,
+          "height": 190
+        },
+        "position3D": {
+          "x": 3000,
+          "y": -2600,
+          "z": 0
+        },
+        "size3D": {
+          "widthMm": 4000,
+          "heightMm": 3800,
+          "depthMm": 20
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-000000000201",
+      "modelElementId": "c1100000-0000-4000-8000-000000000104",
+      "style": {
+        "name": "HUB-1",
+        "deviceId": "HUB-1",
+        "radioRangeMm": 10000
+      },
+      "references": {
+        "room": "c2200000-0000-4000-8000-000000000101"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 352,
+          "y": 272
+        },
+        "size2D": {
+          "width": 26,
+          "height": 26
+        },
+        "position3D": {
+          "x": 1500,
+          "y": -600,
+          "z": 900
+        },
+        "size3D": {
+          "widthMm": 160,
+          "heightMm": 160,
+          "depthMm": 40
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-000000000202",
+      "modelElementId": "c1100000-0000-4000-8000-000000000105",
+      "style": {
+        "name": "SD-LIV",
+        "deviceId": "SD-LIV"
+      },
+      "references": {
+        "room": "c2200000-0000-4000-8000-000000000102",
+        "hub": "c2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 179,
+          "y": 79
+        },
+        "size2D": {
+          "width": 22,
+          "height": 22
+        },
+        "position3D": {
+          "x": -2000,
+          "y": 3500,
+          "z": 2600
+        },
+        "size3D": {
+          "widthMm": 120,
+          "heightMm": 120,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-000000000203",
+      "modelElementId": "c1100000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "MS-LIV",
+        "deviceId": "MS-LIV"
+      },
+      "references": {
+        "room": "c2200000-0000-4000-8000-000000000102",
+        "hub": "c2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 318,
+          "y": 42
+        },
+        "size2D": {
+          "width": 20,
+          "height": 20
+        },
+        "position3D": {
+          "x": 850,
+          "y": 4350,
+          "z": 2100
+        },
+        "size3D": {
+          "widthMm": 80,
+          "heightMm": 60,
+          "depthMm": 80
+        },
+        "rotationZ": -135
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-000000000204",
+      "modelElementId": "c1100000-0000-4000-8000-000000000108",
+      "style": {
+        "name": "CAM-LIV",
+        "deviceId": "CAM-LIV"
+      },
+      "references": {
+        "room": "c2200000-0000-4000-8000-000000000102",
+        "hub": "c2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 42,
+          "y": 42
+        },
+        "size2D": {
+          "width": 22,
+          "height": 22
+        },
+        "position3D": {
+          "x": -4850,
+          "y": 4350,
+          "z": 2200
+        },
+        "size3D": {
+          "widthMm": 120,
+          "heightMm": 80,
+          "depthMm": 80
+        },
+        "rotationZ": -45
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-000000000205",
+      "modelElementId": "c1100000-0000-4000-8000-000000000107",
+      "style": {
+        "name": "TH-LIV",
+        "deviceId": "TH-LIV"
+      },
+      "references": {
+        "room": "c2200000-0000-4000-8000-000000000102",
+        "hub": "c2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 42,
+          "y": 155
+        },
+        "size2D": {
+          "width": 20,
+          "height": 20
+        },
+        "position3D": {
+          "x": -4980,
+          "y": 2000,
+          "z": 1500
+        },
+        "size3D": {
+          "widthMm": 90,
+          "heightMm": 30,
+          "depthMm": 90
+        },
+        "rotationZ": 90
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-000000000206",
+      "modelElementId": "c1100000-0000-4000-8000-000000000109",
+      "style": {
+        "name": "PLUG-LIV",
+        "deviceId": "PLUG-LIV"
+      },
+      "references": {
+        "room": "c2200000-0000-4000-8000-000000000102",
+        "hub": "c2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 131,
+          "y": 42
+        },
+        "size2D": {
+          "width": 18,
+          "height": 18
+        },
+        "position3D": {
+          "x": -3000,
+          "y": 4460,
+          "z": 300
+        },
+        "size3D": {
+          "widthMm": 60,
+          "heightMm": 60,
+          "depthMm": 60
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-000000000207",
+      "modelElementId": "c1100000-0000-4000-8000-000000000105",
+      "style": {
+        "name": "SD-KIT",
+        "deviceId": "SD-KIT"
+      },
+      "references": {
+        "room": "c2200000-0000-4000-8000-000000000103",
+        "hub": "c2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 429,
+          "y": 79
+        },
+        "size2D": {
+          "width": 22,
+          "height": 22
+        },
+        "position3D": {
+          "x": 3000,
+          "y": 3500,
+          "z": 2400
+        },
+        "size3D": {
+          "widthMm": 120,
+          "heightMm": 120,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-000000000208",
+      "modelElementId": "c1100000-0000-4000-8000-000000000109",
+      "style": {
+        "name": "PLUG-KIT",
+        "deviceId": "PLUG-KIT"
+      },
+      "references": {
+        "room": "c2200000-0000-4000-8000-000000000103",
+        "hub": "c2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 520,
+          "y": 181
+        },
+        "size2D": {
+          "width": 18,
+          "height": 18
+        },
+        "position3D": {
+          "x": 4960,
+          "y": 1500,
+          "z": 300
+        },
+        "size3D": {
+          "widthMm": 60,
+          "heightMm": 60,
+          "depthMm": 60
+        },
+        "rotationZ": 90
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-000000000209",
+      "modelElementId": "c1100000-0000-4000-8000-000000000105",
+      "style": {
+        "name": "SD-HALL",
+        "deviceId": "SD-HALL"
+      },
+      "references": {
+        "room": "c2200000-0000-4000-8000-000000000101",
+        "hub": "c2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 154,
+          "y": 259
+        },
+        "size2D": {
+          "width": 22,
+          "height": 22
+        },
+        "position3D": {
+          "x": -2500,
+          "y": -100,
+          "z": 2400
+        },
+        "size3D": {
+          "widthMm": 120,
+          "heightMm": 120,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-00000000020a",
+      "modelElementId": "c1100000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "MS-HALL",
+        "deviceId": "MS-HALL"
+      },
+      "references": {
+        "room": "c2200000-0000-4000-8000-000000000101",
+        "hub": "c2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 518,
+          "y": 260
+        },
+        "size2D": {
+          "width": 20,
+          "height": 20
+        },
+        "position3D": {
+          "x": 4900,
+          "y": -100,
+          "z": 2100
+        },
+        "size3D": {
+          "widthMm": 80,
+          "heightMm": 60,
+          "depthMm": 80
+        },
+        "rotationZ": 180
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-00000000020b",
+      "modelElementId": "c1100000-0000-4000-8000-000000000105",
+      "style": {
+        "name": "SD-BED",
+        "deviceId": "SD-BED"
+      },
+      "references": {
+        "room": "c2200000-0000-4000-8000-000000000104",
+        "hub": "c2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 179,
+          "y": 334
+        },
+        "size2D": {
+          "width": 22,
+          "height": 22
+        },
+        "position3D": {
+          "x": -2000,
+          "y": -1600,
+          "z": 2400
+        },
+        "size3D": {
+          "widthMm": 120,
+          "heightMm": 120,
+          "depthMm": 50
+        },
+        "rotationZ": 0
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-00000000020c",
+      "modelElementId": "c1100000-0000-4000-8000-000000000109",
+      "style": {
+        "name": "PLUG-BED",
+        "deviceId": "PLUG-BED"
+      },
+      "references": {
+        "room": "c2200000-0000-4000-8000-000000000104",
+        "hub": "c2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 42,
+          "y": 431
+        },
+        "size2D": {
+          "width": 18,
+          "height": 18
+        },
+        "position3D": {
+          "x": -4960,
+          "y": -3500,
+          "z": 300
+        },
+        "size3D": {
+          "widthMm": 60,
+          "heightMm": 60,
+          "depthMm": 60
+        },
+        "rotationZ": 90
+      }
+    },
+    {
+      "id": "c2200000-0000-4000-8000-00000000020d",
+      "modelElementId": "c1100000-0000-4000-8000-000000000106",
+      "style": {
+        "name": "MS-BATH",
+        "deviceId": "MS-BATH"
+      },
+      "references": {
+        "room": "c2200000-0000-4000-8000-000000000105",
+        "hub": "c2200000-0000-4000-8000-000000000201"
+      },
+      "presentation": {
+        "position2D": {
+          "x": 518,
+          "y": 468
+        },
+        "size2D": {
+          "width": 20,
+          "height": 20
+        },
+        "position3D": {
+          "x": 4900,
+          "y": -4400,
+          "z": 2100
+        },
+        "size3D": {
+          "widthMm": 80,
+          "heightMm": 60,
+          "depthMm": 80
+        },
+        "rotationZ": 135
+      }
+    }
+  ],
+  "connections": []
+}
