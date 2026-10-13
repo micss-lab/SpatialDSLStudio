@@ -2,17 +2,24 @@ import fs from 'fs';
 import path from 'path';
 import * as sharedGeometry from '../../../../shared/spatial-geometry';
 import * as sharedRules from '../../../../shared/spatial-rules';
-import * as frontendGeometry from '../../../../frontend/src/services/spatial/spatial-geometry';
-import * as frontendRules from '../../../../frontend/src/services/spatial/spatial-rules';
 import { MetaClass, Metamodel, Model, ModelElement, SpatialRule, SpatialRuleKind } from '../../../../shared/types';
-import smartWarehouseMetamodel from '../../../../frontend/src/examples/data/smart-warehouse-metamodel.json';
-import smartWarehouseModel from '../../../../frontend/src/examples/data/smart-warehouse-model.json';
 
 // The frontend cannot import shared/, so the geometry and rule evaluator are
 // mirrored. These tests keep the two copies byte-identical below their
 // import blocks and run the same fixtures through both.
 
+// Frontend files are loaded at run time rather than imported: the backend build
+// compiles src/ (tests included) in an image that has no frontend/ folder.
 const repoRoot = path.resolve(__dirname, '../../../..');
+const frontendGeometry: typeof sharedGeometry = jest.requireActual(
+  path.join(repoRoot, 'frontend/src/services/spatial/spatial-geometry')
+);
+const frontendRules: typeof sharedRules = jest.requireActual(
+  path.join(repoRoot, 'frontend/src/services/spatial/spatial-rules')
+);
+const readJson = (relativePath: string): unknown => JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'));
+const smartWarehouseMetamodel = readJson('frontend/src/examples/data/smart-warehouse-metamodel.json');
+const smartWarehouseModel = readJson('frontend/src/examples/data/smart-warehouse-model.json');
 const bodyOf = (relativePath: string): string => {
   const lines = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8').split('\n');
   return lines.slice(lines.findIndex(line => !line.startsWith('import '))).join('\n');

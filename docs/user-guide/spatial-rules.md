@@ -57,6 +57,11 @@ come from `presentation.size3D`; when an element has none, the metaclass default
 ancestor with 3D notation wins). Elements that are not placed are skipped and never satisfy an "exists"
 clause.
 
+Rules read the 3D pose, not the 2D diagram position. Moving or rotating an element in the 3D view, by
+dragging it or with the **Position & Rotation** fields of the properties panel, changes the pose. A 2D
+move changes it only for elements whose 2D position equals their 3D plan position; the bundled examples
+draw schematic 2D layouts, so their 2D moves do not.
+
 Validation does not depend on which view is open. Representation-level and viewpoint-level
 `defaultSizeMm` overrides, and the renderer's built-in 500 x 800 x 200 mm placeholder, are therefore not
 used for rules. Give elements an explicit `size3D`, or set a metaclass default, when a rule should see them.
@@ -121,8 +126,8 @@ The bundled Smart Warehouse metamodel declares an abstract `FixedEquipment` supe
 | Charging station on a pathway | `adjacentTo` | ChargingStation | PathwayArea | 500 mm | plan | warning |
 | Drone clearance from racks | `minClearance` | InspectionDrone | StorageRack | 1000 mm | volume | error |
 
-To see a violation, move or rotate one conveyor into the other in the 2D or 3D view and refresh the
-validation panel.
+To see a violation, open a warehouse view in 3D, move or rotate one conveyor into the other, and refresh
+the validation panel.
 
 ## Escape hatch: OCL and JavaScript helpers
 
