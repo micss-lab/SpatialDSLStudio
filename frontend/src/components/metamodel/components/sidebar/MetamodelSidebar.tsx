@@ -25,6 +25,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ConstraintTypeSelector from '../../ConstraintTypeSelector';
 import MetaClassNotationEditor from '../../MetaClassNotationEditor';
+import SpatialRulesEditor from '../../SpatialRulesEditor';
 import { metamodelService } from '../../../../services/metamodel';
 import { MetaClass, Metamodel } from '../../../../models/types';
 
@@ -669,6 +670,12 @@ export const MetamodelSidebar: React.FC<MetamodelSidebarProps> = ({
             </Typography>
           </Box>
         )}
+        <Divider />
+        <SpatialRulesEditor
+          metamodel={metamodel}
+          readOnly={readOnly}
+          onUpdateMetamodel={onUpdateMetamodel}
+        />
       </TabPanel>
       <TabPanel value={tabValue} index={2}>
         <MetaClassNotationEditor

@@ -9,7 +9,7 @@ import {
   validateMetamodel,
   validateMetamodelVerticalPlacementPolicies,
 } from './metamodel-validation.service';
-import { validateConcreteSyntaxVerticalPlacement } from '../spatial';
+import { validateConcreteSyntaxVerticalPlacement, validateSpatialRules } from '../spatial';
 import { addMetaClass, updateMetaClass, deleteMetaClass } from './metaclass-crud.service';
 import { addMetaAttribute, updateMetaAttribute, deleteMetaAttribute } from './metaattribute-crud.service';
 import { 
@@ -169,6 +169,10 @@ class MetamodelService {
     }
     const policyErrors = validateMetamodelVerticalPlacementPolicies(metamodelData);
     if (policyErrors.length > 0) throw new Error(policyErrors[0]);
+    if (metamodelData.spatialRules !== undefined) {
+      const ruleErrors = validateSpatialRules(metamodelData.spatialRules, metamodelData);
+      if (ruleErrors.length > 0) throw new Error(ruleErrors[0]);
+    }
 
     const corePackage = metaMetamodelService.getCoreEPackage();
     const importedMetamodel: Metamodel = {

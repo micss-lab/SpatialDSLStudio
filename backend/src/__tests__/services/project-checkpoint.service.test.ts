@@ -141,6 +141,64 @@ describe('ProjectCheckpointService', () => {
     });
   });
 
+  it('round-trips metamodel spatial rules through checkpoint and restore', async () => {
+    const spatialRules = [{
+      id: 'rule-1', name: 'Racks apart', kind: 'minClearance', sourceClassId: 'rack',
+      targetClassId: 'rack', distanceMm: 1500, mode: 'plan', severity: 'error',
+    }];
+    const packageRow = {
+      id: 'package-1', name: 'Ecore', nsURI: 'urn:ecore', nsPrefix: 'ecore', classes: [], userId, projectId,
+    };
+    let metamodelRow: any = {
+      id: 'metamodel-1', name: 'Warehouse DSL', description: null, uri: 'urn:warehouse', prefix: 'wh',
+      eClass: null, classes: [{ id: 'rack', name: 'Rack' }], enums: [], constraints: [], spatialRules,
+      conformsToId: 'package-1', userId, projectId,
+    };
+    prismaMock.ePackage.findMany.mockResolvedValue([packageRow] as any);
+    prismaMock.metamodel.findMany.mockImplementation((async () => [metamodelRow]) as any);
+
+    const manifest = await projectCheckpointService.buildManifest(projectId);
+    expect(manifest.artifacts.find(item => item.id === 'metamodel-1')?.data.spatialRules).toEqual(spatialRules);
+
+    prismaMock.projectCheckpoint.findFirst.mockResolvedValue({
+      id: 'checkpoint-1', projectId, sequence: 1, tag: null, message: null, manifest,
+      contentHash: manifest.contentHash, createdById: userId, createdAt: new Date('2026-07-23T12:00:00.000Z'),
+    } as any);
+    (prismaMock.$transaction as any).mockImplementation(async (operation: Function) => operation(prismaMock));
+    (prismaMock.metamodel.upsert as any).mockImplementation(async ({ create }: any) => {
+      // The restored row is what the next snapshot reads back.
+      metamodelRow = { ...create };
+      return create;
+    });
+    metamodelRow = { ...metamodelRow, spatialRules: [] };
+
+    const restored = await projectCheckpointService.restore(projectId, 'checkpoint-1', manifest.contentHash);
+
+    expect(prismaMock.metamodel.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ id: 'metamodel-1', spatialRules }),
+    }));
+    expect(metamodelRow.spatialRules).toEqual(spatialRules);
+    expect(restored.contentHash).toBe(manifest.contentHash);
+  });
+
+  it('hashes a rule-free metamodel exactly as before spatial rules existed', async () => {
+    const legacyRow = {
+      id: 'metamodel-1', name: 'Warehouse DSL', description: null, uri: 'urn:warehouse', prefix: 'wh',
+      eClass: null, classes: [], enums: [], constraints: [], conformsToId: 'package-1', userId, projectId,
+    };
+    prismaMock.ePackage.findMany.mockResolvedValue([{
+      id: 'package-1', name: 'Ecore', nsURI: 'urn:ecore', nsPrefix: 'ecore', classes: [], userId, projectId,
+    }] as any);
+    prismaMock.metamodel.findMany.mockResolvedValue([legacyRow] as any);
+    const legacy = await projectCheckpointService.buildManifest(projectId);
+
+    prismaMock.metamodel.findMany.mockResolvedValue([{ ...legacyRow, spatialRules: [] }] as any);
+    const current = await projectCheckpointService.buildManifest(projectId);
+
+    expect(current.contentHash).toBe(legacy.contentHash);
+    expect(current.artifacts.find(item => item.id === 'metamodel-1')?.data.spatialRules).toBeUndefined();
+  });
+
   it('restores a verified checkpoint and confirms the graph root hash', async () => {
     const manifest = await projectCheckpointService.buildManifest(projectId);
     prismaMock.projectCheckpoint.findFirst.mockResolvedValue({

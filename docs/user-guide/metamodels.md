@@ -66,6 +66,7 @@ Ecore support is intended for common single-package EMF models. SpatialDSL Studi
 - enum classifiers and enum-typed attributes
 - attribute defaults through `defaultValueLiteral`
 - OCL constraints stored as Ecore annotations
+- spatial rules stored as the `EPackage` annotation `spatialdsl/spatialRules` (class names resolved on import)
 
 Known lossy or unsupported areas:
 
@@ -176,6 +177,12 @@ Use for procedural or advanced rule logic. The editor performs syntax checks and
 
 For OCL syntax examples, see [frontend/src/examples/ocl-examples.ts](../../frontend/src/examples/ocl-examples.ts).
 
+### Spatial rules
+
+The Constraints tab also holds the metamodel's **Spatial Rules**: declarative rules such as "no overlap",
+"minimum clearance", or "within a zone" over placed instances of two metaclasses. They are evaluated with
+the other constraints in browser validation and in the headless pipeline. See [Spatial Rules](spatial-rules.md).
+
 ## Validate a metamodel
 
 Metamodel validation checks structural consistency, including:
@@ -243,12 +250,14 @@ Fix: move rule to correct constraint type tab.
 - `frontend/src/components/metamodel/MetamodelManager.tsx`: Main metamodel list/create/import/export UI.
 - `frontend/src/components/metamodel/VisualMetamodelEditor.tsx`: Visual editor for classes, references, and layout.
 - `frontend/src/components/metamodel/OCLConstraintEditor.tsx`: OCL constraint authoring panel.
+- `frontend/src/components/metamodel/SpatialRulesEditor.tsx`: Spatial rule list and dialog.
 - `frontend/src/services/metamodel/metamodel.service.ts`: Frontend metamodel orchestration and state operations.
 - `backend/src/routes/metamodel.routes.ts`: Backend API endpoints for metamodel CRUD and related actions.
 
 ## Related docs
 
 - [Models](models.md)
+- [Spatial Rules](spatial-rules.md)
 - [Viewpoints and Representation Descriptions](viewpoints.md)
 - [Sirius Desktop Compatibility](../reference/sirius-compatibility.md)
 - [Roles and Sharing](roles-and-sharing.md)

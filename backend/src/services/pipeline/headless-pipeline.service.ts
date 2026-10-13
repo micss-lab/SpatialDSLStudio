@@ -46,6 +46,7 @@ const mapMetamodel = (row: any): Metamodel => ({
   classes: Array.isArray(row.classes) ? row.classes : [],
   enums: Array.isArray(row.enums) ? row.enums : [],
   constraints: Array.isArray(row.constraints) ? row.constraints : [],
+  spatialRules: Array.isArray(row.spatialRules) ? row.spatialRules : [],
 });
 
 const mapRun = (row: any): HeadlessPipelineRun => {

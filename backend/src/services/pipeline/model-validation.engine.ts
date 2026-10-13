@@ -9,21 +9,9 @@ import {
   ValidationResult,
 } from '../../../../shared/types';
 import { spatialElementErrors } from '../../middleware/presentationValidation';
+import { evaluateSpatialRules, isSubtype } from '../../../../shared/spatial-rules';
 
-export const isSubtype = (
-  metamodel: Metamodel,
-  typeId: string,
-  expectedTypeId: string,
-  visited = new Set<string>()
-): boolean => {
-  if (typeId === expectedTypeId) return true;
-  if (visited.has(typeId)) return false;
-  visited.add(typeId);
-  const metaClass = metamodel.classes.find(candidate => candidate.id === typeId);
-  return Boolean(metaClass?.superTypes?.some(superType => (
-    isSubtype(metamodel, superType, expectedTypeId, visited)
-  )));
-};
+export { isSubtype };
 
 export const valueMatchesAttribute = (value: unknown, attribute: MetaAttribute): boolean => {
   if (value === undefined || value === null || (attribute.required && value === '')) {
@@ -160,6 +148,8 @@ export class ModelValidationEngine {
         });
       }
     });
+
+    issues.push(...evaluateSpatialRules(metamodel, model));
 
     return { valid: !issues.some(issue => issue.severity === 'error'), issues };
   }

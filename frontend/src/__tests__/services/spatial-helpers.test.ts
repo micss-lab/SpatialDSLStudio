@@ -11,11 +11,12 @@ import { evaluateJSConstraint } from '../../services/constraint/js/js.validation
 import { prepareContextForOCL } from '../../services/constraint/ocl/ocl.context';
 import { Model, ModelElement, Metamodel, JSConstraint, MetaClass } from '../../models/types';
 
-// The helpers are pure AABB operations built on top of the
-// coordinate contract in spatial.helpers.ts (position3D is the element's
-// X/Y center and Z base, while size3D provides X/Y/Z extents). These tests
-// pin down the box math and confirm the helpers are reachable from both
-// the JS sandbox and the OCL context under a `spatial` namespace.
+// The helpers work on oriented boxes built from the coordinate contract in
+// spatial.helpers.ts (position3D is the element's X/Y center and Z base,
+// size3D provides local X/Y/Z extents, rotationZ turns the footprint
+// counter-clockwise seen from above). These tests pin down the box math,
+// including rotated footprints, and confirm the helpers are reachable from
+// both the JS sandbox and the OCL context under a `spatial` namespace.
 
 const metaClass: MetaClass = {
   id: 'mc-conveyor',
@@ -178,6 +179,105 @@ describe('clearance3D', () => {
 
   it('is Infinity when either element has no volume', () => {
     expect(clearance3D(overlapA, noSize)).toBe(Infinity);
+  });
+});
+
+// Rotated footprints. A 2000 x 500 mm conveyor turned 90 degrees occupies
+// 500 x 2000 mm in plan view, which an axis-aligned test gets wrong.
+const conveyor = (id: string, x: number, y: number, rotationZ: number, z = 0) => makeElement(id, {
+  position3D: { x, y, z },
+  size3D: { widthMm: 2000, heightMm: 500, depthMm: 1000 },
+  rotationZ,
+});
+
+describe('rotation-aware geometry', () => {
+  const straight = conveyor('straight', 0, 0, 0);
+
+  it('treats 0 degrees exactly like the unrotated footprint', () => {
+    expect(boundsOf(straight)).toEqual({ minX: -1000, minY: -250, maxX: 1000, maxY: 250 });
+  });
+
+  it('reports overlap for a 90 degree conveyor that crosses a straight one', () => {
+    // Unrotated, the second conveyor would span y 550..1050 and miss the first.
+    const turned = conveyor('turned', 0, 800, 90);
+    expect(boundsOf(turned)).toEqual({ minX: -250, minY: -200, maxX: 250, maxY: 1800 });
+    expect(overlaps(straight, turned)).toBe(true);
+    expect(overlaps(turned, straight)).toBe(true);
+    expect(clearance(straight, turned)).toBe(0);
+  });
+
+  it('reports no overlap for a 90 degree conveyor that an axis-aligned test would flag', () => {
+    // Unrotated, this conveyor would span x 400..2400 and overlap the first.
+    const turned = conveyor('turned-clear', 1400, 0, 90);
+    expect(overlaps(straight, turned)).toBe(false);
+    expect(overlaps(turned, straight)).toBe(false);
+    expect(clearance(straight, turned)).toBeCloseTo(150, 9);
+  });
+
+  it('does not count touching rotated faces as overlap', () => {
+    const left = conveyor('left', 0, 0, 90);
+    const right = conveyor('right', 500, 0, 90);
+    expect(overlaps(left, right)).toBe(false);
+    expect(clearance(left, right)).toBe(0);
+
+    // Two conveyors at 30 degrees, offset by exactly one width along their local Y axis.
+    const radians = (30 * Math.PI) / 180;
+    const first = conveyor('first', 0, 0, 30);
+    const second = conveyor('second', -Math.sin(radians) * 500, Math.cos(radians) * 500, 30);
+    expect(overlaps(first, second)).toBe(false);
+    expect(clearance(first, second)).toBe(0);
+  });
+
+  it('uses the rotated corners for 45 degree footprints', () => {
+    const diamond = makeElement('diamond', {
+      position3D: { x: 0, y: 0, z: 0 },
+      size3D: { widthMm: 1000, heightMm: 1000, depthMm: 100 },
+      rotationZ: 45,
+    });
+    const square = makeElement('square', {
+      position3D: { x: 1250, y: 0, z: 0 },
+      size3D: { widthMm: 1000, heightMm: 1000, depthMm: 100 },
+    });
+    const halfDiagonal = 500 * Math.SQRT2;
+
+    const bounds = boundsOf(diamond)!;
+    expect(bounds.minX).toBeCloseTo(-halfDiagonal, 9);
+    expect(bounds.maxX).toBeCloseTo(halfDiagonal, 9);
+    expect(bounds.maxY).toBeCloseTo(halfDiagonal, 9);
+    expect(overlaps(diamond, square)).toBe(false);
+    expect(clearance(diamond, square)).toBeCloseTo(750 - halfDiagonal, 9);
+
+    const closer = makeElement('closer', {
+      position3D: { x: 1150, y: 0, z: 0 },
+      size3D: { widthMm: 1000, heightMm: 1000, depthMm: 100 },
+    });
+    // The axis-aligned box of the diamond would stop at x = 500, short of 650.
+    expect(overlaps(diamond, closer)).toBe(true);
+  });
+
+  it('separates elevated and grounded elements by their vertical intervals', () => {
+    const grounded = conveyor('grounded', 0, 0, 90);
+    const elevated = conveyor('elevated', 0, 800, 0, 1500);
+    expect(overlaps(grounded, elevated)).toBe(true);
+    expect(overlaps3D(grounded, elevated)).toBe(false);
+    expect(clearance3D(grounded, elevated)).toBe(500);
+    expect(bounds3DOf(elevated)).toEqual({
+      minX: -1000, minY: 550, minZ: 1500, maxX: 1000, maxY: 1050, maxZ: 2500,
+    });
+
+    const stacked = conveyor('stacked', 0, 800, 0, 1000);
+    expect(overlaps3D(grounded, stacked)).toBe(false);
+    expect(clearance3D(grounded, stacked)).toBe(0);
+
+    const intersecting = conveyor('intersecting', 0, 800, 0, 900);
+    expect(overlaps3D(grounded, intersecting)).toBe(true);
+  });
+
+  it('combines rotated plan gaps with vertical gaps', () => {
+    const grounded = conveyor('grounded-gap', 0, 0, 0);
+    const elevated = conveyor('elevated-gap', 1400, 0, 90, 1400);
+    expect(clearance(grounded, elevated)).toBeCloseTo(150, 9);
+    expect(clearance3D(grounded, elevated)).toBeCloseTo(Math.sqrt(150 * 150 + 400 * 400), 9);
   });
 });
 

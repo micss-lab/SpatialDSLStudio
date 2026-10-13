@@ -60,8 +60,11 @@ class ViewValidationService {
   }
 
   findElementForIssue(diagram: Diagram, issue: ValidationIssue): DiagramElement | undefined {
-    if (!issue.elementId) return undefined;
-    return diagram.elements.find(element => this.getSemanticIds(element).includes(issue.elementId!));
+    for (const issueElementId of this.getIssueElementIds(issue)) {
+      const element = diagram.elements.find(candidate => this.getSemanticIds(candidate).includes(issueElementId));
+      if (element) return element;
+    }
+    return undefined;
   }
 
   getElementSeverity(
@@ -71,9 +74,15 @@ class ViewValidationService {
   ): ValidationSeverity | undefined {
     const semanticIds = this.getSemanticIds(element);
     return issues
-      .filter(issue => Boolean(issue.elementId && semanticIds.includes(issue.elementId)))
+      .filter(issue => this.getIssueElementIds(issue).some(id => semanticIds.includes(id)))
       .map(issue => issue.severity)
       .sort((left, right) => severityRank[right] - severityRank[left])[0];
+  }
+
+  /** The issue's element first, then any related elements such as the other half of a pair. */
+  private getIssueElementIds(issue: ValidationIssue): string[] {
+    return [issue.elementId, ...(issue.relatedElementIds || [])]
+      .filter((value): value is string => typeof value === 'string' && value.length > 0);
   }
 
   private getSemanticIds(element: DiagramElement): string[] {

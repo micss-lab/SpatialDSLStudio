@@ -99,6 +99,29 @@ export interface JSConstraint {
 // Common constraint type that can be either OCL or JavaScript
 export type Constraint = OCLConstraint | JSConstraint;
 
+export type SpatialRuleKind = 'noOverlap' | 'minClearance' | 'maxDistance' | 'within' | 'adjacentTo';
+
+/**
+ * Declarative spatial rule, part of the language definition. Rules quantify
+ * over placed instances of a source and a target metaclass (subtypes
+ * included); see shared/spatial-rules.ts for the exact semantics.
+ */
+export interface SpatialRule {
+  id: string;
+  name: string;
+  kind: SpatialRuleKind;
+  sourceClassId: string;
+  targetClassId: string;
+  /** Required for minClearance, maxDistance, adjacentTo; the margin for within (default 0). */
+  distanceMm?: number;
+  /** Plan-view footprint or full volume; default 'volume'. */
+  mode?: 'plan' | 'volume';
+  severity: 'error' | 'warning' | 'info';
+  message?: string;
+  /** Default true. */
+  enabled?: boolean;
+}
+
 export interface MetaClass extends MetamodelElement {
   abstract: boolean;
   superTypes: string[]; // IDs of parent metaclasses
@@ -155,6 +178,7 @@ export interface Metamodel extends MetamodelElement {
   enums?: MetaEnum[];
   conformsTo: string; // ID of the meta-metamodel package it conforms to
   constraints?: Constraint[]; // Global OCL and JavaScript constraints for the metamodel
+  spatialRules?: SpatialRule[]; // Declarative spatial rules over placed instances
   isOwner?: boolean; // owner/permission metadata from the API listing
   ownerEmail?: string; // creator/owner email; absent when the current user owns it
 }
@@ -646,6 +670,7 @@ export interface ValidationIssue {
   severity: 'error' | 'warning' | 'info';
   message: string;
   elementId?: string; // ID of the problematic element
+  relatedElementIds?: string[]; // Further elements involved, e.g. the other element of an overlapping pair
   location?: string; // Additional location info
   constraintId?: string; // ID of the OCL constraint that caused this issue
 }

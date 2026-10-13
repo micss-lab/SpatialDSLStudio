@@ -11,6 +11,7 @@ import {
 import { metamodelService } from '../metamodel';
 import { oclService } from '../constraint';
 import { jsService } from '../constraint';
+import { evaluateSpatialRules } from '../spatial';
 import { modelInheritanceUtilsService } from './model-inheritance-utils.service';
 
 /**
@@ -75,6 +76,9 @@ export class ModelValidationService {
     
     // Validate JavaScript constraints
     this.validateJSConstraints(model, metamodel, issues);
+
+    // Validate declarative spatial rules of the metamodel
+    this.validateSpatialRules(model, metamodel, issues);
 
     // Store the validation issues
     this.lastValidationIssues = issues.filter(issue => 
@@ -600,6 +604,19 @@ export class ModelValidationService {
       issues.push({
         severity: 'error',
         message: `Error validating JavaScript constraints: ${error instanceof Error ? error.message : String(error)}`,
+        elementId: model.id
+      });
+    }
+  }
+
+  private validateSpatialRules(model: Model, metamodel: Metamodel, issues: ValidationIssue[]): void {
+    try {
+      issues.push(...evaluateSpatialRules(metamodel, model));
+    } catch (error) {
+      console.error('Error validating spatial rules:', error);
+      issues.push({
+        severity: 'error',
+        message: `Error validating spatial rules: ${error instanceof Error ? error.message : String(error)}`,
         elementId: model.id
       });
     }
