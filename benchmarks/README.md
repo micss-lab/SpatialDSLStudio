@@ -43,10 +43,13 @@ stage is opened with pxr; each element's `xformOp:translate`, composed world
 translation, `xformOp:rotateZ`, `xformOp:scale`, and `spatialDsl:*` attributes
 are compared with the model after the millimetre-to-metre conversion
 (tolerance 1e-6). The Visual Components location files and the Omniverse
-`warehouse_layout.json` are compared the same way. The first and last composed
-stages are checked with the `UsdValidation` framework, and the unedited model
-is generated twice to confirm byte-identical outputs. The script exits non-zero
-on any mismatch or nondeterminism.
+`warehouse_layout.json` are compared the same way; the layout JSON gives a yaw
+only for drones (the other groups are axis-aligned footprints for the
+simulator), so their yaw is compared in USD and Visual Components only. The
+first and last composed stages are checked with the `UsdValidation` framework,
+and the unedited model is generated twice to confirm byte-identical outputs.
+The script exits non-zero on any mismatch, nondeterminism, or USD validation
+error or warning.
 
 Outputs: `results/fidelity.json`, `results/fidelity.md`, and the generated
 bundles in `results/fidelity/`. Expected runtime: under 10 seconds.

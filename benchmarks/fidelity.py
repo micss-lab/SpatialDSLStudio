@@ -44,6 +44,10 @@ LAYOUT_JSON_GROUPS = {
     "chargers": {"ChargingStation"},
     "drones": {"InspectionDrone"},
 }
+# warehouse_layout.json gives a yaw only for drones; the other groups are axis-aligned
+# footprints for the simulator. Every element's yaw is still compared in the USD stage
+# (xformOp:rotateZ) and the Visual Components files (Rz).
+LAYOUT_JSON_YAW_GROUPS = {"drones"}
 
 
 def float32(value):
@@ -141,8 +145,8 @@ def check_layout_json(edit_dir, edit, expected, tally):
                 tally.compare("omniverse-layout-json", edit, element["name"], "length", row["length"], element["widthMm"])
                 tally.compare("omniverse-layout-json", edit, element["name"], "width", row["width"], element["heightMm"])
                 tally.compare("omniverse-layout-json", edit, element["name"], "height", row["height"], element["depthMm"])
-            if "yaw" in row:
-                tally.compare("omniverse-layout-json", edit, element["name"], "yaw", row["yaw"], element["rotationZ"])
+            if group in LAYOUT_JSON_YAW_GROUPS:
+                tally.compare("omniverse-layout-json", edit, element["name"], "yaw", row.get("yaw"), element["rotationZ"])
 
 
 def compliance(path):
@@ -219,8 +223,11 @@ def main():
     RESULTS.mkdir(exist_ok=True)
     (RESULTS / "fidelity.json").write_text(json.dumps(result, indent=2) + "\n")
 
+    def compliance_passed(check):
+        return not check["errors"] and not check["failedChecks"] and not check["warnings"]
+
     def compliance_line(check):
-        status = "passed" if not check["errors"] and not check["failedChecks"] else "failed"
+        status = "passed" if compliance_passed(check) else "failed"
         return (f"| {check['edit']}/{check['layer']} | {check['validators']} | {status} | {len(check['errors'])} | "
                 f"{len(check['warnings'])} |")
 
@@ -240,7 +247,9 @@ def main():
         "USD values are read from the composed stage `warehouse_simulation.usda` (layout, asset, and physics layers): "
         "`xformOp:translate` and the composed world translation in metres, `xformOp:rotateZ` (declared `float`, so the expected "
         "yaw is rounded to single precision), `xformOp:scale`, `spatialDsl:baseElevationMm`, and `spatialDsl:className`. "
-        "Visual Components location files and the Omniverse `warehouse_layout.json` are compared in millimetres and degrees.",
+        "Visual Components location files and the Omniverse `warehouse_layout.json` are compared in millimetres and degrees. "
+        "`warehouse_layout.json` gives a yaw only for drones (the other groups are axis-aligned footprints for the simulator), "
+        "so the yaw of the other elements is compared in USD and Visual Components only.",
         "",
         "## USD validation",
         "",
@@ -266,7 +275,9 @@ def main():
             lines += [f"Checker messages for {check['edit']}:", "", *[f"- {message}" for message in details], ""]
     (RESULTS / "fidelity.md").write_text("\n".join(lines))
     print("\n".join(lines))
-    return 0 if not tally.mismatches and manifest["determinism"]["byteIdentical"] else 1
+    passed = (not tally.mismatches and manifest["determinism"]["byteIdentical"]
+              and all(compliance_passed(check) for check in checks))
+    return 0 if passed else 1
 
 
 if __name__ == "__main__":
