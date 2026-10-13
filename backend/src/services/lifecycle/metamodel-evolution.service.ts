@@ -17,6 +17,7 @@ import {
   SpatialRule,
 } from '../../../../shared/types';
 import { validateConcreteSyntaxVerticalPlacement } from '../../../../shared/spatial';
+import { validateSpatialRules } from '../../../../shared/spatial-rules';
 import { contentHash, stableStringify } from './canonical';
 import { projectCheckpointService } from './project-checkpoint.service';
 
@@ -373,6 +374,9 @@ class MetamodelEvolutionService {
       }
     });
 
+    // Apply writes the rules directly, so they get the same validation as a metamodel
+    // update. Class references are checked below to name removed classes.
+    blockers.push(...validateSpatialRules(next.spatialRules ?? []));
     const nextClassNames = new Map(next.classes.map(metaClass => [metaClass.id, metaClass.name]));
     const currentClassNames = new Map(context.current.classes.map(metaClass => [metaClass.id, metaClass.name]));
     asArray<SpatialRule>(next.spatialRules).forEach(rule => {

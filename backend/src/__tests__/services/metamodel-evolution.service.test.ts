@@ -198,6 +198,21 @@ describe('MetamodelEvolutionService', () => {
     expect(withoutRule.blockers).toEqual([]);
   });
 
+  it('blocks an evolution whose spatial rules are not valid rules', async () => {
+    const report = await metamodelEvolutionService.preview(projectId, metamodelId, {
+      ...currentMetamodel,
+      spatialRules: [
+        { id: 'rule-1', name: 'Gap', kind: 'minClearance', sourceClassId: 'robot-class', targetClassId: 'robot-class', severity: 'error' },
+        { id: 'rule-1', name: 'Apart', kind: 'noOverlap', sourceClassId: 'robot-class', targetClassId: 'robot-class', severity: 'error' },
+      ] as any,
+    });
+
+    expect(report.blockers).toEqual(expect.arrayContaining([
+      'spatialRules[0].distanceMm is required for minClearance',
+      expect.stringContaining('duplicate'),
+    ]));
+  });
+
   it('keeps the fingerprint of rule-free metamodels and changes it when rules change', async () => {
     const plain = await metamodelEvolutionService.preview(projectId, metamodelId, currentMetamodel);
     const emptyRules = await metamodelEvolutionService.preview(projectId, metamodelId, { ...currentMetamodel, spatialRules: [] });
