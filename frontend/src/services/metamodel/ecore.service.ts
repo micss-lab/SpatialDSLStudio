@@ -9,6 +9,7 @@ import {
   SpatialRule,
 } from '../../models/types';
 import { metamodelService } from './metamodel.service';
+import { validateSpatialRule } from '../spatial/spatial-rules';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface EcoreExportWarning {
@@ -151,7 +152,7 @@ class EcoreService {
             });
             return;
           }
-          rules.push({
+          const rule: SpatialRule = {
             id: uuidv4(),
             name,
             kind: parsed.kind,
@@ -162,7 +163,17 @@ class EcoreService {
             severity: parsed.severity || 'error',
             ...(parsed.message !== undefined && { message: parsed.message }),
             ...(parsed.enabled !== undefined && { enabled: parsed.enabled }),
-          });
+          };
+          const errors = validateSpatialRule(rule);
+          if (errors.length > 0) {
+            warnings.push({
+              type: 'skipped-annotation',
+              message: `Skipped spatial rule ${name}; it is not a valid spatial rule.`,
+              details: errors,
+            });
+            return;
+          }
+          rules.push(rule);
         } catch {
           warnings.push({
             type: 'skipped-annotation',

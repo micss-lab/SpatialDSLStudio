@@ -289,6 +289,39 @@ describe('Ecore spatial rules annotation', () => {
     })]);
     expect(mockGetMetamodelById(result.metamodelId!)!.spatialRules).toBeUndefined();
   });
+
+  it('skips spatial rules that resolve but are not valid rules', () => {
+    const ecore = `<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0"
+  xmlns:xmi="http://www.omg.org/XMI"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+  name="plant" nsURI="http://example.org/plant" nsPrefix="plant">
+  <eAnnotations source="spatialdsl/spatialRules">
+    <details key="Bogus" value="{&quot;kind&quot;:&quot;bogus&quot;,&quot;source&quot;:&quot;Rack&quot;,&quot;target&quot;:&quot;Rack&quot;}"/>
+    <details key="No gap" value="{&quot;kind&quot;:&quot;minClearance&quot;,&quot;source&quot;:&quot;Rack&quot;,&quot;target&quot;:&quot;Rack&quot;}"/>
+    <details key="Apart" value="{&quot;kind&quot;:&quot;noOverlap&quot;,&quot;source&quot;:&quot;Rack&quot;,&quot;target&quot;:&quot;Rack&quot;}"/>
+  </eAnnotations>
+  <eClassifiers xsi:type="ecore:EClass" name="Rack"/>
+</ecore:EPackage>`;
+
+    const result = ecoreService.importFromEcoreWithReport(ecore);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        type: 'skipped-annotation',
+        message: 'Skipped spatial rule Bogus; it is not a valid spatial rule.',
+        details: [expect.stringContaining('kind')],
+      }),
+      expect.objectContaining({
+        type: 'skipped-annotation',
+        message: 'Skipped spatial rule No gap; it is not a valid spatial rule.',
+        details: ['spatialRule.distanceMm is required for minClearance'],
+      }),
+    ]);
+    expect(mockGetMetamodelById(result.metamodelId!)!.spatialRules).toEqual([
+      expect.objectContaining({ name: 'Apart', kind: 'noOverlap' }),
+    ]);
+  });
 });
 
 describe('Model XMI interop', () => {
