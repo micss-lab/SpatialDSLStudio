@@ -291,8 +291,12 @@ export const getEdgeEndpointPair = (
 ): { source: Point2D; target: Point2D } => {
   const sourceGeometry = getShapeGeometry(sourceElement, options.sourceShape);
   const targetGeometry = getShapeGeometry(targetElement, options.targetShape);
-  const sourceToward = options.sourceToward || targetGeometry.center;
-  const targetToward = options.targetToward || sourceGeometry.center;
+  // Coinciding centres give no direction; leave on the right and arrive on the left.
+  const awayFrom = (center: Point2D, toward: Point2D, dx: number): Point2D => (
+    toward.x === center.x && toward.y === center.y ? { x: center.x + dx, y: center.y } : toward
+  );
+  const sourceToward = awayFrom(sourceGeometry.center, options.sourceToward || targetGeometry.center, 1);
+  const targetToward = awayFrom(targetGeometry.center, options.targetToward || sourceGeometry.center, -1);
 
   return {
     source: sourceUsesCenter ? sourceGeometry.center : getShapeBoundaryPoint(sourceGeometry, sourceToward),
@@ -341,4 +345,25 @@ export const getPolylineMidpoint = (points: Point2D[]): Point2D => {
     remaining -= lengths[index];
   }
   return points[points.length - 1];
+};
+
+/**
+ * Default path of a self-reference edge, in the stored edge-path form
+ * `[source placeholder, ...bend points, target placeholder]`: a loop out of the
+ * top edge, around the right side, and back into the bottom edge.
+ */
+export const getSelfReferencePath = (element: DiagramElement): Point2D[] => {
+  const x = element.x || 0;
+  const y = element.y || 0;
+  const width = element.width || 0;
+  const height = element.height || 0;
+  const center = { x: x + width / 2, y: y + height / 2 };
+  const offset = 40;
+  return [
+    center,
+    { x: x + width / 2 + offset, y },
+    { x: x + width / 2 + offset, y: y + height + offset },
+    { x: x + width / 2, y: y + height + offset },
+    center,
+  ];
 };

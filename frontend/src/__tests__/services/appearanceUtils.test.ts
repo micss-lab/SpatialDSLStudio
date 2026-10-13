@@ -11,6 +11,7 @@ import {
   getShapeBoundaryPoint,
   getShapeGeometry,
   getNearestAttachmentOnBoundary,
+  getSelfReferencePath,
   AppearanceSettings,
 } from '../../components/diagram/2d/utils/appearanceUtils';
 
@@ -284,6 +285,30 @@ describe('edge endpoint clipping', () => {
     const { source, target } = getEdgeEndpointPair(wide, far);
     expect(source).toEqual({ x: 250, y: 50 });
     expect(target).toEqual({ x: 400, y: 50 });
+  });
+
+  it('ends a self-reference or colocated nodes on opposite sides', () => {
+    const { source, target } = getEdgeEndpointPair(wide, wide);
+    expect(source).toEqual({ x: 250, y: 50 });
+    expect(target).toEqual({ x: 50, y: 50 });
+  });
+
+  it('stores a self-reference path whose inner points are all bends', () => {
+    const path = getSelfReferencePath(below);
+    expect(path).toEqual([
+      { x: 150, y: 250 },
+      { x: 190, y: 220 },
+      { x: 190, y: 320 },
+      { x: 150, y: 320 },
+      { x: 150, y: 250 },
+    ]);
+    const bends = path.slice(1, -1);
+    const { source, target } = getEdgeEndpointPair(below, below, false, false, {
+      sourceToward: bends[0],
+      targetToward: bends[bends.length - 1],
+    });
+    expect(source).toEqual({ x: 190, y: 220 });
+    expect(target).toEqual({ x: 150, y: 280 });
   });
 
   it('clips towards the first and last bend points when the edge has bends', () => {

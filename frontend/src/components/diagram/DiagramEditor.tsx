@@ -34,6 +34,7 @@ import {
   getFillColor,
   getNearestAttachmentOnBoundary,
   getPolylineMidpoint,
+  getSelfReferencePath,
   getShapeBoundaryPoint,
   getShapeGeometry,
   getStrokeColor,
@@ -295,15 +296,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
               // Create edge with bend points if it's a self-reference
               if (targetElement.id === edgeStartElement.id) {
                 // For self-references, we'll add default bend points to make it visually clear
-                const offsetX = 40; // Horizontal offset for the bend point
-                const offsetY = 40; // Vertical offset for the bend point
-                
-                // Calculate bend points based on element's position and size
-                const bendPoints = [
-                  { x: edgeStartElement.x! + edgeStartElement.width! / 2 + offsetX, y: edgeStartElement.y! }, 
-                  { x: edgeStartElement.x! + edgeStartElement.width! / 2 + offsetX, y: edgeStartElement.y! + edgeStartElement.height! + offsetY },
-                  { x: edgeStartElement.x! + edgeStartElement.width! / 2, y: edgeStartElement.y! + edgeStartElement.height! + offsetY }
-                ];
+                const bendPoints = getSelfReferencePath(edgeStartElement);
                 
                 modelService.setModelElementReference(
                   diagram.modelId,
@@ -402,15 +395,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
       // Get source element to calculate bend points
       const sourceElement = diagram?.elements.find(e => e.id === sourceId);
       if (sourceElement) {
-        const offsetX = 40; // Horizontal offset for the bend point
-        const offsetY = 40; // Vertical offset for the bend point
-        
-        // Calculate bend points based on element's position and size
-        bendPoints = [
-          { x: sourceElement.x! + sourceElement.width! / 2 + offsetX, y: sourceElement.y! }, 
-          { x: sourceElement.x! + sourceElement.width! / 2 + offsetX, y: sourceElement.y! + sourceElement.height! + offsetY },
-          { x: sourceElement.x! + sourceElement.width! / 2, y: sourceElement.y! + sourceElement.height! + offsetY }
-        ];
+        bendPoints = getSelfReferencePath(sourceElement);
       }
     }
     
@@ -1506,7 +1491,8 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
       return null;
     }
     
-    // Stored edge points keep placeholder ends; only the inner points are bends.
+    // Stored edge paths keep placeholder ends (see DiagramElement.points); only the
+    // inner points are bends.
     const bendPoints = Array.isArray(element.points) && element.points.length > 2
       ? element.points.slice(1, -1)
       : [];

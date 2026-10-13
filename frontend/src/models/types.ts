@@ -590,7 +590,9 @@ export interface DiagramElement {
   containerMappingId?: string; // Mapping that makes this node a visual container
   style: Record<string, any>; // Visual styling - make it required
   referenceAttributes?: Record<string, any>; // Attributes for references (new)
-  points?: Array<{x: number, y: number}>; // Control points for edge routing (new)
+  // Edge path [source placeholder, ...bend points, target placeholder]; the renderer
+  // replaces both ends with points clipped to the node outlines.
+  points?: Array<{x: number, y: number}>;
 }
 
 export interface Diagram {

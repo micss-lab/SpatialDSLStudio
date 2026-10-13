@@ -40,13 +40,33 @@ const appearanceOf = (element: DiagramElement): Record<string, any> => (
 
 const cross = (o: Point2D, a: Point2D, b: Point2D): number => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
 
-/** Proper crossing: the segments intersect at a point interior to both. */
-const segmentsCross = ([a, b]: Segment, [c, d]: Segment): boolean => {
+const EPSILON = 1e-6;
+
+const onSegment = (p: Point2D, [a, b]: Segment): boolean => (
+  Math.abs(cross(a, b, p)) <= EPSILON * Math.max(1, Math.hypot(b.x - a.x, b.y - a.y))
+  && p.x >= Math.min(a.x, b.x) - EPSILON && p.x <= Math.max(a.x, b.x) + EPSILON
+  && p.y >= Math.min(a.y, b.y) - EPSILON && p.y <= Math.max(a.y, b.y) + EPSILON
+);
+
+/**
+ * Points where two segments meet: the intersection of a proper crossing, plus any
+ * endpoint lying on the other segment (T-junctions, shared ends, collinear overlaps).
+ */
+const segmentContacts = (first: Segment, second: Segment): Point2D[] => {
+  const [a, b] = first;
+  const [c, d] = second;
   const d1 = cross(c, d, a);
   const d2 = cross(c, d, b);
   const d3 = cross(a, b, c);
   const d4 = cross(a, b, d);
-  return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
+    const t = d1 / (d1 - d2);
+    return [{ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }];
+  }
+  return [
+    ...[a, b].filter(point => onSegment(point, second)),
+    ...[c, d].filter(point => onSegment(point, first)),
+  ];
 };
 
 const segmentHitsBox = ([a, b]: Segment, box: Box): boolean => {
@@ -120,18 +140,36 @@ const edgeLabelBox = (label: string, at: Point2D): Box => {
   return { minX: at.x - width / 2, maxX: at.x + width / 2, minY: at.y - 9, maxY: at.y + 6 };
 };
 
+describe('segmentContacts', () => {
+  const p = (x: number, y: number): Point2D => ({ x, y });
+  it('reports crossings, T-junctions, and collinear overlaps, but not disjoint segments', () => {
+    expect(segmentContacts([p(0, 0), p(10, 10)], [p(0, 10), p(10, 0)])).toEqual([p(5, 5)]);
+    expect(segmentContacts([p(0, 0), p(10, 0)], [p(5, 0), p(5, 10)])).toEqual([p(5, 0)]);
+    expect(segmentContacts([p(0, 0), p(10, 0)], [p(5, 0), p(15, 0)])).toEqual([p(10, 0), p(5, 0)]);
+    expect(segmentContacts([p(0, 0), p(10, 0)], [p(0, 1), p(10, 1)])).toEqual([]);
+  });
+});
+
 describe.each((activityViewsFixture as unknown as Diagram[]).map(view => [view.name, view] as const))(
   'activity example view %s',
   (_name, view) => {
     afterEach(() => jest.restoreAllMocks());
 
-    it('has no edge crossings', () => {
+    it('has no edge crossings or touching edges', () => {
       const { edges } = materialize(view);
       expect(edges.length).toBeGreaterThan(5);
       const crossings: string[] = [];
       edges.forEach((first, i) => edges.slice(i + 1).forEach(second => {
+        // Edges that share a node may meet only on that node's outline or inside it.
+        const sharedBoxes = [first.source, first.target]
+          .filter(node => node.id === second.source.id || node.id === second.target.id)
+          .map(node => nodeBox(node));
         first.segments.forEach(a => second.segments.forEach(b => {
-          if (segmentsCross(a, b)) crossings.push(`${first.edge.id} x ${second.edge.id}`);
+          const contacts = segmentContacts(a, b).filter(point => !sharedBoxes.some(box => (
+            point.x >= box.minX - EPSILON && point.x <= box.maxX + EPSILON
+            && point.y >= box.minY - EPSILON && point.y <= box.maxY + EPSILON
+          )));
+          if (contacts.length > 0) crossings.push(`${first.edge.id} x ${second.edge.id}`);
         }));
       }));
       expect(crossings).toEqual([]);
