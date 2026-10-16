@@ -5,6 +5,7 @@ import { DiagramElement, MetaClass, Metamodel, Model, Position3D, Representation
 import { appearanceService, mmToPixel } from '../../services/diagram';
 import { domainToRenderPosition, normalizePosition3D } from '../../services/spatial';
 import ShapeIndicator3D from './ShapeIndicator3D';
+import { isHitWithin } from './3d/utils/selection';
 
 // Represents a 3D element with position and rotation information
 export interface Element3D extends DiagramElement {
@@ -192,7 +193,7 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
     e.nativeEvent?.stopImmediatePropagation();
     
     // Only handle clicks if we're not in the middle of dragging
-    if (!isDragging && e.object && (e.object === meshRef.current || e.object.parent === groupRef.current)) {
+    if (!isDragging && isHitWithin(e.object, [meshRef.current, groupRef.current])) {
       onClick();
     }
   }, [onClick, isDragging]);
@@ -206,7 +207,7 @@ const Node3D = forwardRef<THREE.Group, Node3DProps>(({
     if (lowPerformance) return;
     
     // Verify this is a genuine click on our element
-    if (e.object && (e.object === meshRef.current || e.object.parent === groupRef.current)) {
+    if (isHitWithin(e.object, [meshRef.current, groupRef.current])) {
       // Only select if not already selected
       if (!selected) {
         onClick();
