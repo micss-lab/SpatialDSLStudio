@@ -1,0 +1,92 @@
+name: Health Probe
+
+on:
+  workflow_call:
+    inputs:
+      app-url:
+        description: Base URL of the deployment to probe.
+        type: string
+        required: true
+      delay-seconds:
+        description: Seconds to wait before the first request, so a brief blip can clear.
+        type: number
+        default: 0
+    outputs:
+      status:
+        description: '"up" if the app returned a healthy response, "down" otherwise.'
+        value: ${{ jobs.probe.outputs.status }}
+      detail:
+        description: Why the probe concluded the app was down.
+        value: ${{ jobs.probe.outputs.detail }}
+
+jobs:
+  probe:
+    name: Ping production
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.probe.outputs.status }}
+      detail: ${{ steps.probe.outputs.detail }}
+    steps:
+      - name: Ping health endpoint
+        id: probe
+        env:
+          APP_URL: ${{ inputs.app-url }}
+          DELAY_SECONDS: ${{ inputs.delay-seconds }}
+        # Reports its verdict through outputs instead of the exit code, so that a
+        # single unreachable runner cannot fail the workflow on its own.
+        run: |
+          if [ -z "$APP_URL" ]; then
+            echo "::error::The APP_URL repository variable is not set."
+            exit 1
+          fi
+
+          health_url="$APP_URL/api/health"
+
+          if [ "$DELAY_SECONDS" -gt 0 ]; then
+            echo "Waiting ${DELAY_SECONDS}s before probing..."
+            sleep "$DELAY_SECONDS"
+          fi
+
+          echo "Runner egress IP: $(curl -s --max-time 10 https://api.ipify.org || echo unknown)"
+
+          describe_transport_failure() {
+            case "$1" in
+              6)        echo "DNS lookup failed" ;;
+              7)        echo "could not connect to the host on port 443" ;;
+              28)       echo "no answer: the TCP connection timed out" ;;
+              35|60|77) echo "TLS handshake failed (curl exit $1)" ;;
+              52)       echo "the server closed the connection without responding" ;;
+              56)       echo "the connection was reset while reading the response" ;;
+              *)        echo "curl exit $1" ;;
+            esac
+          }
+
+          body=$(mktemp)
+          attempts=3
+          detail="no attempt completed"
+
+          for attempt in $(seq 1 $attempts); do
+            echo "Attempt $attempt of $attempts: GET $health_url"
+
+            if http_code=$(curl -sS -o "$body" -w '%{http_code}' \
+                 --connect-timeout 10 --max-time 30 "$health_url"); then
+              if [ "$http_code" = "200" ] && jq -e '.success == true' "$body" > /dev/null 2>&1; then
+                echo "  healthy: $(cat "$body")"
+                echo "status=up" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              detail="the app answered with HTTP $http_code"
+              echo "  $detail: $(head -c 300 "$body")"
+            else
+              detail=$(describe_transport_failure $?)
+              echo "  $detail"
+            fi
+
+            if [ "$attempt" -lt "$attempts" ]; then
+              sleep 15
+            fi
+          done
+
+          echo "::warning::$health_url is not healthy from this runner: $detail"
+          echo "status=down" >> "$GITHUB_OUTPUT"
+          echo "detail=$detail" >> "$GITHUB_OUTPUT"

@@ -5,41 +5,47 @@ on:
     - cron: '*/30 * * * *'  # every 30 minutes
   workflow_dispatch:
 
+# One failed probe does not mean the app is down. GitHub-hosted runners are
+# intermittently blackholed by the network in front of the VPS, which from a
+# single runner is indistinguishable from an outage: every request times out
+# for the whole run, then the next run from a different IP succeeds. Each stage
+# below therefore runs on a fresh runner with a different egress IP, and only a
+# failure seen from all three fails the workflow and sends a notification.
 jobs:
-  ping:
-    name: Ping Production
+  probe:
+    name: Probe
+    uses: ./.github/workflows/health-probe.yml
+    with:
+      app-url: ${{ vars.APP_URL }}
+
+  recheck:
+    name: Re-check
+    needs: probe
+    if: needs.probe.outputs.status == 'down'
+    uses: ./.github/workflows/health-probe.yml
+    with:
+      app-url: ${{ vars.APP_URL }}
+      delay-seconds: 60
+
+  confirm:
+    name: Confirm
+    needs: recheck
+    if: needs.recheck.outputs.status == 'down'
+    uses: ./.github/workflows/health-probe.yml
+    with:
+      app-url: ${{ vars.APP_URL }}
+      delay-seconds: 120
+
+  alert:
+    name: Production is down
+    needs: [probe, recheck, confirm]
+    if: needs.confirm.outputs.status == 'down'
     runs-on: ubuntu-latest
     steps:
-      - name: Check production health
+      - name: Report outage
         run: |
-          max_attempts=5
-          attempt=1
-          delay=10
-          max_delay=60
-          health_url="${{ vars.APP_URL }}/api/health"
-          
-          while [ $attempt -le $max_attempts ]; do
-            echo "Attempt $attempt of $max_attempts..."
-            
-            if response=$(curl -sfS --connect-timeout 10 --max-time 30 --retry 2 --retry-delay 5 --retry-all-errors "$health_url"); then
-              echo "$response"
-              if echo "$response" | jq -e '.success == true' > /dev/null; then
-                echo "✅ Health check passed"
-                exit 0
-              fi
-            fi
-            
-            if [ $attempt -lt $max_attempts ]; then
-              echo "⚠️ Attempt $attempt failed, retrying in ${delay}s..."
-              sleep $delay
-              delay=$((delay * 2))
-              if [ $delay -gt $max_delay ]; then
-                delay=$max_delay
-              fi
-            fi
-            
-            attempt=$((attempt + 1))
-          done
-          
-          echo "❌ Health check failed after $max_attempts attempts"
+          echo "::error::${{ vars.APP_URL }} failed three health probes from three runners."
+          echo "Probe:   ${{ needs.probe.outputs.detail }}"
+          echo "Re-check: ${{ needs.recheck.outputs.detail }}"
+          echo "Confirm: ${{ needs.confirm.outputs.detail }}"
           exit 1
