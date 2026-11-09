@@ -42,6 +42,12 @@ inside the phase plans until run on the required software/hardware.
 | 12 | [Metamodel evolution and co-evolution](phase-12-metamodel-coevolution.md) | [x] |
 | 13 | [Reproducible headless MDE pipelines](phase-13-headless-mde-pipelines.md) | [x] |
 
+### Project scoping track
+
+| Plan | Status |
+| --- | --- |
+| [Projects as the scoping unit for every artifact](project-scoping/00-master-plan.md), five phases | [~] |
+
 ## How to use
 
 1. Pick the next phase per the sequencing in `ROADMAP.md`.
