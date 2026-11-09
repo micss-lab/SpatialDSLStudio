@@ -53,7 +53,7 @@ jobs:
             case "$1" in
               6)        echo "DNS lookup failed" ;;
               7)        echo "could not connect to the host on port 443" ;;
-              28)       echo "no answer: the TCP connection timed out" ;;
+              28)       echo "timed out: no complete answer within the connect or 30 s request limit" ;;
               35|60|77) echo "TLS handshake failed (curl exit $1)" ;;
               52)       echo "the server closed the connection without responding" ;;
               56)       echo "the connection was reset while reading the response" ;;
