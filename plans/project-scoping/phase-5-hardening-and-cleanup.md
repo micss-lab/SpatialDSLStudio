@@ -5,6 +5,14 @@ admin tooling, seed/demo/docs, and remove interim tolerances introduced in Phase
 
 Depends on: Phases 1-4 live and stable; backfill verified complete in all environments.
 
+## 0. Reconcile with the shipped code first
+
+This phase was written in July, before Phases 1 to 3 shipped. Checked against `main` on 2026-11-09:
+
+- **Nine scoped tables, not seven.** `EPackage` and `StoredFile` also have an optional `projectId`, alongside `Metamodel`, `Viewpoint`, `Model`, `Diagram`, `TransformationRule`, `CodeGenerationProject` and `TestCase`. The audit in §1 and the hardening scope must cover all nine. Reconcile the exclusions in master plan D6, Phase 1 §1.2 and §6 below.
+- **Moves must carry the metamodel's `EPackage`.** `project-checkpoint.service.ts` rejects a manifest that references an artifact outside the project, so the closure in §2 has to move the package, or clone and rebind it, and handle packages shared between metamodels and name clashes in the destination. Test the dependency closure of both projects.
+- **§4 has shipped.** List routes already filter by `req.projectContext.projectId`, and #44 removed the all-project fallback. Treat server-side scoping as the baseline that any later change must keep.
+
 ## 1. Make `projectId` required
 
 Precondition audit script (extend `backend/scripts/migrate-projects.ts` with `--verify`):
