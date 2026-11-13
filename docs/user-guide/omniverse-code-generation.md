@@ -74,6 +74,10 @@ The generated Python script creates a `.usda` USD stage with:
 - a placeholder cube only for unmapped classes or unavailable asset files
 - source metadata attributes such as `spatialDsl:sourceName`,
   `spatialDsl:className`, and source coordinates in millimeters
+- in the layered layout layer and `warehouse_layout.json`, the ID of the model
+  element behind each prim and record (`spatialDsl:elementId`, `id`), so a
+  recorded simulation run can be attributed to model elements (see the Twin
+  loop section of `benchmarks/README.md`)
 
 The legacy Python builder remains useful for its explicit missing-asset cube
 fallback. The layered root adds a real physics scene, proxy colliders, robot

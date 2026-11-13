@@ -22,6 +22,7 @@ import math
 import os
 import time
 
+import observe
 from layout import load_layout, scene_bounds
 
 ROBOT_ASSET = "nvidia-f1tenth-amr/f1tenth_amr_collision.usda"
@@ -60,6 +61,11 @@ def parse_args():
         "--save-runtime-layer",
         help="export the non-destructive session-layer physics/control overrides on shutdown",
     )
+    parser.add_argument(
+        "--observe-out",
+        help="record the world pose of every generated prim to this observation log (needs --scene)",
+    )
+    parser.add_argument("--observe-hz", type=float, default=2.0)
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--max-seconds", type=float, default=0.0)
     return parser.parse_args()
@@ -125,6 +131,8 @@ def main():
     args = parse_args()
     layout = load_layout(args.layout)
     asset_root = os.path.abspath(os.path.expanduser(args.asset_root))
+    if args.observe_out and not args.scene:
+        raise SystemExit("--observe-out needs --scene: only generated prims carry model element IDs")
 
     from isaacsim import SimulationApp
     simulation_app = SimulationApp({"headless": args.headless})
@@ -323,7 +331,7 @@ def main():
             )
         )
         robots.append({
-            "name": record["name"], "opc": "Robot%d" % (index + 1),
+            "name": record["name"], "id": record.get("id"), "opc": "Robot%d" % (index + 1),
             "x": record["x"], "y": record["y"], "heading": 0.0,
             "prim": prim, "body": body, "t_attr": t_attr, "rz_attr": rz_attr,
             "left_joint": left_joint, "right_joint": right_joint,
@@ -342,6 +350,20 @@ def main():
 
     dt = 1.0 / SIM_HZ
     sim_time = 0.0
+    recorder = None
+    if args.observe_out:
+        traced = observe.traced_prims(stage)
+        if not traced or not all(r["id"] for r in robots):
+            raise SystemExit("Scene or layout carries no model element IDs; regenerate the bundle")
+        recorder = observe.ObservationRecorder(
+            os.path.abspath(os.path.expanduser(args.observe_out)),
+            source="isaac-sim",
+            layout_sha256=observe.file_sha256(args.layout),
+            scene=os.path.basename(args.scene),
+            controlled=[r["id"] for r in robots if r["id"]],
+        )
+        recorder.sample(sim_time, observe.sample_stage(traced))
+        next_observation = 1.0 / args.observe_hz
     try:
         while simulation_app.is_running():
             for r in robots:
@@ -412,9 +434,15 @@ def main():
                     ua.DataValue(ua.Variant([r["x"], r["y"], r["heading"]], ua.VariantType.Double)))
             simulation_app.update()
             sim_time += dt
+            if recorder and sim_time >= next_observation:
+                recorder.sample(sim_time, observe.sample_stage(traced))
+                next_observation += 1.0 / args.observe_hz
             if args.max_seconds > 0.0 and sim_time >= args.max_seconds:
                 break
     finally:
+        if recorder:
+            recorder.close()
+            print("[sim] wrote %d observation samples to %s" % (recorder.samples, recorder.path))
         if args.save_runtime_layer:
             runtime_path = os.path.abspath(os.path.expanduser(args.save_runtime_layer))
             stage.GetSessionLayer().Export(runtime_path)

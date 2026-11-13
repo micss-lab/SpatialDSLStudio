@@ -99,12 +99,32 @@ Python can install it with `./python.sh -m pip install asyncua`.
 The robots plan paths around the racks and dock and yield to each other at
 crossings; the brain reassigns pickup/drop-off goals as they arrive.
 
+## Recording a run
+
+Every prim of a generated layered scene carries the ID of the model element it
+was generated from (`spatialDsl:elementId`), and so does every record of a
+generated `warehouse_layout.json` (`id`). Add `--observe-out observations.jsonl`
+(and optionally `--observe-hz`, default 2) to the simulator command to record
+the world pose of every stamped prim while the scene runs. It needs `--scene`,
+because only generated prims carry the stamp.
+
+The log is JSON Lines: a header naming the source, the hash of the layout the
+run used, and the elements the simulator drives, then one record per element
+per sample (`t`, `elementId`, `prim`, `x`, `y`, `z` in metres, `yaw` in
+degrees). `observe.py` documents the format.
+
+`run_standin_sim.py` writes the same log without Isaac Sim, a GPU, or OPC UA:
+the brain drives the robots kinematically, everything else stays at its
+authored pose, and `--disturb "NAME:DX,DY[,DZ[,DYAW]]@T"` displaces an element
+at a chosen time. `benchmarks/README.md` (Twin loop) describes how a log is
+lifted back onto the model and checked against its spatial rules.
+
 ## Tests
 
 Pure-Python, no Isaac Sim or OPC UA needed:
 
 ```bash
-python3 -m unittest test_nav test_brain test_runtime_modes test_layout
+python3 -m unittest test_nav test_brain test_runtime_modes test_layout test_observe
 ```
 
 - `test_nav.py`: A* routes around obstacles / returns None when walled off;
@@ -115,6 +135,9 @@ python3 -m unittest test_nav test_brain test_runtime_modes test_layout
   joint geometry.
 - `test_layout.py`: millimetre-to-metre XYZ scaling, exact 4.5 m/0 m drone base
   elevations, and separation from the ground obstacle set.
+- `test_observe.py`: the observation log format, the stand-in (only robots
+  move; a disturbance displaces its element from its time on), and reading the
+  stamp, pose, and authoring layer from a USD stage (skipped without pxr).
 
 ## Swapping the transport
 
