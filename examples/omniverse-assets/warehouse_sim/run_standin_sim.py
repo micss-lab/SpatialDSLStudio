@@ -11,7 +11,8 @@ placed.
       --authored authored.jsonl --observe-out observations.jsonl \
       --disturb "Storage Rack #2:-1.2,0@20"
 
-`--authored` is the output of `observe.py snapshot` for the generated scene.
+`--authored` is the output of `observe.py snapshot --layout` for the same
+generated bundle as `--layout`.
 `--disturb NAME:DX,DY[,DZ[,DYAW]]@T` displaces the named element by metres and
 degrees at simulation time T (repeatable). T = 0 means the element never sits
 at its authored pose.
@@ -55,7 +56,13 @@ def parse_args():
 
 def run(layout_path, authored_path, out_path, *, seconds=60.0, observe_hz=2.0, disturbances=()):
     layout = load_layout(layout_path)
-    _, authored_samples = read_log(authored_path)
+    authored_header, authored_samples = read_log(authored_path)
+    bundle_files = authored_header.get("bundleFiles") or {}
+    if file_sha256(layout_path) not in bundle_files.values():
+        raise SystemExit(
+            "The layout and the authored snapshot come from different generations; take the snapshot "
+            "with `observe.py snapshot --layout` from the same bundle."
+        )
     poses = {element_id: dict(record) for element_id, record in authored_samples[0][1].items()}
     for pose in poses.values():
         pose.pop("t", None)
@@ -82,7 +89,8 @@ def run(layout_path, authored_path, out_path, *, seconds=60.0, observe_hz=2.0, d
     }
 
     recorder = ObservationRecorder(
-        out_path, source="standin", layout_sha256=file_sha256(layout_path),
+        out_path, source="standin",
+        bundle={"bundleFingerprint": authored_header.get("bundleFingerprint"), "bundleFiles": bundle_files},
         scene=os.path.basename(authored_path), controlled=robot_ids.values(),
     )
     pending = sorted(disturbances, key=lambda item: item["t"])
@@ -97,6 +105,10 @@ def run(layout_path, authored_path, out_path, *, seconds=60.0, observe_hz=2.0, d
             pose["y"] += disturbance["dy"]
             pose["z"] += disturbance["dz"]
             pose["yaw"] += disturbance["dyaw"]
+            if disturbance["name"] in reported:
+                # A driven robot: move the pose the brain sees too, or the next step undoes the disturbance.
+                x, y, heading = reported[disturbance["name"]]
+                reported[disturbance["name"]] = (x + disturbance["dx"], y + disturbance["dy"], heading + disturbance["dyaw"])
         for name, (x, y, heading) in reported.items():
             poses[robot_ids[name]].update({"x": x, "y": y, "yaw": heading})
         if step % sample_every == 0:

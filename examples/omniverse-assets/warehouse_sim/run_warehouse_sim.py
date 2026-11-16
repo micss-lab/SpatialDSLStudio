@@ -358,7 +358,7 @@ def main():
         recorder = observe.ObservationRecorder(
             os.path.abspath(os.path.expanduser(args.observe_out)),
             source="isaac-sim",
-            layout_sha256=observe.file_sha256(args.layout),
+            bundle=observe.scene_bundle(args.scene, args.layout),
             scene=os.path.basename(args.scene),
             controlled=[r["id"] for r in robots if r["id"]],
         )

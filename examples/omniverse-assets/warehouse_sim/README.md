@@ -108,15 +108,18 @@ generated `warehouse_layout.json` (`id`). Add `--observe-out observations.jsonl`
 the world pose of every stamped prim while the scene runs. It needs `--scene`,
 because only generated prims carry the stamp.
 
-The log is JSON Lines: a header naming the source, the hash of the layout the
-run used, and the elements the simulator drives, then one record per element
+The log is JSON Lines: a header naming the source, a fingerprint of the
+generated files the run used (`--layout`, the `--scene` root layer, and its
+sublayers), and the elements the simulator drives, then one record per element
 per sample (`t`, `elementId`, `prim`, `x`, `y`, `z` in metres, `yaw` in
 degrees). `observe.py` documents the format.
 
 `run_standin_sim.py` writes the same log without Isaac Sim, a GPU, or OPC UA:
 the brain drives the robots kinematically, everything else stays at its
 authored pose, and `--disturb "NAME:DX,DY[,DZ[,DYAW]]@T"` displaces an element
-at a chosen time. `benchmarks/README.md` (Twin loop) describes how a log is
+at a chosen time (for a robot, the brain sees the displaced pose too). Its
+`--authored` input is `observe.py snapshot --scene ... --layout ...` taken from
+the same bundle as `--layout`. `benchmarks/README.md` (Twin loop) describes how a log is
 lifted back onto the model and checked against its spatial rules.
 
 ## Tests

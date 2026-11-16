@@ -33,7 +33,9 @@ export interface ObservedPose {
 export interface ObservationHeader {
   schema: string;
   source: string;
-  layoutSha256?: string | null;
+  /** Identifies the generated bundle the run used: the layout JSON, the root scene layer, and its sublayers. */
+  bundleFingerprint?: string | null;
+  bundleFiles?: Record<string, string> | null;
   scene?: string | null;
   controlledElementIds: string[];
 }
@@ -73,18 +75,32 @@ export interface PoseMm {
 }
 
 export interface DeviationFinding {
-  /** realization-offset: never at its authored pose. runtime-drift: moved during the run. */
+  /**
+   * realization-offset: not at its authored pose in any sample; deltas are measured from the authored pose.
+   * runtime-drift: moved away from where it started; deltas are measured from the first sample.
+   */
   kind: 'realization-offset' | 'runtime-drift';
   trace: TraceChain;
   onsetT: number;
+  /** Displacement in the onset sample. */
   deltaMm: { x: number; y: number; z: number };
   deltaYawDeg: number;
+  /** Displacement in the last sample; zero when the element came back. */
+  finalDeltaMm: { x: number; y: number; z: number };
+  finalDeltaYawDeg: number;
   designPose: PoseMm;
+  /** The model pose implied by the onset sample. */
   observedPose: PoseMm;
+  /** The model pose implied by the last sample. */
+  finalPose: PoseMm;
 }
 
 export interface RuleFinding {
-  /** runtime-rule-violation: holds at runtime only. design-violation-not-observed: holds in the model only. */
+  /**
+   * runtime-rule-violation: absent from the model, present in some samples.
+   * design-violation-not-observed: present in the model, absent from some samples.
+   * firstT, lastT, and samples describe the samples in which the verdict differs from the model.
+   */
   kind: 'runtime-rule-violation' | 'design-violation-not-observed';
   ruleId: string;
   ruleName: string;
@@ -113,7 +129,7 @@ export interface TwinReport {
     observation: {
       source: string;
       scene?: string | null;
-      layoutSha256?: string | null;
+      bundleFingerprint?: string | null;
       samples: number;
       durationS: number;
       tracedElements: number;
@@ -264,37 +280,52 @@ export function analyzeRun(input: {
     };
   };
 
-  const traced = model.elements.filter(element => (
-    element.presentation?.position3D && authored.has(element.id) && first.poses.has(element.id)
-  ));
+  // A missing observation must not read as "unchanged": every sample has to cover every authored element.
+  const strangers = [...authored.keys()].filter(id => !elements.has(id));
+  if (strangers.length > 0) {
+    throw new Error(`The authored snapshot holds ${strangers.length} element(s) this model does not have, `
+      + `for example ${strangers[0]}; it was taken from a different generation of the model`);
+  }
+  observations.samples.forEach(sample => {
+    const missing = [...authored.keys()].filter(id => !sample.poses.has(id));
+    if (missing.length > 0) {
+      throw new Error(`The observation sample at t = ${sample.t} s lacks ${missing.length} of ${authored.size} `
+        + `authored elements, for example ${traceOf(missing[0]).elementName}; the log is incomplete`);
+    }
+  });
+  const traced = model.elements.filter(element => element.presentation?.position3D && authored.has(element.id));
 
   // Elements the simulator does not drive are expected to stay where the model put them.
   const deviations: DeviationFinding[] = [];
   const finding = (
-    kind: DeviationFinding['kind'], element: ModelElement, onsetT: number, from: ObservedPose, to: ObservedPose
+    kind: DeviationFinding['kind'], element: ModelElement, onsetT: number,
+    reference: ObservedPose, atOnset: ObservedPose, atEnd: ObservedPose
   ): DeviationFinding => {
-    const delta = residual(from, to);
+    const delta = residual(reference, atOnset);
+    const finalDelta = residual(reference, atEnd);
     return {
       kind,
       trace: traceOf(element.id),
       onsetT,
       deltaMm: { x: delta.x, y: delta.y, z: delta.z },
       deltaYawDeg: delta.yaw,
+      finalDeltaMm: { x: finalDelta.x, y: finalDelta.y, z: finalDelta.z },
+      finalDeltaYawDeg: finalDelta.yaw,
       designPose: designPose(element),
-      observedPose: liftPose(element, authored.get(element.id)!, to),
+      observedPose: liftPose(element, authored.get(element.id)!, atOnset),
+      finalPose: liftPose(element, authored.get(element.id)!, atEnd),
     };
   };
   traced.filter(element => !controlled.has(element.id)).forEach(element => {
+    const authoredPose = authored.get(element.id)!;
     const start = first.poses.get(element.id)!;
-    if (exceeds(residual(authored.get(element.id)!, start), tolerances)) {
-      deviations.push(finding('realization-offset', element, first.t, authored.get(element.id)!, start));
-    }
-    const onset = observations.samples.find(sample => {
-      const pose = sample.poses.get(element.id);
-      return pose !== undefined && exceeds(residual(start, pose), tolerances);
-    });
-    const end = last.poses.get(element.id);
-    if (onset && end) deviations.push(finding('runtime-drift', element, onset.t, start, end));
+    const end = last.poses.get(element.id)!;
+    const neverAuthored = observations.samples.every(sample => (
+      exceeds(residual(authoredPose, sample.poses.get(element.id)!), tolerances)
+    ));
+    if (neverAuthored) deviations.push(finding('realization-offset', element, first.t, authoredPose, start, end));
+    const onset = observations.samples.find(sample => exceeds(residual(start, sample.poses.get(element.id)!), tolerances));
+    if (onset) deviations.push(finding('runtime-drift', element, onset.t, start, onset.poses.get(element.id)!, end));
   });
 
   const motion = traced.filter(element => controlled.has(element.id)).map(element => {
@@ -309,38 +340,47 @@ export function analyzeRun(input: {
     return { trace: traceOf(element.id), pathLengthMm: round(pathLengthMm, 1) };
   });
 
-  // The design-time rules, evaluated unchanged on the lifted model of every sample.
+  // The design-time rules, evaluated unchanged on the lifted model of every sample and
+  // compared with the model's own verdicts sample by sample.
+  type Span = { issue: ValidationIssue; firstT: number; lastT: number; samples: number };
   const designIssues = new Map(evaluateSpatialRules(metamodel, model).map(issue => [issueKey(issue), issue]));
-  const seen = new Map<string, { issue: ValidationIssue; firstT: number; lastT: number; samples: number }>();
+  const runtimeOnly = new Map<string, Span>();
+  const designAbsent = new Map<string, Span>();
+  const note = (spans: Map<string, Span>, key: string, issue: ValidationIssue, t: number): void => {
+    const span = spans.get(key);
+    if (span) {
+      span.lastT = t;
+      span.samples += 1;
+    } else {
+      spans.set(key, { issue, firstT: t, lastT: t, samples: 1 });
+    }
+  };
   observations.samples.forEach(sample => {
+    const present = new Set<string>();
     evaluateSpatialRules(metamodel, liftModel(model, authored, sample.poses)).forEach(issue => {
-      const entry = seen.get(issueKey(issue));
-      if (entry) {
-        entry.lastT = sample.t;
-        entry.samples += 1;
-      } else {
-        seen.set(issueKey(issue), { issue, firstT: sample.t, lastT: sample.t, samples: 1 });
-      }
+      const key = issueKey(issue);
+      present.add(key);
+      if (!designIssues.has(key)) note(runtimeOnly, key, issue, sample.t);
+    });
+    designIssues.forEach((issue, key) => {
+      if (!present.has(key)) note(designAbsent, key, issue, sample.t);
     });
   });
-  const ruleFinding = (kind: RuleFinding['kind'], issue: ValidationIssue, span?: {
-    firstT: number; lastT: number; samples: number;
-  }): RuleFinding => ({
+  const ruleFinding = (kind: RuleFinding['kind'], span: Span): RuleFinding => ({
     kind,
-    ruleId: issue.constraintId || 'unknown',
-    ruleName: ruleNames.get(issue.constraintId || '') || issue.constraintId || 'unknown',
-    severity: issue.severity,
-    message: issue.message,
-    ...(span ? { firstT: span.firstT, lastT: span.lastT } : {}),
-    samples: span?.samples || 0,
-    elements: [issue.elementId, ...(issue.relatedElementIds || [])]
+    ruleId: span.issue.constraintId || 'unknown',
+    ruleName: ruleNames.get(span.issue.constraintId || '') || span.issue.constraintId || 'unknown',
+    severity: span.issue.severity,
+    message: span.issue.message,
+    firstT: span.firstT,
+    lastT: span.lastT,
+    samples: span.samples,
+    elements: [span.issue.elementId, ...(span.issue.relatedElementIds || [])]
       .filter((id): id is string => Boolean(id)).map(traceOf),
   });
   const ruleFindings: RuleFinding[] = [
-    ...[...seen.entries()].filter(([key]) => !designIssues.has(key))
-      .map(([, entry]) => ruleFinding('runtime-rule-violation', entry.issue, entry)),
-    ...[...designIssues.entries()].filter(([key]) => !seen.has(key))
-      .map(([, issue]) => ruleFinding('design-violation-not-observed', issue)),
+    ...[...runtimeOnly.values()].map(span => ruleFinding('runtime-rule-violation', span)),
+    ...[...designAbsent.values()].map(span => ruleFinding('design-violation-not-observed', span)),
   ];
 
   // Reconciliation proposal: adopt the final observed pose of every element that
@@ -376,7 +416,7 @@ export function analyzeRun(input: {
       observation: {
         source: observations.header.source,
         scene: observations.header.scene,
-        layoutSha256: observations.header.layoutSha256,
+        bundleFingerprint: observations.header.bundleFingerprint,
         samples: observations.samples.length,
         durationS: round(last.t - first.t, 3),
         tracedElements: traced.length,
@@ -432,16 +472,20 @@ export function renderReport(title: string, report: TwinReport): string {
     '',
   ];
   if (report.deviations.length > 0) {
-    lines.push('## Deviations', '', '| Kind | Onset (s) | Delta x, y, z (mm) / yaw (deg) | Traced to |', '| --- | ---: | --- | --- |');
+    const delta = (mm: { x: number; y: number; z: number }, yaw: number): string => `${mm.x}, ${mm.y}, ${mm.z} / ${yaw}`;
+    lines.push('## Deviations', '',
+      'Realization offsets are measured from the authored pose, runtime drifts from the first sample.', '',
+      '| Kind | Onset (s) | At onset: x, y, z (mm) / yaw (deg) | At end | Traced to |', '| --- | ---: | --- | --- | --- |');
     report.deviations.forEach(item => lines.push(
-      `| ${item.kind} | ${item.onsetT} | ${item.deltaMm.x}, ${item.deltaMm.y}, ${item.deltaMm.z} / ${item.deltaYawDeg} | ${traceCell(item.trace)} |`
+      `| ${item.kind} | ${item.onsetT} | ${delta(item.deltaMm, item.deltaYawDeg)} | ${delta(item.finalDeltaMm, item.finalDeltaYawDeg)} | ${traceCell(item.trace)} |`
     ));
     lines.push('');
   }
   if (report.ruleFindings.length > 0) {
-    lines.push('## Rule verdicts that differ between model and run', '', '| Kind | Rule | First to last (s) | Message | Elements |', '| --- | --- | --- | --- | --- |');
+    lines.push('## Rule verdicts that differ between model and run', '',
+      '| Kind | Rule | Differs from first to last (s) | Samples | Message | Elements |', '| --- | --- | --- | ---: | --- | --- |');
     report.ruleFindings.forEach(item => lines.push(
-      `| ${item.kind} | ${item.ruleName} (${item.severity}) | ${item.firstT === undefined ? 'n/a' : `${item.firstT} to ${item.lastT}`} | ${item.message} | ${item.elements.map(trace => trace.elementName).join(', ')} |`
+      `| ${item.kind} | ${item.ruleName} (${item.severity}) | ${item.firstT} to ${item.lastT} | ${item.samples} | ${item.message} | ${item.elements.map(trace => trace.elementName).join(', ')} |`
     ));
     lines.push('');
   }
@@ -452,7 +496,7 @@ export function renderReport(title: string, report: TwinReport): string {
   }
   lines.push('## Reconciliation proposal', '');
   if (report.reconciliation.patch.length === 0) {
-    lines.push('The run agrees with the model; nothing to reconcile.', '');
+    lines.push('The final observed state agrees with the model; nothing to reconcile.', '');
   } else {
     lines.push('Accepting the observed state would change the model as follows (`reconciled-model.json`):', '',
       '| Element | Attribute | From | To |', '| --- | --- | --- | --- |');

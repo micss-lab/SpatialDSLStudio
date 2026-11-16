@@ -3,17 +3,16 @@
  * what happens, lift the observations back onto the model, and re-evaluate the
  * design-time spatial rules on what was observed.
  *
- *   npm run twin-loop                                   # three stand-in scenarios, self-checking
+ *   npm run twin-loop                                   # four stand-in scenarios, self-checking
  *   npm run twin-loop -- --observations <log.jsonl>     # analyse a log recorded by the Isaac Sim bridge
  *
  * The stand-in scenarios need no simulator. A log recorded in Isaac Sim
  * (run_warehouse_sim.py --scene ... --observe-out ...) must come from the
- * bundle this script generates in results/twin-loop/bundle; the layout hash in
- * the log is checked against it.
+ * bundle this script generates in results/twin-loop/bundle; the bundle
+ * fingerprint in the log is checked against it.
  */
 import './lib/offline-env';
 import { execFileSync } from 'child_process';
-import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { CodeGenerationTemplate, Metamodel, Model } from '../shared/types';
@@ -93,7 +92,31 @@ const scenarios: Scenario[] = [
         : ['expected one realization offset of Loading Dock by 150 mm in z from t = 0 s'];
     },
   },
+  {
+    name: 'transient-drift',
+    description: 'Storage Rack #2 is pushed into the aisle at t = 20 s and back to its place at t = 40 s.',
+    disturbances: ['Storage Rack #2:-1.2,0@20', 'Storage Rack #2:1.2,0@40'],
+    check: report => {
+      const failures: string[] = [];
+      const [deviation] = report.deviations;
+      if (report.deviations.length !== 1 || deviation.kind !== 'runtime-drift' || deviation.onsetT !== 20
+        || deviation.deltaMm.x !== -1200 || deviation.finalDeltaMm.x !== 0) {
+        failures.push('expected one runtime drift of Storage Rack #2 by -1200 mm at t = 20 s, back in place at the end');
+      }
+      const aisle = report.ruleFindings.find(item => item.kind === 'runtime-rule-violation' && item.ruleId === RACK_AISLE_RULE);
+      if (!aisle || aisle.firstT !== 20 || aisle.lastT !== 39.5) {
+        failures.push('expected the rack aisle rule to fail at runtime from t = 20 s to t = 39.5 s only');
+      }
+      if (report.reconciliation.patch.length !== 0) failures.push('expected an empty reconciliation patch');
+      return failures;
+    },
+  },
 ];
+
+// Read a log given on the command line before the results folder is cleaned: it may live inside it.
+const externalIndex = process.argv.indexOf('--observations');
+const externalFile = externalIndex >= 0 ? path.resolve(process.argv[externalIndex + 1] || '') : undefined;
+const external = externalFile ? readObservationLog(externalFile) : undefined;
 
 const runPython = (args: string[]): void => {
   if (!fs.existsSync(python)) throw new Error(`Missing ${python}; see benchmarks/README.md for the venv setup`);
@@ -116,15 +139,22 @@ BUNDLE_FILES.forEach(name => {
 // Layers reference assets as @omniverse-assets/...@ relative to the bundle root.
 fs.symlinkSync(path.join(repoRoot, 'examples', 'omniverse-assets'), path.join(bundleDir, 'omniverse-assets'), 'dir');
 const layoutPath = path.join(bundleDir, 'warehouse_layout.json');
-const layoutSha256 = crypto.createHash('sha256').update(fs.readFileSync(layoutPath)).digest('hex');
 const authoredPath = path.join(bundleDir, 'authored.jsonl');
-runPython(['observe.py', 'snapshot', '--scene', path.join(bundleDir, 'warehouse_simulation.usda'), '--out', authoredPath]);
+runPython([
+  'observe.py', 'snapshot', '--scene', path.join(bundleDir, 'warehouse_simulation.usda'), '--layout', layoutPath,
+  '--out', authoredPath,
+]);
 const authored = readObservationLog(authoredPath);
+const bundleFingerprint = authored.header.bundleFingerprint;
 
 const analyse = (name: string, title: string, observations: ObservationLog): TwinReport => {
-  if (observations.header.layoutSha256 !== layoutSha256) {
-    throw new Error(`${name}: the log was recorded against a different generated layout `
-      + `(${observations.header.layoutSha256}) than this model generates (${layoutSha256})`);
+  if (!bundleFingerprint || observations.header.bundleFingerprint !== bundleFingerprint) {
+    const expected = authored.header.bundleFiles || {};
+    const recorded = observations.header.bundleFiles || {};
+    const differing = [...new Set([...Object.keys(expected), ...Object.keys(recorded)])]
+      .filter(file => expected[file] !== recorded[file]);
+    throw new Error(`${name}: the log was recorded against a different generation of the model; `
+      + `generated files that differ: ${differing.join(', ') || 'unknown (the log carries no bundle fingerprint)'}`);
   }
   const { report, reconciledModel } = analyzeRun({
     model, metamodel, modelHash: contentHash(model), metamodelHash: contentHash(metamodel),
@@ -140,12 +170,9 @@ const analyse = (name: string, title: string, observations: ObservationLog): Twi
   return report;
 };
 
-const externalIndex = process.argv.indexOf('--observations');
-if (externalIndex >= 0) {
-  const file = path.resolve(process.argv[externalIndex + 1] || '');
-  const observations = readObservationLog(file);
-  const report = analyse('external', path.basename(file), observations);
-  process.stdout.write(`${renderReport(path.basename(file), report)}\nReport written to ${path.join(outDir, 'external')}\n`);
+if (externalFile && external) {
+  const report = analyse('external', path.basename(externalFile), external);
+  process.stdout.write(`${renderReport(path.basename(externalFile), report)}\nReport written to ${path.join(outDir, 'external')}\n`);
   process.exit(0);
 }
 
@@ -175,7 +202,7 @@ const summary = {
   tracedElements: rows[0].report.provenance.observation.tracedElements,
   samplesPerRun: rows[0].report.provenance.observation.samples,
   modelHash: rows[0].report.provenance.modelHash,
-  layoutSha256,
+  bundleFingerprint,
   seconds: Math.round((Date.now() - started) / 100) / 10,
 };
 fs.writeFileSync(path.join(resultsDir, 'twin-loop.json'), `${JSON.stringify(summary, null, 2)}\n`);

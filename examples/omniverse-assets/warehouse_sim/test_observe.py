@@ -33,7 +33,18 @@ LAYOUT = {
     "drones": [],
 }
 
-STAMPED_SCENE = """#usda 1.0
+ROOT_SCENE = """#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Z"
+    subLayers = [
+        @./stamped.usda@
+    ]
+)
+"""
+
+STAMPED_LAYER = """#usda 1.0
 (
     defaultPrim = "World"
     metersPerUnit = 1
@@ -66,7 +77,8 @@ class ObservationTests(unittest.TestCase):
         with open(self.layout_path, "w", encoding="utf-8") as handle:
             json.dump(LAYOUT, handle)
         self.authored_path = self.path("authored.jsonl")
-        recorder = observe.ObservationRecorder(self.authored_path, source="usd-authored")
+        self.bundle = observe.bundle_record({"warehouse_layout.json": observe.file_sha256(self.layout_path)})
+        recorder = observe.ObservationRecorder(self.authored_path, source="usd-authored", bundle=self.bundle)
         recorder.sample(0.0, [
             {"elementId": record["id"], "prim": "/World/" + record["id"], "layer": "warehouse_layout.usda",
              "x": record["x"], "y": record["y"], "z": record["z"] + record.get("height", 0.0) / 2.0, "yaw": 0.0}
@@ -89,10 +101,11 @@ class ObservationTests(unittest.TestCase):
         self.assertEqual(len(samples), 1)
         self.assertEqual(samples[0][1]["rack"]["z"], 1.25)
 
-    def test_standin_moves_only_the_robots_and_binds_the_log_to_the_layout(self):
+    def test_standin_moves_only_the_robots_and_binds_the_log_to_the_bundle(self):
         header, samples = self.run_standin()
         self.assertEqual(header["controlledElementIds"], ["robot-a", "robot-b"])
-        self.assertEqual(header["layoutSha256"], observe.file_sha256(self.layout_path))
+        self.assertEqual(header["bundleFingerprint"], self.bundle["bundleFingerprint"])
+        self.assertEqual(header["bundleFiles"], self.bundle["bundleFiles"])
         self.assertEqual(len(samples), 21)  # 2 Hz over 10 s, both ends included
         first, last = samples[0][1], samples[-1][1]
         self.assertEqual((first["rack"]["x"], first["rack"]["y"]), (last["rack"]["x"], last["rack"]["y"]))
@@ -108,17 +121,34 @@ class ObservationTests(unittest.TestCase):
         self.assertAlmostEqual(by_time[10.0]["rack"]["y"], 0.5)
         self.assertAlmostEqual(by_time[10.0]["rack"]["yaw"], 15.0)
 
+    def test_disturbing_a_robot_moves_the_pose_the_brain_sees(self):
+        disturbance = run_standin_sim.parse_disturbance("Robot A:2,3,0,15@0")
+        _, samples = self.run_standin(disturbances=[disturbance])
+        first, second = samples[0][1]["robot-a"], samples[1][1]["robot-a"]
+        self.assertEqual((first["x"], first["y"], first["yaw"]), (-16.0, -5.0, 15.0))
+        # The brain continues from the displaced pose instead of snapping back to (-18, -8).
+        self.assertLess(((second["x"] + 16.0) ** 2 + (second["y"] + 5.0) ** 2) ** 0.5, 1.0)
+
+    def test_standin_refuses_a_layout_from_another_generation(self):
+        with open(self.layout_path, "w", encoding="utf-8") as handle:
+            json.dump({**LAYOUT, "obstacles": []}, handle)
+        with self.assertRaises(SystemExit):
+            self.run_standin()
+
     @unittest.skipUnless(HAVE_PXR, "pxr (usd-core) is not installed")
-    def test_snapshot_reads_the_stamp_pose_and_authoring_layer(self):
+    def test_snapshot_reads_the_stamp_pose_authoring_layer_and_bundle(self):
         scene = self.path("scene.usda")
         with open(scene, "w", encoding="utf-8") as handle:
-            handle.write(STAMPED_SCENE)
+            handle.write(ROOT_SCENE)
+        with open(self.path("stamped.usda"), "w", encoding="utf-8") as handle:
+            handle.write(STAMPED_LAYER)
         out = self.path("snapshot.jsonl")
-        self.assertEqual(observe.snapshot(scene, out), 1)
+        self.assertEqual(observe.snapshot(scene, out, self.layout_path), 1)
         header, samples = observe.read_log(out)
         record = samples[0][1]["rack"]
         self.assertEqual(header["source"], "usd-authored")
-        self.assertEqual((record["prim"], record["layer"]), ("/World/Rack_0", "scene.usda"))
+        self.assertEqual(sorted(header["bundleFiles"]), ["scene.usda", "stamped.usda", "warehouse_layout.json"])
+        self.assertEqual((record["prim"], record["layer"]), ("/World/Rack_0", "stamped.usda"))
         self.assertEqual((record["x"], record["y"], record["z"]), (10.0, 12.0, 1.25))
         self.assertAlmostEqual(record["yaw"], 30.0, places=4)
 
