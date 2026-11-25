@@ -4,11 +4,12 @@ This guide covers the versioned side of a Studio Project: capturing checkpoints,
 evolving a metamodel without breaking the models that conform to it, and running
 reproducible pipelines on the server.
 
-These three capabilities are API-driven and CLI-driven today. The project picker
-and project settings screens exist in the web UI; checkpoints, evolution, and
-pipelines are reached through the REST API, the typed
-`lifecycleService` client, or the pipeline CLI. A dedicated lifecycle panel is
-not part of this slice.
+Open **Project History** in the project sidebar to browse checkpoints and review
+pipeline runs. The **Checkpoints** tab compares a saved checkpoint with the
+current project or an earlier checkpoint. Project roles with checkpoint creation
+access can also capture a checkpoint from that tab. The **Pipeline runs** tab
+shows run status, step results, and recorded output. Use the REST API for
+metamodel evolution and checkpoint restore. The pipeline CLI can start a run.
 
 ## Studio Projects
 

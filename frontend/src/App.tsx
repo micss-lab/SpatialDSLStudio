@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Typography,
   Button,
@@ -59,6 +59,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { OwnerFilterProvider } from './contexts/OwnerFilterContext';
 import { LAST_PROJECT_KEY, ProjectProvider, useProject } from './contexts/ProjectContext';
 import { ProjectOverviewPage, ProjectPickerPage, ProjectSettingsPage } from './components/projects';
+import { ProjectHistoryPage } from './components/projects/ProjectHistoryPage';
+import { SimulationResultsPage } from './components/projects/SimulationResultsPage';
 import { metamodelService } from './services/metamodel';
 import { diagramService } from './services/diagram';
 import { modelService } from './services/model';
@@ -646,6 +648,8 @@ const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ user, isAdmin, onLo
             <Route path="transformations" element={<TransformationDashboard />} />
             <Route path="testing" element={<ModelBasedTestingDashboard />} />
             <Route path="testing/:metamodelId" element={<ModelBasedTestingDashboard />} />
+            <Route path="simulation-results" element={<SimulationResultsPage key={projectId} />} />
+            <Route path="history" element={<ProjectHistoryPage key={projectId} />} />
             <Route path="test-details" element={<TestDetails />} />
             <Route path="settings" element={<ProjectSettingsPage />} />
             <Route path="help" element={<HelpPage />} />
@@ -2056,7 +2060,17 @@ const DiagramEditorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { can } = useProject();
   const canEditView = can('view.update') && can('model.update');
-  const [mode, setMode] = useState<'2D' | '3D'>('2D');
+  const [params, setParams] = useSearchParams();
+  const mode = params.get('mode') === '3d' ? '3D' : '2D';
+  const setMode = (next: '2D' | '3D') => {
+    const search = new URLSearchParams(params);
+    if (next === '3D') search.set('mode', '3d');
+    else {
+      search.delete('mode');
+      search.delete('element');
+    }
+    setParams(search, { replace: true });
+  };
   const [diagramVersion, setDiagramVersion] = useState(0);
   const diagramId = id || '';
 
@@ -2139,7 +2153,7 @@ const DiagramEditorPage: React.FC = () => {
           ) : (
             <div style={{ height: '100%', width: '100%', position: 'relative' }} className="diagram3d-container">
               <React.Suspense fallback={<Typography>Loading 3D editor...</Typography>}>
-                <Diagram3DEditor diagramId={diagramId} />
+                <Diagram3DEditor key={diagramId} diagramId={diagramId} focusElementId={params.get('element') || undefined} />
               </React.Suspense>
             </div>
           )}

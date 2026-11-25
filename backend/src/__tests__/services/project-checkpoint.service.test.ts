@@ -134,7 +134,7 @@ describe('ProjectCheckpointService', () => {
     expect(projectCheckpointService.diffManifests(created.manifest!, changed)).toEqual({
       fromHash: created.contentHash,
       toHash: 'sha256:changed',
-      added: [{ type: 'model', id: 'model-2' }],
+      added: [{ type: 'model', id: 'model-2', name: 'New model' }],
       removed: [],
       changed: [],
       unchanged: 0,

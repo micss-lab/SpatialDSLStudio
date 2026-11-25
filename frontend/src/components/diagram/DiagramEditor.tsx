@@ -22,6 +22,7 @@ import DiagramPalette, { DiagramPaletteDragItem } from '../palette/DiagramPalett
 import DiagramElementProperties from './DiagramElementProperties';
 import RuleVisualizationPanel from './RuleVisualizationPanel';
 import ViewValidationPanel from './ViewValidationPanel';
+import { useViewValidation } from './shared/hooks/useViewValidation';
 import { useDiagramData, useElementSelection } from './shared/hooks';
 import { 
   formatEdgeLabel,
@@ -76,7 +77,6 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
     severity: 'info' | 'success' | 'error';
     message: string;
   } | null>(null);
-  const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
 
   // Zoom and pan states
   const [scale, setScale] = useState(1);
@@ -94,18 +94,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
     diagram ? viewpointService.resolveRepresentationDescription(diagram).representationDescription : undefined
   ), [diagram]);
   const activeToolType = activeTool ? getExecutableToolType(activeTool) : undefined;
-  const validationContextKey = diagram
-    ? `${diagram.id}:${diagram.modelId}:${diagram.representationDescriptionId || ''}`
-    : '';
-
-  const validateView = useCallback(() => {
-    const currentDiagram = diagramService.getDiagramById(diagramId);
-    setValidationIssues(currentDiagram ? viewValidationService.validateDiagram(currentDiagram).issues : []);
-  }, [diagramId]);
-
-  useEffect(() => {
-    if (validationContextKey) validateView();
-  }, [validateView, validationContextKey]);
+  const { issues: validationIssues, validate: validateView } = useViewValidation(diagram, Boolean(draggingElement));
 
   const handleValidationIssueSelect = useCallback((issue: ValidationIssue) => {
     const currentDiagram = diagramService.getDiagramById(diagramId);

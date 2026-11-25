@@ -31,7 +31,7 @@ const nullableJson = (value: unknown): Prisma.InputJsonValue | typeof Prisma.Jso
 const nonEmptyArray = (value: unknown): unknown[] | undefined => (
   Array.isArray(value) && value.length > 0 ? value : undefined
 );
-const sortRefs = (values: ProjectArtifactRef[]): ProjectArtifactRef[] => (
+const sortRefs = <T extends ProjectArtifactRef>(values: T[]): T[] => (
   [...values].sort((left, right) => artifactKey(left).localeCompare(artifactKey(right)))
 );
 
@@ -355,20 +355,20 @@ class ProjectCheckpointService {
   ): ProjectCheckpointDiff {
     const fromArtifacts = new Map(from.artifacts.map(item => [artifactKey(item), item]));
     const toArtifacts = new Map(to.artifacts.map(item => [artifactKey(item), item]));
-    const added: ProjectArtifactRef[] = [];
-    const removed: ProjectArtifactRef[] = [];
-    const changed: ProjectArtifactRef[] = [];
+    const added: ProjectCheckpointDiff['added'] = [];
+    const removed: ProjectCheckpointDiff['removed'] = [];
+    const changed: ProjectCheckpointDiff['changed'] = [];
     let unchanged = 0;
 
     toArtifacts.forEach((artifact, key) => {
       const previous = fromArtifacts.get(key);
-      if (!previous) added.push({ type: artifact.type, id: artifact.id });
+      if (!previous) added.push({ type: artifact.type, id: artifact.id, name: artifact.name });
       else if (previous.contentHash !== artifact.contentHash) {
-        changed.push({ type: artifact.type, id: artifact.id });
+        changed.push({ type: artifact.type, id: artifact.id, name: artifact.name });
       } else unchanged += 1;
     });
     fromArtifacts.forEach((artifact, key) => {
-      if (!toArtifacts.has(key)) removed.push({ type: artifact.type, id: artifact.id });
+      if (!toArtifacts.has(key)) removed.push({ type: artifact.type, id: artifact.id, name: artifact.name });
     });
 
     return {

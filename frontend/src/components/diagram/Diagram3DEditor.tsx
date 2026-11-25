@@ -12,15 +12,17 @@ import viewpointService from '../../services/viewpoint.service';
 import DiagramPalette, { DiagramPaletteDragItem } from '../palette/DiagramPalette';
 import DiagramElementProperties from './DiagramElementProperties';
 import ViewValidationPanel from './ViewValidationPanel';
+import { useViewValidation } from './shared/hooks/useViewValidation';
 import { modelInheritanceUtilsService, modelService } from '../../services/model';
 import Node3D, { Element3D } from './Node3D';
 import { useElementSelection } from './shared/hooks';
 import { StatusOverlay3D, GridControls } from './3d/components';
 import { useProject } from '../../contexts/ProjectContext';
-import { normalizePosition3D, renderToDomainPosition } from '../../services/spatial';
+import { domainToRenderPosition, normalizePosition3D, renderToDomainPosition } from '../../services/spatial';
 
 interface Diagram3DEditorProps {
   diagramId: string;
+  focusElementId?: string;
 }
 
 const canonicalElementPosition3D = (element: DiagramElement): { x: number; y: number; z: number } => (
@@ -42,17 +44,20 @@ const asElement3D = (element: DiagramElement): Element3D => ({
 });
 
 // Controls and scene setup
-const SceneSetup = React.memo(({ onPlaneClick, gridSizeX, gridSizeY, controlsEnabled, sceneElevation }: {
+const SceneSetup = React.memo(({ onPlaneClick, gridSizeX, gridSizeY, controlsEnabled, sceneElevation, focusNode }: {
   onPlaneClick: (position: THREE.Vector3) => void,
   gridSizeX: number,
   gridSizeY: number,
   controlsEnabled: boolean,
   sceneElevation: number,
+  focusNode: Element3D | null,
 }) => {
   const { camera } = useThree();
+  const controls = useRef<React.ComponentRef<typeof OrbitControls>>(null);
   
   // Set initial camera position - stadium-style broadcast perspective
   useEffect(() => {
+    if (focusNode) return;
     // Position camera like in a football stadium, high up in the stands at midfield
     // Looking down at the center of the pitch with a broadcast-style angle
     const stadiumHeight = Math.max(8000, sceneElevation * 1.5 + 4000);
@@ -78,7 +83,20 @@ const SceneSetup = React.memo(({ onPlaneClick, gridSizeX, gridSizeY, controlsEna
     const adjustedY = camera.position.y + Math.tan(downwardAngle) * horizontalDistance;
     
     camera.lookAt(targetPoint.x, adjustedY, targetPoint.z);
-  }, [camera, sceneElevation]);
+  }, [camera, focusNode, sceneElevation]);
+
+  useEffect(() => {
+    if (!focusNode) return;
+    const position = canonicalElementPosition3D(focusNode);
+    const height = focusNode.depthMm || 0;
+    const target = new THREE.Vector3(...domainToRenderPosition({ ...position, z: position.z + height / 2 }));
+    const distance = Math.max(2200, 1.8 * Math.max(focusNode.widthMm || 0, focusNode.heightMm || 0, height));
+    const offset = new THREE.Vector3(1, 0.8, 1).normalize().multiplyScalar(distance);
+    camera.position.copy(target).add(offset);
+    camera.lookAt(target);
+    controls.current?.target.copy(target);
+    controls.current?.update();
+  }, [camera, focusNode]);
   
   // Handle clicks on the plane with camera-angle-aware detection
   const handlePlaneClick = (event: { stopPropagation: () => void; point: THREE.Vector3; intersections?: any[]; object?: any }) => {
@@ -123,6 +141,7 @@ const SceneSetup = React.memo(({ onPlaneClick, gridSizeX, gridSizeY, controlsEna
   return (
     <>
       <OrbitControls 
+        ref={controls}
         enabled={controlsEnabled}
         enableDamping 
         dampingFactor={0.25} 
@@ -362,7 +381,7 @@ class WebGLErrorBoundary extends React.Component<
 }
 
 // Main 3D diagram editor
-const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
+const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId, focusElementId }) => {
   const { project } = useProject();
   const [diagram, setDiagram] = useState<Diagram | null>(null);
   const [metamodel, setMetamodel] = useState<Metamodel | null>(null);
@@ -370,6 +389,8 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
   
   // Element selection using shared hook
   const { selectedElement, setSelectedElement } = useElementSelection<Element3D>();
+  const [focusNode, setFocusNode] = useState<Element3D | null>(null);
+  const focusedRequest = useRef<string | undefined>(undefined);
   
   const [isDraggingPaletteItem, setIsDraggingPaletteItem] = useState(false);
   const [draggingPaletteItem, setDraggingPaletteItem] = useState<DiagramPaletteDragItem | null>(null);
@@ -384,7 +405,6 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
   const [gridControlAnchor, setGridControlAnchor] = useState<HTMLElement | null>(null);
   const [selectedAxes, setSelectedAxes] = useState({ x: true, y: true }); // Track which axes are selected
   const [elementZIndexes, setElementZIndexes] = useState<Record<string, number>>({});
-  const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   const [isElevationDragging, setIsElevationDragging] = useState(false);
   const [elevationFeedback, setElevationFeedback] = useState<string | null>(null);
   const nextZIndexRef = useRef<number>(1);
@@ -672,7 +692,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
   const getSortedElements = useCallback(() => {
     if (!diagram?.elements) return [];
     
-    return [...diagram.elements]
+    const sorted = [...diagram.elements]
       .filter(element => element.type === 'node')
       .map(element => ({
         element,
@@ -680,7 +700,14 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
       }))
       .sort((a, b) => a.zIndex - b.zIndex)
       .map(item => item.element);
-  }, [diagram?.elements, elementZIndexes]);
+    const limit = lowPerformanceMode ? 20 : 50;
+    const visible = sorted.slice(0, limit);
+    const selected = sorted.find(element => element.id === selectedElement?.id);
+    if (selected && !visible.includes(selected)) {
+      visible[limit - 1] = selected;
+    }
+    return visible;
+  }, [diagram?.elements, elementZIndexes, lowPerformanceMode, selectedElement?.id]);
 
   const viewContext = React.useMemo(
     () => diagram ? viewpointService.resolveRepresentationDescription(diagram) : {},
@@ -712,16 +739,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
   ), [metamodel, selectedSemanticElement, viewContext.representationDescription, viewContext.viewpoint]);
   const verticalPlacement = selected3DAppearance?.verticalPlacement || { mode: 'grounded' as const };
   const selectedBaseZ = selectedElement ? canonicalElementPosition3D(selectedElement).z : 0;
-  const validationContextKey = diagram
-    ? `${diagram.id}:${diagram.modelId}:${diagram.representationDescriptionId || ''}`
-    : '';
-  const validateView = useCallback(() => {
-    const currentDiagram = diagramService.getDiagramById(diagramId);
-    setValidationIssues(currentDiagram ? viewValidationService.validateDiagram(currentDiagram).issues : []);
-  }, [diagramId]);
-  useEffect(() => {
-    if (validationContextKey) validateView();
-  }, [validateView, validationContextKey]);
+  const { issues: validationIssues, validate: validateView } = useViewValidation(diagram, isDragging || isElevationDragging);
   const handleValidationIssueSelect = useCallback((issue: ValidationIssue) => {
     const currentDiagram = diagramService.getDiagramById(diagramId);
     if (!currentDiagram) return;
@@ -730,6 +748,24 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
     bringToFront(element.id);
     setSelectedElement(asElement3D(element));
   }, [bringToFront, diagramId, setSelectedElement]);
+
+  useEffect(() => {
+    if (!focusElementId) {
+      focusedRequest.current = undefined;
+      setFocusNode(null);
+      return;
+    }
+    const key = `${diagramId}:${focusElementId}`;
+    if (diagram?.id !== diagramId || focusedRequest.current === key) return;
+    const element = viewValidationService.findElementForIssue(diagram, {
+      elementId: focusElementId, severity: 'info', message: '',
+    });
+    if (element?.type !== 'node') return;
+    focusedRequest.current = key;
+    const node = asElement3D(element);
+    setFocusNode(node);
+    setSelectedElement(node);
+  }, [diagram, diagramId, focusElementId, setSelectedElement]);
 
   // If we have a WebGL error, show fallback UI
   if (webGLError) {
@@ -1327,6 +1363,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
               gridSizeY={gridSizeY}
               controlsEnabled={!isDragging && !isElevationDragging}
               sceneElevation={maxSceneElevation}
+              focusNode={focusNode}
             />
             
             {/* Add fog to prevent whitening at distance */}
@@ -1334,8 +1371,6 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId }) => {
             
             {/* Render elements sorted by z-index so later elements appear on top */}
             {getSortedElements()
-              // Limit the number of rendered elements to prevent WebGL overload
-              .slice(0, lowPerformanceMode ? 20 : 50) // Reduce limit further in low performance mode
               .map((element, index, array) => {
                 const metaClass = metamodel?.classes.find(c => c.id === element.modelElementId);
                 if (!metaClass) return null;

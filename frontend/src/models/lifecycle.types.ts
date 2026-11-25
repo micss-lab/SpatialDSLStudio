@@ -46,9 +46,9 @@ export interface ProjectCheckpoint {
 export interface ProjectCheckpointDiff {
   fromHash: string;
   toHash: string;
-  added: ProjectArtifactRef[];
-  removed: ProjectArtifactRef[];
-  changed: ProjectArtifactRef[];
+  added: Array<ProjectArtifactRef & { name?: string }>;
+  removed: Array<ProjectArtifactRef & { name?: string }>;
+  changed: Array<ProjectArtifactRef & { name?: string }>;
   unchanged: number;
 }
 

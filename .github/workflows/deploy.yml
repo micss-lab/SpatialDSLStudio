@@ -11,6 +11,9 @@ jobs:
     name: Deploy to VPS
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    concurrency:
+      group: spatialdsl-production-deploy
+      cancel-in-progress: false
 
     steps:
       - name: Deploy via SSH
@@ -29,7 +32,22 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d --build
             docker compose -f docker-compose.prod.yml exec -T -e ADMIN_EMAIL="$ADMIN_EMAIL" -e ADMIN_PASSWORD="$ADMIN_PASSWORD" backend npx prisma migrate deploy
             docker compose -f docker-compose.prod.yml exec -T -e ADMIN_EMAIL="$ADMIN_EMAIL" -e ADMIN_PASSWORD="$ADMIN_PASSWORD" backend npx prisma db seed
+            docker compose -f docker-compose.prod.yml exec -T frontend nginx -s reload
             docker image prune -f
         env:
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+
+      - name: Verify the public API
+        shell: bash
+        env:
+          APP_URL: ${{ vars.APP_URL || 'https://dsl-studio.micss-lab.be' }}
+        run: |
+          for attempt in {1..6}; do
+            if curl --fail --silent --show-error --max-time 10 "${APP_URL%/}/api/health" | jq -e '.success == true'; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 6 ]; then sleep 5; fi
+          done
+          echo '::error::The public API did not become healthy after deployment.'
+          exit 1
