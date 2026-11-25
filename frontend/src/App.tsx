@@ -38,6 +38,7 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 
 import MetamodelManager from './components/metamodel/MetamodelManager';
+import { MetamodelEvolutionPage } from './components/metamodel/MetamodelEvolutionPage';
 import { ViewpointManager } from './components/viewpoints';
 import ModelManager from './components/model/ModelManager';
 import DiagramEditor from './components/diagram/DiagramEditor';
@@ -634,6 +635,7 @@ const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ user, isAdmin, onLo
             <Route path="viewpoints" element={<ViewpointsPage />} />
             <Route path="representations" element={<Navigate to="../viewpoints" replace />} />
             <Route path="metamodels/:metamodelId/viewpoints" element={<ViewpointManager />} />
+            <Route path="metamodels/:id/evolution" element={<MetamodelEvolutionPage />} />
             <Route path="metamodels/:id" element={<MetamodelEditorPage />} />
             <Route path="models" element={<ModelsPage />} />
             <Route path="models/:id" element={<ModelEditorPage />} />

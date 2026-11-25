@@ -245,7 +245,16 @@ describe('MetamodelEvolutionService', () => {
     expect(checkpointSpy).not.toHaveBeenCalled();
   });
 
-  it('checkpoints and transactionally migrates attribute values', async () => {
+  it.each([false, true])('checkpoints and transactionally migrates attribute values (inherited: %s)', async inherited => {
+    const next = renamedMetamodel();
+    if (inherited) {
+      const subclass = { ...currentMetamodel.classes[0], id: 'mobile-robot', name: 'MobileRobot', superTypes: ['robot-class'], attributes: [] };
+      next.classes.push(subclass);
+      prismaMock.metamodel.findFirst.mockResolvedValue({ ...metamodelRow, classes: [...currentMetamodel.classes, subclass] } as any);
+      prismaMock.model.findMany.mockResolvedValue([{ ...modelRow,
+        elements: [{ ...modelRow.elements[0], modelElementId: subclass.id }],
+      }] as any);
+    }
     const rules = [{
       kind: 'rename-attribute' as const,
       classId: 'robot-class',
@@ -256,7 +265,7 @@ describe('MetamodelEvolutionService', () => {
     const preview = await metamodelEvolutionService.preview(
       projectId,
       metamodelId,
-      renamedMetamodel(),
+      next,
       rules
     );
     jest.spyOn(projectCheckpointService, 'create').mockResolvedValue({
@@ -289,7 +298,7 @@ describe('MetamodelEvolutionService', () => {
       projectId,
       metamodelId,
       {
-        nextMetamodel: renamedMetamodel(),
+        nextMetamodel: next,
         expectedSourceHash: preview.sourceHash,
         rules,
         checkpointTag: 'before-speed-rename',
@@ -313,8 +322,41 @@ describe('MetamodelEvolutionService', () => {
     });
     expect(prismaMock.metamodel.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: metamodelId },
-      data: expect.objectContaining({ classes: renamedMetamodel().classes }),
+      data: expect.objectContaining({ classes: next.classes }),
     }));
+  });
+
+  it('rejects an apply if a concurrent model edit would make the rename overwrite a value', async () => {
+    const next = renamedMetamodel();
+    const rules = [{ kind: 'rename-attribute' as const, classId: 'robot-class', featureId: 'speed-attribute', fromName: 'speed', toName: 'maximumSpeed' }];
+    const preview = await metamodelEvolutionService.preview(projectId, metamodelId, next, rules);
+    prismaMock.model.findMany
+      .mockResolvedValueOnce([modelRow] as any)
+      .mockResolvedValueOnce([{ ...modelRow, elements: [{ ...modelRow.elements[0], style: { speed: 12, maximumSpeed: 30 } }] }] as any);
+    jest.spyOn(projectCheckpointService, 'create').mockResolvedValue({ id: 'checkpoint-1' } as any);
+    (prismaMock.$transaction as any).mockImplementation(async (operation: Function) => operation(prismaMock));
+    prismaMock.metamodelMigration.create.mockResolvedValue({ id: 'failed-migration' } as any);
+
+    await expect(metamodelEvolutionService.apply(projectId, metamodelId, {
+      nextMetamodel: next, expectedSourceHash: preview.sourceHash, rules,
+    }, userId)).rejects.toThrow('would overwrite existing instance values');
+    expect(prismaMock.model.update).not.toHaveBeenCalled();
+    expect(prismaMock.metamodel.update).not.toHaveBeenCalled();
+  });
+
+  it('blocks deleting a class while surviving elements still reference its instances', async () => {
+    const host = { ...currentMetamodel.classes[0], id: 'host', name: 'Host', attributes: [], references: [{
+      id: 'peer', name: 'peer', eClass: '', target: 'host', containment: false, cardinality: { lowerBound: 0, upperBound: 1 },
+    }] };
+    prismaMock.metamodel.findFirst.mockResolvedValue({ ...metamodelRow, classes: [host, { ...currentMetamodel.classes[0], superTypes: ['host'] }] } as any);
+    prismaMock.model.findMany.mockResolvedValue([{ ...modelRow, elements: [modelRow.elements[0], {
+      id: 'server', modelElementId: 'host', style: {}, references: { peer: 'robot-1' },
+    }] }] as any);
+
+    const report = await metamodelEvolutionService.preview(projectId, metamodelId, { ...currentMetamodel, classes: [host] }, [
+      { kind: 'remove-class', classId: 'robot-class', deleteInstances: true },
+    ]);
+    expect(report.blockers).toEqual([expect.stringContaining('links surviving elements to instances of removed classes')]);
   });
 });
 

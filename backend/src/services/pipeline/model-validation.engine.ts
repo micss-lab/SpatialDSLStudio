@@ -30,7 +30,7 @@ export const valueMatchesAttribute = (value: unknown, attribute: MetaAttribute):
   return typeof value === attribute.type;
 };
 
-const inheritedFeatures = <T extends MetaAttribute | MetaReference>(
+export const inheritedFeatures = <T extends MetaAttribute | MetaReference>(
   metamodel: Metamodel,
   metaClass: MetaClass,
   key: 'attributes' | 'references',

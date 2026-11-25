@@ -201,10 +201,7 @@ class MetamodelService {
 
     // Let an in-flight save settle first, otherwise its 404 fallback can
     // re-create the metamodel right after we delete it
-    const pendingSave = this.pendingSaves.get(id);
-    if (pendingSave) {
-      await pendingSave.catch(() => {});
-    }
+    await this.waitForPendingSave(id);
 
     try {
       await deleteMetamodelFromAPI(id);
@@ -523,6 +520,10 @@ class MetamodelService {
     URL.revokeObjectURL(url);
     
     return true;
+  }
+
+  async waitForPendingSave(id: string): Promise<void> {
+    await this.pendingSaves.get(id);
   }
 
   /**

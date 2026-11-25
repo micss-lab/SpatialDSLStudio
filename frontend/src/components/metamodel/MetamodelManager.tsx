@@ -7,6 +7,7 @@ import FileUploadIcon from '@mui/icons-material/FileUpload';
 import ShareIcon from '@mui/icons-material/Share';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import HistoryIcon from '@mui/icons-material/History';
 import { Metamodel } from '../../models/types';
 import { metamodelService } from '../../services/metamodel';
 import VisualMetamodelEditor from './VisualMetamodelEditor';
@@ -318,6 +319,13 @@ const MetamodelManager: React.FC = () => {
           }}>
             <ListItemIcon><AccountTreeIcon fontSize="small" /></ListItemIcon>
             <ListItemText>Manage Viewpoints</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={() => {
+            if (actionsTarget) navigate(`/projects/${project.id}/metamodels/${actionsTarget.id}/evolution`);
+            closeActionsMenu();
+          }}>
+            <ListItemIcon><HistoryIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Metamodel Evolution</ListItemText>
           </MenuItem>
           {canDelete && (
             <MenuItem onClick={() => {

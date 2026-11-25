@@ -8,8 +8,9 @@ Open **Project History** in the project sidebar to browse checkpoints and review
 pipeline runs. The **Checkpoints** tab compares a saved checkpoint with the
 current project or an earlier checkpoint. Project roles with checkpoint creation
 access can also capture a checkpoint from that tab. The **Pipeline runs** tab
-shows run status, step results, and recorded output. Use the REST API for
-metamodel evolution and checkpoint restore. The pipeline CLI can start a run.
+shows run status, step results, and recorded output. Open **Metamodel Evolution**
+from a metamodel's actions menu to review or apply a migration. Use the REST
+API to restore a checkpoint. The pipeline CLI can start a run.
 
 ## Studio Projects
 
@@ -105,6 +106,16 @@ Only a project owner (or a platform admin) can restore.
 Changing a published metamodel is the moment where MDE projects usually break:
 the language moves and the models that conform to it silently stop making sense.
 Evolution turns that into an explicit, previewable operation.
+
+1. Open **Metamodels**, then choose **Metamodel Evolution** from the selected
+   metamodel's actions menu.
+2. Stage class or attribute changes, or load a proposed JSON export for the
+   same metamodel. Keep IDs stable for classes and features you intend to edit.
+3. Click **Preview migration** and review the affected artifacts and blockers.
+   Select any applicable migration rules and preview again.
+4. Choose **Review and apply** when the preview has no blockers. Confirm the
+   migration and use **View recovery checkpoint** to open its checkpoint in
+   Project History.
 
 ### Preview before you migrate
 

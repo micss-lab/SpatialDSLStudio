@@ -4,6 +4,7 @@ import { ProjectHistoryPage } from '../../components/projects/ProjectHistoryPage
 import { useProject } from '../../contexts/ProjectContext';
 import { lifecycleService } from '../../services/lifecycle.service';
 
+jest.mock('react-router-dom');
 jest.mock('../../contexts/ProjectContext', () => ({ useProject: jest.fn() }));
 jest.mock('../../services/lifecycle.service', () => ({
   lifecycleService: {
