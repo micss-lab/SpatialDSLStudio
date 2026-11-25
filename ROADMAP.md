@@ -112,7 +112,6 @@ and a runnable simulation, from one web tool.
 | `.odesign` advanced features | Reused mappings, style customizations, Java services, and complex Sirius expressions remain common in real specs. | Conditional styles, common filters, and additional layers now round-trip; remaining constructs are reported, never silently imported. |
 | Validation quick fixes | The 2D and 3D validation panels filter by severity and revalidate after edits. | Add rule-specific, previewable fixes for selected issues. |
 | Higher-fidelity Ecore/XMI | Opposites, containment nuances, multi-resource sessions, and sidecar representation resources widen interoperability. | |
-| Metamodel evolution UI | Project History covers checkpoint creation, comparison, and pipeline results. | Add a guided migration preview and review flow using the existing API. |
 | Branching and merge | Checkpoints are linear per project; there is no branch, fork, or three-way merge of an artifact graph. | The canonical hashing and diff primitives are the foundation this would build on. |
 | Cross-project artifact reuse | Every artifact belongs to exactly one project, so a shared library metamodel must be copied rather than referenced. | Deliberate: the one-project invariant is what makes scoping and restore predictable. |
 
@@ -135,6 +134,8 @@ and a runnable simulation, from one web tool.
     saved pipeline runs and step results.
 16. **Validation feedback.** Filter issues by severity and revalidate after
     placement edits in 2D and 3D.
+17. **Metamodel Evolution.** Stage a proposal, preview its impact, review and
+    apply migration rules, and open the recovery checkpoint from migration history.
 
 ## Suggested sequencing
 

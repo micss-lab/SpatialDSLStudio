@@ -60,12 +60,12 @@ export function syncMetamodelToAPI(
       } else {
         console.error('Error syncing metamodel to API:', error);
       }
-    } finally {
-      pendingSaves.delete(metamodel.id);
     }
   };
 
-  const savePromise = doSave();
+  const savePromise = doSave().finally(() => {
+    if (pendingSaves.get(metamodel.id) === savePromise) pendingSaves.delete(metamodel.id);
+  });
   pendingSaves.set(metamodel.id, savePromise);
 }
 
@@ -101,10 +101,10 @@ export function saveMetamodelToAPI(
       syncedToDb.add(metamodel.id);
     } catch (err) {
       console.error('Error saving metamodel to API:', err);
-    } finally {
-      pendingSaves.delete(metamodel.id);
     }
-  })();
+  })().finally(() => {
+    if (pendingSaves.get(metamodel.id) === savePromise) pendingSaves.delete(metamodel.id);
+  });
   
   pendingSaves.set(metamodel.id, savePromise);
 }

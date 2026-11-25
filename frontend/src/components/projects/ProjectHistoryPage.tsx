@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Chip,
   CircularProgress, Container, MenuItem, Paper, Stack, Tab, Tabs, TextField, Typography,
@@ -14,13 +15,13 @@ const checkpointLabel = (checkpoint: ProjectCheckpoint) => (
 );
 const errorMessage = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
 
-function Checkpoints({ projectId, canCreate }: { projectId: string; canCreate: boolean }) {
+function Checkpoints({ projectId, canCreate, initialCheckpointId }: { projectId: string; canCreate: boolean; initialCheckpointId: string }) {
   const [checkpoints, setCheckpoints] = useState<ProjectCheckpoint[] | null>(null);
   const [error, setError] = useState('');
   const [tag, setTag] = useState('');
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
-  const [sourceId, setSourceId] = useState('');
+  const [sourceId, setSourceId] = useState(initialCheckpointId);
   const [againstId, setAgainstId] = useState('');
   const [diff, setDiff] = useState<ProjectCheckpointDiff | null>(null);
   const [diffLabel, setDiffLabel] = useState('');
@@ -222,6 +223,8 @@ function PipelineRuns({ projectId }: { projectId: string }) {
 
 export function ProjectHistoryPage() {
   const { project, can } = useProject();
+  const [params] = useSearchParams();
+  const checkpointId = params.get('checkpoint') || '';
   const [tab, setTab] = useState<'checkpoints' | 'runs'>('checkpoints');
 
   return (
@@ -233,7 +236,7 @@ export function ProjectHistoryPage() {
       </Tabs>
       <Box role="tabpanel" id={`${tab}-panel`} aria-labelledby={`${tab}-tab`}>
         {tab === 'checkpoints'
-          ? <Checkpoints key={project.id} projectId={project.id} canCreate={can('checkpoint.create')} />
+          ? <Checkpoints key={`${project.id}:${checkpointId}`} projectId={project.id} canCreate={can('checkpoint.create')} initialCheckpointId={checkpointId} />
           : <PipelineRuns key={project.id} projectId={project.id} />}
       </Box>
     </Container>

@@ -20,6 +20,7 @@ import { validateConcreteSyntaxVerticalPlacement } from '../../../../shared/spat
 import { validateSpatialRules } from '../../../../shared/spatial-rules';
 import { contentHash, stableStringify } from './canonical';
 import { projectCheckpointService } from './project-checkpoint.service';
+import { inheritedFeatures } from '../pipeline/model-validation.engine';
 
 const asArray = <T>(value: unknown): T[] => Array.isArray(value) ? value as T[] : [];
 const hasOwn = (value: Record<string, any>, key: string): boolean => (
@@ -95,6 +96,34 @@ const matchesRule = (
   && (!rule.featureId || rule.featureId === change.featureId)
   && (!rule.fromName || rule.fromName === change.before?.name)
 ));
+
+const featuresByClass = (metamodel: Metamodel) => {
+  const classes = new Map(metamodel.classes.map(cls => [cls.id, cls]));
+  return new Map(metamodel.classes.map(cls => {
+    const lineage = new Set<string>();
+    const visit = (id: string) => {
+      if (lineage.has(id)) return;
+      lineage.add(id);
+      classes.get(id)?.superTypes?.forEach(visit);
+    };
+    visit(cls.id);
+    return [cls.id, {
+      lineage,
+      attributes: inheritedFeatures<MetaAttribute>(metamodel, cls, 'attributes'),
+      references: inheritedFeatures<MetaReference>(metamodel, cls, 'references'),
+    }];
+  }));
+};
+
+const affectedFeatures = (before: ReturnType<typeof featuresByClass>, after: ReturnType<typeof featuresByClass>) => {
+  return (classId: string, change: MetamodelEvolutionChange): boolean => {
+    if (!change.featureId) return change.classId === classId;
+    const classFeatures = (change.before ? before : after).get(classId);
+    if (!classFeatures?.lineage.has(change.classId)) return false;
+    const features = change.kind.startsWith('attribute-') ? classFeatures.attributes : classFeatures.references;
+    return features.some(feature => feature.id === change.featureId);
+  };
+};
 
 class MetamodelEvolutionService {
   compare(current: Metamodel, next: Metamodel): MetamodelEvolutionChange[] {
@@ -265,9 +294,8 @@ class MetamodelEvolutionService {
     });
   }
 
-  private async loadContext(projectId: string, metamodelId: string): Promise<{
+  private async loadContext(projectId: string, metamodelId: string, db: Prisma.TransactionClient = prisma): Promise<{
     current: Metamodel;
-    row: any;
     models: any[];
     diagrams: any[];
     viewpoints: any[];
@@ -275,19 +303,19 @@ class MetamodelEvolutionService {
     generators: any[];
     tests: any[];
   }> {
-    const row = await prisma.metamodel.findFirst({ where: { id: metamodelId, projectId } });
+    const row = await db.metamodel.findFirst({ where: { id: metamodelId, projectId } });
     if (!row) throw new ApiError(404, 'Metamodel not found in this project');
-    const models = await prisma.model.findMany({ where: { projectId, conformsToId: metamodelId } });
+    const models = await db.model.findMany({ where: { projectId, conformsToId: metamodelId } });
     const modelIds = models.map(model => model.id);
     const [diagrams, viewpoints, transformations, generators, tests] = await Promise.all([
-      prisma.diagram.findMany({ where: { projectId, ...(modelIds.length > 0 && { modelId: { in: modelIds } }) } }),
-      prisma.viewpoint.findMany({ where: { projectId, metamodelId } }),
-      prisma.transformationRule.findMany({ where: { projectId } }),
-      prisma.codeGenerationProject.findMany({ where: { projectId, targetMetamodelId: metamodelId } }),
-      prisma.testCase.findMany({ where: { projectId } }),
+      db.diagram.findMany({ where: { projectId, modelId: { in: modelIds } } }),
+      db.viewpoint.findMany({ where: { projectId, metamodelId } }),
+      db.transformationRule.findMany({ where: { projectId } }),
+      db.codeGenerationProject.findMany({ where: { projectId, targetMetamodelId: metamodelId } }),
+      db.testCase.findMany({ where: { projectId } }),
     ]);
     return {
-      current: toMetamodel(row), row,
+      current: toMetamodel(row),
       models: models || [], diagrams: diagrams || [], viewpoints: viewpoints || [],
       transformations: transformations || [], generators: generators || [], tests: tests || [],
     };
@@ -300,12 +328,24 @@ class MetamodelEvolutionService {
     rules: MetamodelMigrationRule[] = []
   ): Promise<MetamodelEvolutionReport> {
     const context = await this.loadContext(projectId, metamodelId);
+    return this.buildReport(context, next, rules);
+  }
+
+  private buildReport(
+    context: Awaited<ReturnType<MetamodelEvolutionService['loadContext']>>,
+    next: Metamodel,
+    rules: MetamodelMigrationRule[]
+  ): MetamodelEvolutionReport {
     this.assertTargetIsValid(context.current, next);
     const changes = this.compare(context.current, next);
     const impacts: MetamodelEvolutionImpact[] = [];
     const blockers: string[] = [];
     const warnings: string[] = [];
-    const impactedClassIds = new Set(changes.map(change => change.classId));
+    const beforeFeatures = featuresByClass(context.current);
+    const afterFeatures = featuresByClass(next);
+    const affects = affectedFeatures(beforeFeatures, afterFeatures);
+    const impactedClassIds = new Set(context.current.classes
+      .filter(cls => changes.some(change => affects(cls.id, change))).map(cls => cls.id));
     const tokenChanges = changes.filter(change => change.breaking).map(change => ({
       change,
       tokens: [
@@ -316,15 +356,14 @@ class MetamodelEvolutionService {
         .filter((value): value is string => typeof value === 'string' && value.length > 0),
     }));
 
-    const modelElements = new Map<string, ModelElement[]>();
     context.models.forEach(model => {
       const elements = asArray<ModelElement>(model.elements);
-      modelElements.set(model.id, elements);
       const affectedElementIds = elements
         .filter(element => impactedClassIds.has(element.modelElementId))
         .map(element => element.id);
       impacts.push({
         artifact: { type: 'model', id: model.id },
+        name: model.name,
         reasons: affectedElementIds.length > 0
           ? [`${affectedElementIds.length} element(s) instantiate changed classes`]
           : ['Model conforms to the evolving metamodel'],
@@ -333,14 +372,17 @@ class MetamodelEvolutionService {
     });
     context.diagrams.forEach(diagram => impacts.push({
       artifact: { type: 'view', id: diagram.id },
+      name: diagram.name,
       reasons: ['View projects a model that conforms to the evolving metamodel'],
     }));
     context.viewpoints.forEach(viewpoint => impacts.push({
       artifact: { type: 'viewpoint', id: viewpoint.id },
+      name: viewpoint.name,
       reasons: ['Viewpoint is defined for the evolving metamodel'],
     }));
     context.generators.forEach(generator => impacts.push({
       artifact: { type: 'generator', id: generator.id },
+      name: generator.name,
       reasons: ['Generator targets the evolving metamodel'],
     }));
 
@@ -354,7 +396,7 @@ class MetamodelEvolutionService {
         item.tokens
       ));
       if (matched.length > 0) {
-        impacts.push({ artifact: { type: 'transformation', id: rule.id }, reasons: ['Rule references changed language elements'] });
+        impacts.push({ artifact: { type: 'transformation', id: rule.id }, name: rule.name, reasons: ['Rule references changed language elements'] });
         blockers.push(`Transformation ${rule.name} must be updated before applying this breaking evolution`);
       }
     });
@@ -390,8 +432,20 @@ class MetamodelEvolutionService {
     });
 
     const allElements = context.models.flatMap(model => asArray<ModelElement>(model.elements));
+    const removedClasses = new Set(changes.filter(change => change.kind === 'class-removed').map(change => change.classId));
+    if (removedClasses.size > 0) context.models.forEach(model => {
+      const elements = asArray<ModelElement>(model.elements);
+      const removedIds = new Set(elements.filter(element => removedClasses.has(element.modelElementId)).map(element => element.id));
+      const survivingLinks = elements.some(element => !removedIds.has(element.id) && (
+        (element.presentation?.attachedToElementId && removedIds.has(element.presentation.attachedToElementId))
+        || Object.values(element.references || {}).some(value => (Array.isArray(value) ? value : [value])
+          .some(targetId => targetId !== null && removedIds.has(targetId)))
+      ));
+      if (survivingLinks) blockers.push(`Model ${model.name} links surviving elements to instances of removed classes; clear those links before applying`);
+    });
     for (const change of changes) {
-      const elements = allElements.filter(element => element.modelElementId === change.classId);
+      const elements = allElements.filter(element => affects(element.modelElementId, change)
+        && (change.kind === 'class-removed' || !removedClasses.has(element.modelElementId)));
       if (change.kind === 'class-removed' && elements.length > 0) {
         const rule = matchesRule(rules, 'remove-class', change);
         if (!rule?.deleteInstances) {
@@ -406,7 +460,8 @@ class MetamodelEvolutionService {
         if (withValue.length > 0 && (!rule || rule.toName !== toName)) {
           blockers.push(`Attribute ${fromName} has instance values; add a rename-attribute rule to ${toName}`);
         }
-        if (rule && withValue.some(element => hasOwn(element.style || {}, toName))) {
+        if (rule && withValue.some(element => hasOwn(element.style || {}, toName)
+          || afterFeatures.get(element.modelElementId)?.attributes.some(attribute => attribute.name === toName && attribute.id !== change.featureId))) {
           blockers.push(`Attribute rename ${fromName} -> ${toName} would overwrite existing instance values`);
         }
       }
@@ -415,6 +470,13 @@ class MetamodelEvolutionService {
         const withValue = elements.filter(element => hasOwn(element.style || {}, fromName));
         if (withValue.length > 0 && !matchesRule(rules, 'remove-attribute', change)) {
           blockers.push(`Attribute ${fromName} has instance values; add a remove-attribute rule`);
+        }
+      }
+      if (change.kind === 'attribute-renamed' || change.kind === 'attribute-removed') {
+        const fromName = String(change.before?.name || '');
+        if (elements.some(element => hasOwn(element.style || {}, fromName)
+          && beforeFeatures.get(element.modelElementId)?.attributes.some(attribute => attribute.name === fromName && attribute.id !== change.featureId))) {
+          blockers.push(`Attribute ${fromName} has ambiguous inherited values; resolve the duplicate attribute before applying`);
         }
       }
       if (change.kind === 'attribute-added' && change.after?.required && change.after.defaultValue === undefined) {
@@ -451,7 +513,7 @@ class MetamodelEvolutionService {
 
     context.tests.forEach(test => {
       const relevant = changes.filter(change => (
-        change.classId === test.targetMetaClassId
+        affects(test.targetMetaClassId, change)
         && (
           change.kind.startsWith('class-')
           || change.before?.name === test.targetProperty
@@ -459,7 +521,7 @@ class MetamodelEvolutionService {
         )
       ));
       if (relevant.length > 0) {
-        impacts.push({ artifact: { type: 'test', id: test.id }, reasons: ['Test targets a changed language element'] });
+        impacts.push({ artifact: { type: 'test', id: test.id }, name: test.name, reasons: ['Test targets a changed language element'] });
         if (relevant.some(change => change.kind === 'class-removed' || change.kind === 'attribute-removed')) {
           blockers.push(`Test ${test.name} targets a removed language element and must be updated or deleted`);
         }
@@ -468,7 +530,7 @@ class MetamodelEvolutionService {
 
     const dedupe = (items: string[]): string[] => [...new Set(items)].sort();
     return {
-      metamodelId,
+      metamodelId: context.current.id,
       sourceHash: metamodelFingerprint(context.current),
       targetHash: metamodelFingerprint(next),
       changes,
@@ -482,7 +544,8 @@ class MetamodelEvolutionService {
   private migrateModel(
     model: any,
     changes: MetamodelEvolutionChange[],
-    rules: MetamodelMigrationRule[]
+    rules: MetamodelMigrationRule[],
+    affects: ReturnType<typeof affectedFeatures>
   ): { elements: ModelElement[]; connections: any[]; changedElements: number; deletedElements: number; deletedIds: string[] } {
     const original = asArray<ModelElement>(model.elements);
     const deletedClassIds = new Set(
@@ -500,7 +563,7 @@ class MetamodelEvolutionService {
       .map(element => {
         const style = { ...(element.style || {}) };
         let changed = false;
-        changes.filter(change => change.classId === element.modelElementId).forEach(change => {
+        changes.filter(change => affects(element.modelElementId, change)).forEach(change => {
           if (change.kind === 'attribute-renamed') {
             const rule = matchesRule(rules, 'rename-attribute', change);
             const fromName = String(change.before?.name || '');
@@ -558,23 +621,28 @@ class MetamodelEvolutionService {
       tag: request.checkpointTag,
       message: request.message || `Before evolution of ${request.nextMetamodel.name}`,
     });
-    const context = await this.loadContext(projectId, metamodelId);
-    const migrations = context.models.map(model => ({
-      model,
-      result: this.migrateModel(model, report.changes, rules),
-    }));
-    const migratedModels = migrations.map(item => ({
-      modelId: item.model.id,
-      changedElements: item.result.changedElements,
-      deletedElements: item.result.deletedElements,
-    }));
+    let migratedModels: MetamodelMigrationResult['migratedModels'] = [];
+    let appliedReport = report;
 
     try {
       const migrationRow = await prisma.$transaction(async tx => {
-        const latest = await tx.metamodel.findFirst({ where: { id: metamodelId, projectId } });
-        if (!latest || metamodelFingerprint(toMetamodel(latest)) !== report.sourceHash) {
+        const context = await this.loadContext(projectId, metamodelId, tx);
+        if (metamodelFingerprint(context.current) !== report.sourceHash) {
           throw new ApiError(409, 'Metamodel changed while the migration was being prepared');
         }
+        const next = request.nextMetamodel;
+        appliedReport = this.buildReport(context, next, rules);
+        if (appliedReport.blockers.length > 0) {
+          throw new ApiError(409, `Evolution is blocked: ${appliedReport.blockers.join('; ')}`);
+        }
+        const affects = affectedFeatures(featuresByClass(context.current), featuresByClass(next));
+        const migrations = context.models.map(model => ({
+          model,
+          result: this.migrateModel(model, appliedReport.changes, rules, affects),
+        }));
+        migratedModels = migrations.map(({ model, result }) => ({
+          modelId: model.id, changedElements: result.changedElements, deletedElements: result.deletedElements,
+        }));
 
         for (const migration of migrations) {
           if (migration.result.changedElements > 0 || migration.result.deletedElements > 0) {
@@ -607,12 +675,12 @@ class MetamodelEvolutionService {
         }
 
         for (const test of context.tests) {
-          const rename = report.changes.find(change => (
+          const rename = appliedReport.changes.find(change => (
             change.kind === 'attribute-renamed'
-            && change.classId === test.targetMetaClassId
+            && affects(test.targetMetaClassId, change)
             && change.before?.name === test.targetProperty
           ));
-          const classRename = report.changes.find(change => (
+          const classRename = appliedReport.changes.find(change => (
             change.kind === 'class-renamed' && change.classId === test.targetMetaClassId
           ));
           if (rename || classRename) {
@@ -629,7 +697,6 @@ class MetamodelEvolutionService {
           }
         }
 
-        const next = request.nextMetamodel;
         await tx.metamodel.update({
           where: { id: metamodelId },
           data: {
@@ -653,14 +720,14 @@ class MetamodelEvolutionService {
             sourceHash: report.sourceHash,
             targetHash: report.targetHash,
             status: 'APPLIED',
-            changeSet: report.changes as any,
-            impactReport: report as any,
+            changeSet: appliedReport.changes as any,
+            impactReport: appliedReport as any,
             migrationReport: { migratedModels } as any,
             createdById: userId,
             appliedAt: new Date(),
           },
         });
-      });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
       return {
         id: migrationRow.id,
@@ -670,12 +737,15 @@ class MetamodelEvolutionService {
         sourceHash: report.sourceHash,
         targetHash: report.targetHash,
         status: 'APPLIED',
-        report,
+        report: appliedReport,
         migratedModels,
         createdAt: migrationRow.createdAt.toISOString(),
         appliedAt: migrationRow.appliedAt?.toISOString(),
       };
     } catch (error) {
+      const failure = error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034'
+        ? new ApiError(409, 'Project artifacts changed during the migration. Run the preview again.')
+        : error;
       await prisma.metamodelMigration.create({
         data: {
           projectId,
@@ -684,13 +754,13 @@ class MetamodelEvolutionService {
           sourceHash: report.sourceHash,
           targetHash: report.targetHash,
           status: 'FAILED',
-          changeSet: report.changes as any,
-          impactReport: report as any,
-          migrationReport: { migratedModels, error: error instanceof Error ? error.message : String(error) } as any,
+          changeSet: appliedReport.changes as any,
+          impactReport: appliedReport as any,
+          migrationReport: { migratedModels, error: failure instanceof Error ? failure.message : String(failure) } as any,
           createdById: userId,
         },
       }).catch(() => undefined);
-      throw error;
+      throw failure;
     }
   }
 

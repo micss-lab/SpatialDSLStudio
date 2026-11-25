@@ -186,6 +186,7 @@ export interface MetamodelEvolutionChange {
 
 export interface MetamodelEvolutionImpact {
   artifact: ProjectArtifactRef;
+  name?: string;
   reasons: string[];
   affectedElementIds?: string[];
 }

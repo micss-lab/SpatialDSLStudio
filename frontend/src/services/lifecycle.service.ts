@@ -60,6 +60,10 @@ export const lifecycleService = {
     return apiClient.get(`${projectEndpoint(projectId)}/metamodels`);
   },
 
+  getMetamodel(projectId: string, metamodelId: string): Promise<Metamodel> {
+    return apiClient.get(`${projectEndpoint(projectId)}/metamodels/${encodeURIComponent(metamodelId)}`);
+  },
+
   listModels(projectId: string): Promise<Model[]> {
     return apiClient.get(`${projectEndpoint(projectId)}/models`);
   },
