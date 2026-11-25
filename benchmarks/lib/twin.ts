@@ -110,6 +110,7 @@ export interface RuleFinding {
   lastT?: number;
   samples: number;
   elements: TraceChain[];
+  poses?: Array<{ elementId: string; designPose: PoseMm; observedPose: PoseMm }>;
 }
 
 export interface ModelPatchEntry {
@@ -342,17 +343,17 @@ export function analyzeRun(input: {
 
   // The design-time rules, evaluated unchanged on the lifted model of every sample and
   // compared with the model's own verdicts sample by sample.
-  type Span = { issue: ValidationIssue; firstT: number; lastT: number; samples: number };
+  type Span = { issue: ValidationIssue; firstSample: ObservationSample; lastT: number; samples: number };
   const designIssues = new Map(evaluateSpatialRules(metamodel, model).map(issue => [issueKey(issue), issue]));
   const runtimeOnly = new Map<string, Span>();
   const designAbsent = new Map<string, Span>();
-  const note = (spans: Map<string, Span>, key: string, issue: ValidationIssue, t: number): void => {
+  const note = (spans: Map<string, Span>, key: string, issue: ValidationIssue, sample: ObservationSample): void => {
     const span = spans.get(key);
     if (span) {
-      span.lastT = t;
+      span.lastT = sample.t;
       span.samples += 1;
     } else {
-      spans.set(key, { issue, firstT: t, lastT: t, samples: 1 });
+      spans.set(key, { issue, firstSample: sample, lastT: sample.t, samples: 1 });
     }
   };
   observations.samples.forEach(sample => {
@@ -360,24 +361,35 @@ export function analyzeRun(input: {
     evaluateSpatialRules(metamodel, liftModel(model, authored, sample.poses)).forEach(issue => {
       const key = issueKey(issue);
       present.add(key);
-      if (!designIssues.has(key)) note(runtimeOnly, key, issue, sample.t);
+      if (!designIssues.has(key)) note(runtimeOnly, key, issue, sample);
     });
     designIssues.forEach((issue, key) => {
-      if (!present.has(key)) note(designAbsent, key, issue, sample.t);
+      if (!present.has(key)) note(designAbsent, key, issue, sample);
     });
   });
-  const ruleFinding = (kind: RuleFinding['kind'], span: Span): RuleFinding => ({
-    kind,
-    ruleId: span.issue.constraintId || 'unknown',
-    ruleName: ruleNames.get(span.issue.constraintId || '') || span.issue.constraintId || 'unknown',
-    severity: span.issue.severity,
-    message: span.issue.message,
-    firstT: span.firstT,
-    lastT: span.lastT,
-    samples: span.samples,
-    elements: [span.issue.elementId, ...(span.issue.relatedElementIds || [])]
-      .filter((id): id is string => Boolean(id)).map(traceOf),
-  });
+  const ruleFinding = (kind: RuleFinding['kind'], span: Span): RuleFinding => {
+    const ids = [span.issue.elementId, ...(span.issue.relatedElementIds || [])]
+      .filter((id): id is string => Boolean(id));
+    return {
+      kind,
+      ruleId: span.issue.constraintId || 'unknown',
+      ruleName: ruleNames.get(span.issue.constraintId || '') || span.issue.constraintId || 'unknown',
+      severity: span.issue.severity,
+      message: span.issue.message,
+      firstT: span.firstSample.t,
+      lastT: span.lastT,
+      samples: span.samples,
+      elements: ids.map(traceOf),
+      poses: ids.flatMap(elementId => {
+        const element = elements.get(elementId);
+        const start = authored.get(elementId);
+        const sample = span.firstSample.poses.get(elementId);
+        return element && start && sample ? [{
+          elementId, designPose: designPose(element), observedPose: liftPose(element, start, sample),
+        }] : [];
+      }),
+    };
+  };
   const ruleFindings: RuleFinding[] = [
     ...[...runtimeOnly.values()].map(span => ruleFinding('runtime-rule-violation', span)),
     ...[...designAbsent.values()].map(span => ruleFinding('design-violation-not-observed', span)),

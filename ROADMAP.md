@@ -110,9 +110,9 @@ and a runnable simulation, from one web tool.
 | Advanced container layout | Fixed containment-driven containers now work; auto-sizing, collapse/expand, compartments, and non-containment grouping are still missing. | Build on the Phase 3 parent/child projection metadata. |
 | Advanced tool operations | Native create/delete/reconnect tools and safe create-time attribute assignment now run. Custom direct-edit behavior and full Sirius action trees are still needed for richer DSL workflows. | Keep expression/service execution constrained and explicit. |
 | `.odesign` advanced features | Reused mappings, style customizations, Java services, and complex Sirius expressions remain common in real specs. | Conditional styles, common filters, and additional layers now round-trip; remaining constructs are reported, never silently imported. |
-| Validation workflow extensions | View-scoped validation and property panels now support review in 2D/3D; quick fixes, severity filters, and optional live revalidation would shorten correction loops. | Validation currently runs when a view opens and on explicit refresh. |
+| Validation quick fixes | The 2D and 3D validation panels filter by severity and revalidate after edits. | Add rule-specific, previewable fixes for selected issues. |
 | Higher-fidelity Ecore/XMI | Opposites, containment nuances, multi-resource sessions, and sidecar representation resources widen interoperability. | |
-| Lifecycle UI surface | Checkpoints, evolution previews, and pipeline runs are reachable through REST, the typed client service, and the CLI, but have no dedicated panel in the web UI. | The contracts are stable, so a panel is presentation work rather than new backend capability. |
+| Metamodel evolution UI | Project History covers checkpoint creation, comparison, and pipeline results. | Add a guided migration preview and review flow using the existing API. |
 | Branching and merge | Checkpoints are linear per project; there is no branch, fork, or three-way merge of an artifact graph. | The canonical hashing and diff primitives are the foundation this would build on. |
 | Cross-project artifact reuse | Every artifact belongs to exactly one project, so a shared library metamodel must be copied rather than referenced. | Deliberate: the one-project invariant is what makes scoping and restore predictable. |
 
@@ -126,6 +126,15 @@ and a runnable simulation, from one web tool.
 | Real robot runtime validation | The production AMR has joint mappings and a differential-drive articulation layer. | Validate its physical behavior in Isaac Sim on supported NVIDIA hardware. |
 | Isaac Sim QA loop | Verified runs on real hardware/cloud with screenshots, checksums, and version records. | Manual QA the team runs; not automatable here. |
 | Visual Components runtime parity | Generated JADE configuration now consumes Controller/Task/Product entities and shares the OPC UA contract. | Load it against a supported Visual Components/WarehouseMAS installation. |
+
+## Recent phases
+
+14. **Simulation Results.** Import a twin-loop report into a Studio Project, compare
+    designed and observed poses, and locate reported elements in 3D.
+15. **Project History.** Create and compare checkpoints in the browser and review
+    saved pipeline runs and step results.
+16. **Validation feedback.** Filter issues by severity and revalidate after
+    placement edits in 2D and 3D.
 
 ## Suggested sequencing
 

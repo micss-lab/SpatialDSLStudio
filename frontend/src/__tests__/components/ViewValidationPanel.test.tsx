@@ -30,4 +30,17 @@ describe('ViewValidationPanel', () => {
     expect(onSelectIssue).toHaveBeenCalledWith(issue);
     expect(onRefresh).toHaveBeenCalledTimes(1);
   });
+
+  it('filters the list by severity and navigates to the matching issue', () => {
+    const warning = { severity: 'warning' as const, message: 'Battery reserve is low' };
+    const error = { severity: 'error' as const, message: 'Rack clearance is too small' };
+    const onSelectIssue = jest.fn();
+    render(<ViewValidationPanel issues={[warning, error]} onRefresh={jest.fn()} onSelectIssue={onSelectIssue} />);
+
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    fireEvent.click(screen.getByRole('option', { name: 'Errors' }));
+    expect(screen.queryByText(warning.message)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /rack clearance is too small/i }));
+    expect(onSelectIssue).toHaveBeenCalledWith(error);
+  });
 });

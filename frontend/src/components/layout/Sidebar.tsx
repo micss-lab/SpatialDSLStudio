@@ -34,6 +34,8 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import SettingsIcon from '@mui/icons-material/Settings';
+import HistoryIcon from '@mui/icons-material/History';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import { AuthUser } from '../../services/core';
 import { useProject } from '../../contexts/ProjectContext';
 import { StudioProject } from '../../models/project.types';
@@ -106,6 +108,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isAdmin, onLogout, onRoleReques
     { label: 'Code Generation', path: `${base}/code-generation`, icon: <CodeIcon /> },
     { label: 'Transformations', path: `${base}/transformations`, icon: <AutorenewIcon /> },
     { label: 'Testing', path: `${base}/testing`, icon: <BugReportIcon /> },
+    { label: 'Simulation Results', path: `${base}/simulation-results`, icon: <AssessmentIcon /> },
+    { label: 'Project History', path: `${base}/history`, icon: <HistoryIcon /> },
     { label: 'Project Settings', path: `${base}/settings`, icon: <SettingsIcon /> },
     { label: 'Admin', path: '/admin', icon: <AdminPanelSettingsIcon />, adminOnly: true },
   ];
@@ -225,7 +229,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isAdmin, onLogout, onRoleReques
 
       <Divider />
 
-      <List sx={{ py: 1, flex: 1 }}>
+      <List sx={{ py: 1, flex: 1, overflowY: 'auto' }}>
         {visibleNavItems.map(renderItem)}
       </List>
 

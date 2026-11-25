@@ -21,8 +21,9 @@ can call the same geometry through the `spatial` helpers (see [Escape hatch](#es
    labelled for that kind.
 4. Click **Add**. The rule is saved with the metamodel.
 
-To see violations, open a view of a model and click the refresh button of the validation panel. Offending
-elements get an error, warning, or info marker in 2D and in 3D.
+Open a model view to see validation issues. The 2D and 3D editors refresh issues
+after you finish a placement edit. Filter the panel by severity or click
+**Validate view** to check immediately. Select an issue to locate its element.
 
 ## Rule fields
 
@@ -126,8 +127,8 @@ The bundled Smart Warehouse metamodel declares an abstract `FixedEquipment` supe
 | Charging station on a pathway | `adjacentTo` | ChargingStation | PathwayArea | 500 mm | plan | warning |
 | Drone clearance from racks | `minClearance` | InspectionDrone | StorageRack | 1000 mm | volume | error |
 
-To see a violation, open a warehouse view in 3D, move or rotate one conveyor into the other, and refresh
-the validation panel.
+To see a violation, open a warehouse view in 3D and move or rotate one conveyor
+into the other. The validation panel updates after the edit.
 
 ## Example: Smart Home
 
@@ -155,8 +156,8 @@ mounting height), and yaw.
 
 To see a violation, open the `Device Placement 3D` view, switch to 3D, and move the living-room smoke
 detector `SD-LIV` toward the hallway: with its Y position below 860 mm it is closer than 300 mm to the
-living-room wall, and at 500 mm it sits on the wall and is inside no room. Refresh the validation panel
-to see the rule errors.
+living-room wall, and at 500 mm it sits on the wall and is inside no room. The
+validation panel updates after the edit.
 
 ## Escape hatch: OCL and JavaScript helpers
 

@@ -125,3 +125,10 @@ including `results/twin-loop/`, which the script cleans only after reading it.
 Outputs: `results/twin-loop.json`, `results/twin-loop.md`, and per-scenario
 `report.json`, `report.md`, `observations.jsonl`, and `reconciled-model.json`
 in `results/twin-loop/`. Expected runtime: about 5 seconds.
+
+To review the rack-clearance violation in Studio, open a project with the Smart
+Warehouse starter. In **Simulation Results**, import and save
+`results/twin-loop/runtime-drift/report.json`. Open **Storage rack aisle width**
+to review the violation at 20 seconds and compare designed and observed poses.
+Click **Locate in 3D** on **Storage Rack #2** to select and center the rack in a
+view of the project model.

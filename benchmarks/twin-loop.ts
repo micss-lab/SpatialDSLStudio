@@ -74,6 +74,10 @@ const scenarios: Scenario[] = [
       }
       const aisle = report.ruleFindings.find(item => item.kind === 'runtime-rule-violation' && item.ruleId === RACK_AISLE_RULE);
       if (!aisle || aisle.firstT !== 20) failures.push('expected the rack aisle rule to fail at runtime from t = 20 s');
+      const movedRack = aisle?.poses?.find(pose => pose.elementId === deviation?.trace.elementId);
+      if (!movedRack || movedRack.observedPose.x - movedRack.designPose.x !== -1200) {
+        failures.push('expected the first failing sample to report the moved rack pose');
+      }
       if (!report.reconciliation.ruleImpact.introduced.some(text => text.startsWith('Storage rack aisle width'))) {
         failures.push('expected accepting the observed layout to introduce the rack aisle issue');
       }

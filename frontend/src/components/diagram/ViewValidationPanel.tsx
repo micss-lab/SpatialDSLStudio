@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Chip,
   IconButton,
+  MenuItem,
   Paper,
+  Select,
   Stack,
   Tooltip,
   Typography,
@@ -23,71 +25,88 @@ const ViewValidationPanel: React.FC<ViewValidationPanelProps> = ({
   issues,
   onRefresh,
   onSelectIssue,
-}) => (
-  <Paper
-    variant="outlined"
-    role="region"
-    aria-label="View validation"
-    data-testid="view-validation-panel"
-    sx={{ width: 340, maxWidth: 'calc(100vw - 32px)', overflow: 'hidden' }}
-  >
-    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.25, py: 0.75 }}>
-      <Stack direction="row" spacing={1} alignItems="center">
-        <Typography variant="subtitle2">Validation</Typography>
-        <Chip
+}) => {
+  const [severity, setSeverity] = useState<ValidationIssue['severity'] | 'all'>('all');
+  const visibleIssues = severity === 'all' ? issues : issues.filter(issue => issue.severity === severity);
+
+  return (
+    <Paper
+      variant="outlined"
+      role="region"
+      aria-label="View validation"
+      data-testid="view-validation-panel"
+      sx={{ width: 340, maxWidth: 'calc(100vw - 32px)', overflow: 'hidden' }}
+    >
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.25, py: 0.75 }}>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Typography variant="subtitle2">Validation</Typography>
+          <Chip
+            size="small"
+            label={issues.length === 1 ? '1 issue' : `${issues.length} issues`}
+            color={issues.some(issue => issue.severity === 'error') ? 'error' : issues.length > 0 ? 'warning' : 'default'}
+          />
+        </Stack>
+        <Select
           size="small"
-          label={issues.length === 1 ? '1 issue' : `${issues.length} issues`}
-          color={issues.some(issue => issue.severity === 'error') ? 'error' : issues.length > 0 ? 'warning' : 'default'}
-        />
-      </Stack>
-      <Tooltip title="Validate view">
-        <IconButton size="small" aria-label="Validate view" onClick={onRefresh}>
-          <RefreshIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
-    </Stack>
-    <Box sx={{ borderTop: 1, borderColor: 'divider', maxHeight: 190, overflowY: 'auto' }}>
-      {issues.length === 0 ? (
-        <Typography variant="body2" color="text.secondary" sx={{ px: 1.25, py: 1 }}>
-          No validation issues in this view.
-        </Typography>
-      ) : issues.map((issue, index) => (
-        <Box
-          component="button"
-          type="button"
-          key={`${issue.elementId || 'view'}-${issue.constraintId || index}-${index}`}
-          data-testid={`validation-issue-${index}`}
-          onClick={() => onSelectIssue(issue)}
-          sx={{
-            display: 'block',
-            width: '100%',
-            border: 0,
-            borderBottom: index < issues.length - 1 ? 1 : 0,
-            borderColor: 'divider',
-            background: 'transparent',
-            color: 'inherit',
-            textAlign: 'left',
-            px: 1.25,
-            py: 1,
-            cursor: issue.elementId ? 'pointer' : 'default',
-            '&:hover': { backgroundColor: 'action.hover' },
-          }}
+          value={severity}
+          onChange={event => setSeverity(event.target.value as typeof severity)}
+          inputProps={{ 'aria-label': 'Filter validation issues by severity' }}
+          sx={{ ml: 'auto', fontSize: '0.8rem', '& .MuiSelect-select': { py: 0.5 } }}
         >
-          <Stack direction="row" spacing={1} alignItems="flex-start">
-            <Chip size="small" label={issue.severity} color={severityColor(issue.severity)} />
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="body2">{issue.message}</Typography>
-              {(issue.location || issue.constraintId) && (
-                <Typography variant="caption" color="text.secondary">
-                  {[issue.location, issue.constraintId].filter(Boolean).join(' · ')}
-                </Typography>
-              )}
-            </Box>
-          </Stack>
-        </Box>
-      ))}
-    </Box>
-  </Paper>
-);
+          <MenuItem value="all">All severities</MenuItem>
+          <MenuItem value="error">Errors</MenuItem>
+          <MenuItem value="warning">Warnings</MenuItem>
+          <MenuItem value="info">Info</MenuItem>
+        </Select>
+        <Tooltip title="Validate view">
+          <IconButton size="small" aria-label="Validate view" onClick={onRefresh}>
+            <RefreshIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+      <Box sx={{ borderTop: 1, borderColor: 'divider', maxHeight: 190, overflowY: 'auto' }}>
+        {visibleIssues.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ px: 1.25, py: 1 }}>
+            {issues.length === 0 ? 'No validation issues in this view.' : 'No issues match this severity.'}
+          </Typography>
+        ) : visibleIssues.map((issue, index) => (
+          <Box
+            component="button"
+            type="button"
+            key={`${issue.elementId || 'view'}-${issue.constraintId || index}-${index}`}
+            data-testid={`validation-issue-${index}`}
+            onClick={() => onSelectIssue(issue)}
+            sx={{
+              display: 'block',
+              width: '100%',
+              border: 0,
+              borderBottom: index < issues.length - 1 ? 1 : 0,
+              borderColor: 'divider',
+              background: 'transparent',
+              color: 'inherit',
+              textAlign: 'left',
+              px: 1.25,
+              py: 1,
+              cursor: issue.elementId ? 'pointer' : 'default',
+              '&:hover': { backgroundColor: 'action.hover' },
+            }}
+          >
+            <Stack direction="row" spacing={1} alignItems="flex-start">
+              <Chip size="small" label={issue.severity} color={severityColor(issue.severity)} />
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2">{issue.message}</Typography>
+                {(issue.location || issue.constraintId) && (
+                  <Typography variant="caption" color="text.secondary">
+                    {[issue.location, issue.constraintId].filter(Boolean).join(' · ')}
+                  </Typography>
+                )}
+              </Box>
+            </Stack>
+          </Box>
+        ))}
+      </Box>
+    </Paper>
+  );
+};
 
 export default ViewValidationPanel;
