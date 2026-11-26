@@ -46,11 +46,12 @@ import type { PinCreationOption } from '../../services/diagram/diagram.service';
 
 interface DiagramEditorProps {
   diagramId: string;
+  canApplyQuickFix?: boolean;
 }
 
 const NODE_LABEL_MIN_WIDTH = 140;
 
-const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
+const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId, canApplyQuickFix = false }) => {
   // Load diagram data using shared hook
   const { diagram, setDiagram, metamodel, model } = useDiagramData(diagramId);
   
@@ -1725,6 +1726,7 @@ const DiagramEditor: React.FC<DiagramEditorProps> = ({ diagramId }) => {
             issues={validationIssues}
             onRefresh={validateView}
             onSelectIssue={handleValidationIssueSelect}
+            quickFix={canApplyQuickFix && diagram ? { diagram, onApplied: () => { saveChanges(); validateView(); } } : undefined}
           />
         </Box>
 

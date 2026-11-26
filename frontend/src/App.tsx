@@ -2151,11 +2151,11 @@ const DiagramEditorPage: React.FC = () => {
           ) : isTree ? (
             <TreeView diagramId={diagramId} />
           ) : mode === '2D' ? (
-            <DiagramEditor diagramId={diagramId} />
+            <DiagramEditor diagramId={diagramId} canApplyQuickFix={canEditView} />
           ) : (
             <div style={{ height: '100%', width: '100%', position: 'relative' }} className="diagram3d-container">
               <React.Suspense fallback={<Typography>Loading 3D editor...</Typography>}>
-                <Diagram3DEditor key={diagramId} diagramId={diagramId} focusElementId={params.get('element') || undefined} />
+                <Diagram3DEditor key={diagramId} diagramId={diagramId} focusElementId={params.get('element') || undefined} canApplyQuickFix={canEditView} />
               </React.Suspense>
             </div>
           )}

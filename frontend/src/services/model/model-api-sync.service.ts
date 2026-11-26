@@ -76,12 +76,12 @@ export class ModelApiSyncService {
         } else {
           console.error('Error syncing model to API:', error);
         }
-      } finally {
-        this.pendingSaves.delete(model.id);
       }
     };
 
-    const savePromise = doSave();
+    const savePromise = doSave().finally(() => {
+      if (this.pendingSaves.get(model.id) === savePromise) this.pendingSaves.delete(model.id);
+    });
     this.pendingSaves.set(model.id, savePromise);
   }
 
@@ -97,10 +97,10 @@ export class ModelApiSyncService {
         this.syncedToDb.add(model.id);
       } catch (err) {
         console.error('Error saving model to API:', err);
-      } finally {
-        this.pendingSaves.delete(model.id);
       }
-    })();
+    })().finally(() => {
+      if (this.pendingSaves.get(model.id) === savePromise) this.pendingSaves.delete(model.id);
+    });
     
     this.pendingSaves.set(model.id, savePromise);
   }

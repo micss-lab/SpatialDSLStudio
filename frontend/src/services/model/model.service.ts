@@ -3,7 +3,8 @@ import {
   ModelElement, 
   ModelElementPresentation,
   ValidationResult,
-  OCLValidationIssue
+  OCLValidationIssue,
+  SpatialQuickFixApplied,
 } from '../../models/types';
 import { oclService } from '../constraint';
 import { modelCrudService } from './model-crud.service';
@@ -60,10 +61,21 @@ class ModelService {
       const model = this.getModelById(changedModelId);
       if (model) {
         modelApiSyncService.syncModelToAPI(model);
-        window.dispatchEvent(new CustomEvent('model:changed', { detail: { modelId: changedModelId } }));
-        window.dispatchEvent(new Event('storage'));
+        this.notifyModelChanged(changedModelId);
       }
     }
+  }
+
+  private notifyModelChanged(modelId: string): void {
+    window.dispatchEvent(new CustomEvent('model:changed', { detail: { modelId } }));
+    window.dispatchEvent(new Event('storage'));
+  }
+
+  useSavedSpatialQuickFix({ modelId, elementId, presentation }: SpatialQuickFixApplied): void {
+    const element = this.getModelById(modelId)?.elements.find(candidate => candidate.id === elementId);
+    if (!element) return;
+    element.presentation = presentation;
+    this.notifyModelChanged(modelId);
   }
 
   private normalizeImportedElement(element: any, index: number): ModelElement {
@@ -133,8 +145,7 @@ class ModelService {
       models.push(savedModel);
     }
 
-    window.dispatchEvent(new CustomEvent('model:changed', { detail: { modelId: savedModel.id } }));
-    window.dispatchEvent(new Event('storage'));
+    this.notifyModelChanged(savedModel.id);
     return savedModel;
   }
 

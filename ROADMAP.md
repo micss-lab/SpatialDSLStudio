@@ -110,7 +110,6 @@ and a runnable simulation, from one web tool.
 | Advanced container layout | Fixed containment-driven containers now work; auto-sizing, collapse/expand, compartments, and non-containment grouping are still missing. | Build on the Phase 3 parent/child projection metadata. |
 | Advanced tool operations | Native create/delete/reconnect tools and safe create-time attribute assignment now run. Custom direct-edit behavior and full Sirius action trees are still needed for richer DSL workflows. | Keep expression/service execution constrained and explicit. |
 | `.odesign` advanced features | Reused mappings, style customizations, Java services, and complex Sirius expressions remain common in real specs. | Conditional styles, common filters, and additional layers now round-trip; remaining constructs are reported, never silently imported. |
-| Validation quick fixes | The 2D and 3D validation panels filter by severity and revalidate after edits. | Add rule-specific, previewable fixes for selected issues. |
 | Higher-fidelity Ecore/XMI | Opposites, containment nuances, multi-resource sessions, and sidecar representation resources widen interoperability. | |
 | Branching and merge | Checkpoints are linear per project; there is no branch, fork, or three-way merge of an artifact graph. | The canonical hashing and diff primitives are the foundation this would build on. |
 | Cross-project artifact reuse | Every artifact belongs to exactly one project, so a shared library metamodel must be copied rather than referenced. | Deliberate: the one-project invariant is what makes scoping and restore predictable. |
@@ -136,6 +135,8 @@ and a runnable simulation, from one web tool.
     placement edits in 2D and 3D.
 17. **Metamodel Evolution.** Stage a proposal, preview its impact, review and
     apply migration rules, and open the recovery checkpoint from migration history.
+18. **Spatial validation fixes.** Preview and apply a verified placement change for
+    an overlap or minimum-clearance issue from either diagram editor.
 
 ## Suggested sequencing
 

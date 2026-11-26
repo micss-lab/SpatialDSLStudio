@@ -4,6 +4,8 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { mockDeep, mockReset } from 'jest-mock-extended';
 import { PrismaClient } from '@prisma/client';
+import { errorHandler } from '../../middleware/errorHandler';
+import { ProjectCapability } from '../../../../shared/types';
 
 
 const diagramServiceMock = {
@@ -19,6 +21,8 @@ const diagramServiceMock = {
   updateElement: jest.fn(),
   deleteElement: jest.fn(),
   updateGridSettings: jest.fn(),
+  previewSpatialQuickFix: jest.fn(),
+  applySpatialQuickFix: jest.fn(),
 };
 jest.mock('../../services/diagram.service', () => ({
   diagramService: diagramServiceMock,
@@ -47,7 +51,9 @@ function makeToken(role = 'DSL_DESIGNER') {
   );
 }
 
-function buildApp() {
+const projectId = 'project-1';
+
+function buildApp(capabilities?: ProjectCapability[]) {
   const app = express();
   app.use(express.json());
   app.use((req: any, res: any, next: any) => {
@@ -58,9 +64,11 @@ function buildApp() {
     } catch {
       return res.status(401).json({ error: 'Invalid token' });
     }
+    if (capabilities) req.projectContext = { projectId, capabilities };
     next();
   });
-  app.use('/api/diagrams', diagramRouter);
+  app.use(capabilities ? '/api/projects/:projectId/views' : '/api/diagrams', diagramRouter);
+  if (capabilities) app.use(errorHandler);
   return app;
 }
 
@@ -72,6 +80,44 @@ const mockDiagram = {
   elements: [],
   connections: [],
 };
+
+describe('project-scoped spatial quick fixes', () => {
+  const path = `/api/projects/${projectId}/views/${mockDiagram.id}/quick-fixes`;
+  const payload = { ruleId: 'rule', elementId: 'rack-a', relatedElementId: 'rack-b', moveElementId: 'rack-a' };
+  const previewHash = `sha256:${'0'.repeat(64)}`;
+
+  beforeEach(() => {
+    prismaMock.diagram.findUnique.mockResolvedValue({ projectId } as any);
+  });
+
+  it('requires both view and model update permissions', async () => {
+    const res = await request(buildApp(['project.read', 'view.update'])).post(`${path}/preview`)
+      .set('Authorization', `Bearer ${makeToken()}`).send(payload);
+    expect(res.status).toBe(403);
+    expect(diagramServiceMock.previewSpatialQuickFix).not.toHaveBeenCalled();
+  });
+
+  it('rejects a view from a different project', async () => {
+    prismaMock.diagram.findUnique.mockResolvedValue({ projectId: 'other-project' } as any);
+    const res = await request(buildApp(['view.update', 'model.update'])).post(`${path}/preview`)
+      .set('Authorization', `Bearer ${makeToken()}`).send(payload);
+    expect(res.status).toBe(404);
+    expect(diagramServiceMock.previewSpatialQuickFix).not.toHaveBeenCalled();
+  });
+
+  it('passes the scoped pair and reviewed hash through to apply', async () => {
+    diagramServiceMock.previewSpatialQuickFix.mockResolvedValue({ previewHash });
+    diagramServiceMock.applySpatialQuickFix.mockResolvedValue({ elementId: 'rack-a' });
+    const app = buildApp(['view.update', 'model.update']);
+    const auth = `Bearer ${makeToken()}`;
+    const preview = await request(app).post(`${path}/preview`).set('Authorization', auth).send(payload);
+    const apply = await request(app).post(`${path}/apply`).set('Authorization', auth).send({ ...payload, expectedPreviewHash: previewHash });
+    expect(preview.status).toBe(200);
+    expect(apply.status).toBe(200);
+    expect(diagramServiceMock.previewSpatialQuickFix).toHaveBeenCalledWith(projectId, mockDiagram.id, payload);
+    expect(diagramServiceMock.applySpatialQuickFix).toHaveBeenCalledWith(projectId, mockDiagram.id, payload, previewHash);
+  });
+});
 
 describe('GET /api/diagrams', () => {
   it('returns all diagrams', async () => {

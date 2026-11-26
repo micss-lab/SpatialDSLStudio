@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Box,
+  Button,
   Chip,
   IconButton,
   MenuItem,
@@ -11,12 +12,14 @@ import {
   Typography,
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { ValidationIssue } from '../../models/types';
+import { Diagram, ValidationIssue } from '../../models/types';
+import { SpatialQuickFixDialog, SpatialQuickFixOption } from './SpatialQuickFixDialog';
 
 interface ViewValidationPanelProps {
   issues: ValidationIssue[];
   onRefresh: () => void;
   onSelectIssue: (issue: ValidationIssue) => void;
+  quickFix?: { diagram: Diagram; onApplied: () => void };
 }
 
 const severityColor = (severity: ValidationIssue['severity']): 'error' | 'warning' | 'info' => severity;
@@ -25,9 +28,25 @@ const ViewValidationPanel: React.FC<ViewValidationPanelProps> = ({
   issues,
   onRefresh,
   onSelectIssue,
+  quickFix,
 }) => {
   const [severity, setSeverity] = useState<ValidationIssue['severity'] | 'all'>('all');
+  const [fix, setFix] = useState<{ viewId: string; issue: ValidationIssue; options: SpatialQuickFixOption[] } | null>(null);
   const visibleIssues = severity === 'all' ? issues : issues.filter(issue => issue.severity === severity);
+  const diagram = quickFix?.diagram;
+  const visibleNodes = useMemo(() => new Map(diagram?.elements.filter(element => element.type === 'node').map(element => {
+    const id = String(element.style?.linkedModelElementId || element.style?.modelElementRefId || element.id);
+    return [id, String(element.style?.name || id)] as const;
+  })), [diagram]);
+
+  const fixOptions = (issue: ValidationIssue): SpatialQuickFixOption[] => {
+    if (!issue.constraintId || !issue.elementId || issue.relatedElementIds?.length !== 1
+        || (issue.location !== 'spatialRules.noOverlap' && issue.location !== 'spatialRules.minClearance')) return [];
+    return [issue.elementId, issue.relatedElementIds[0]].flatMap(id => {
+      const name = visibleNodes.get(id);
+      return name ? [{ id, name }] : [];
+    });
+  };
 
   return (
     <Paper
@@ -69,42 +88,53 @@ const ViewValidationPanel: React.FC<ViewValidationPanelProps> = ({
           <Typography variant="body2" color="text.secondary" sx={{ px: 1.25, py: 1 }}>
             {issues.length === 0 ? 'No validation issues in this view.' : 'No issues match this severity.'}
           </Typography>
-        ) : visibleIssues.map((issue, index) => (
-          <Box
-            component="button"
-            type="button"
-            key={`${issue.elementId || 'view'}-${issue.constraintId || index}-${index}`}
-            data-testid={`validation-issue-${index}`}
-            onClick={() => onSelectIssue(issue)}
-            sx={{
-              display: 'block',
-              width: '100%',
-              border: 0,
-              borderBottom: index < issues.length - 1 ? 1 : 0,
-              borderColor: 'divider',
-              background: 'transparent',
-              color: 'inherit',
-              textAlign: 'left',
-              px: 1.25,
-              py: 1,
-              cursor: issue.elementId ? 'pointer' : 'default',
-              '&:hover': { backgroundColor: 'action.hover' },
-            }}
-          >
-            <Stack direction="row" spacing={1} alignItems="flex-start">
-              <Chip size="small" label={issue.severity} color={severityColor(issue.severity)} />
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="body2">{issue.message}</Typography>
-                {(issue.location || issue.constraintId) && (
-                  <Typography variant="caption" color="text.secondary">
-                    {[issue.location, issue.constraintId].filter(Boolean).join(' · ')}
-                  </Typography>
-                )}
+        ) : visibleIssues.map((issue, index) => {
+          const options = fixOptions(issue);
+          return (
+            <Stack key={`${issue.elementId || 'view'}-${issue.constraintId || index}-${index}`} direction="row" alignItems="center"
+              sx={{ borderBottom: index < visibleIssues.length - 1 ? 1 : 0, borderColor: 'divider' }}>
+              <Box
+                component="button"
+                type="button"
+                data-testid={`validation-issue-${index}`}
+                onClick={() => onSelectIssue(issue)}
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  border: 0,
+                  background: 'transparent',
+                  color: 'inherit',
+                  textAlign: 'left',
+                  px: 1.25,
+                  py: 1,
+                  cursor: issue.elementId ? 'pointer' : 'default',
+                  '&:hover': { backgroundColor: 'action.hover' },
+                }}
+              >
+                <Stack direction="row" spacing={1} alignItems="flex-start">
+                  <Chip size="small" label={issue.severity} color={severityColor(issue.severity)} />
+                  <Box sx={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+                    <Typography variant="body2">{issue.message}</Typography>
+                    {(issue.location || issue.constraintId) && (
+                      <Typography variant="caption" color="text.secondary">
+                        {[issue.location, issue.constraintId].filter(Boolean).join(' · ')}
+                      </Typography>
+                    )}
+                  </Box>
+                </Stack>
               </Box>
+              {diagram && options.length > 0 && (
+                <Button size="small" sx={{ mr: 0.75, flexShrink: 0 }} aria-label={`Preview fix for ${issue.message}`}
+                  onClick={() => setFix({ viewId: diagram.id, issue, options })}>Preview fix</Button>
+              )}
             </Stack>
-          </Box>
-        ))}
+          );
+        })}
       </Box>
+      {quickFix && fix && fix.viewId === diagram?.id && (
+        <SpatialQuickFixDialog viewId={quickFix.diagram.id} modelId={quickFix.diagram.modelId} issue={fix.issue}
+          options={fix.options} onClose={() => setFix(null)} onApplied={quickFix.onApplied} />
+      )}
     </Paper>
   );
 };

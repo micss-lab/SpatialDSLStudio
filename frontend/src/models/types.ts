@@ -684,6 +684,28 @@ export interface ValidationResult {
   issues: ValidationIssue[];
 }
 
+export interface SpatialQuickFixRequest {
+  ruleId: string;
+  elementId: string;
+  relatedElementId: string;
+  moveElementId: string;
+}
+
+export interface SpatialQuickFixPreview {
+  previewHash: string;
+  ruleName: string;
+  elementName: string;
+  before: Position3D;
+  after: Position3D;
+  clearedIssues: number;
+}
+
+export interface SpatialQuickFixApplied {
+  modelId: string;
+  elementId: string;
+  presentation: ModelElementPresentation;
+}
+
 // Types for OCL Validation Results
 
 export interface OCLValidationContext {
