@@ -1,4 +1,5 @@
 import prisma from '../config/database';
+import { Prisma } from '@prisma/client';
 import { ApiError } from '../middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -9,6 +10,7 @@ import {
   MetaClass,
   MetaReference,
   Metamodel,
+  Model,
   ModelConnection,
   ModelElement,
   ModelElementPresentation,
@@ -17,17 +19,25 @@ import {
   CreateDiagramRequest,
   UpdateDiagramRequest,
   UserRole,
-  ResourceWithPermission
+  ResourceWithPermission,
+  SpatialQuickFixApplied,
+  SpatialQuickFixPreview,
+  SpatialQuickFixRequest,
+  SpatialRule,
 } from '../../../shared/types';
 import { sharingService } from './sharing.service';
 import { canPerformOperation } from '../middleware/permissions';
 import { viewpointService } from './viewpoint.service';
 import { spatialElementErrors } from '../middleware/presentationValidation';
 import {
+  isFiniteNumber,
+  normalizeModelElementSpatial,
   normalizePosition3D,
   normalizePresentation,
   validatePresentation,
 } from '../../../shared/spatial';
+import { contentHash } from './lifecycle/canonical';
+import { planSpatialQuickFix } from './spatial-quick-fix';
 
 export interface DiagramWithPermission extends Diagram, ResourceWithPermission {}
 
@@ -1020,6 +1030,79 @@ class DiagramService {
     });
 
     return this.mapToDiagram(diagram);
+  }
+
+  private async prepareSpatialQuickFix(
+    db: Prisma.TransactionClient, projectId: string, diagramId: string, request: SpatialQuickFixRequest
+  ) {
+    const view = await db.diagram.findFirst({ where: { id: diagramId, projectId } });
+    if (!view) throw new ApiError(404, 'View not found');
+    if (!this.getIncludedElementIds(view).includes(request.moveElementId)) {
+      throw new ApiError(400, 'The element to move must belong to this view');
+    }
+    const row = await db.model.findFirst({ where: { id: view.modelId, projectId } });
+    if (!row) throw new ApiError(404, 'Model not found');
+    const language = await db.metamodel.findFirst({ where: { id: row.conformsToId, projectId } });
+    if (!language) throw new ApiError(404, 'Metamodel not found');
+
+    const elements = (row.elements as unknown as ModelElement[]) || [];
+    const model: Model = {
+      id: row.id, name: row.name, metamodelId: row.metamodelId, conformsTo: row.conformsToId,
+      elements: elements.map(normalizeModelElementSpatial),
+    };
+    const metamodel: Metamodel = {
+      id: language.id, name: language.name, uri: language.uri, prefix: language.prefix,
+      eClass: language.eClass || '', conformsTo: language.conformsToId,
+      classes: (language.classes as unknown as MetaClass[]) || [],
+      spatialRules: (language.spatialRules as unknown as SpatialRule[]) || [],
+    };
+    const result = planSpatialQuickFix(metamodel, model, request);
+    if (result.status === 'stale') throw new ApiError(409, 'This spatial issue has changed. Refresh validation and try again.');
+    if (result.status !== 'ready') throw new ApiError(422, 'Studio found no verified move for this element. Try the other element or adjust placement manually.');
+
+    const preview: SpatialQuickFixPreview = {
+      ...result.plan,
+      previewHash: contentHash({
+        diagramId, viewRevision: view.updatedAt, modelRevision: row.updatedAt,
+        metamodelRevision: language.updatedAt, request, plan: result.plan,
+      }),
+    };
+    const moving = model.elements.find(element => element.id === request.moveElementId)!;
+    const legacy2D = moving.style?.position;
+    const existingPresentation = !moving.presentation?.position2D && isFiniteNumber(legacy2D?.x) && isFiniteNumber(legacy2D?.y)
+      ? { ...moving.presentation, position2D: { x: legacy2D.x, y: legacy2D.y } } : moving.presentation;
+    const presentation = this.mergePresentation(existingPresentation, { position3D: preview.after });
+    return { modelId: row.id, elements, moving, presentation, preview };
+  }
+
+  async previewSpatialQuickFix(
+    projectId: string, diagramId: string, request: SpatialQuickFixRequest
+  ): Promise<SpatialQuickFixPreview> {
+    const prepared = await this.prepareSpatialQuickFix(prisma, projectId, diagramId, request);
+    return prepared.preview;
+  }
+
+  async applySpatialQuickFix(
+    projectId: string, diagramId: string, request: SpatialQuickFixRequest, expectedPreviewHash: string
+  ): Promise<SpatialQuickFixApplied> {
+    try {
+      return await prisma.$transaction(async tx => {
+        const { modelId, elements, moving, presentation, preview } = await this.prepareSpatialQuickFix(tx, projectId, diagramId, request);
+        if (preview.previewHash !== expectedPreviewHash) {
+          throw new ApiError(409, 'The view, model, or spatial rules changed after preview. Preview the fix again.');
+        }
+        await tx.model.update({
+          where: { id: modelId },
+          data: { elements: elements.map(element => element.id === moving.id ? { ...moving, presentation } : element) as unknown as Prisma.InputJsonValue },
+        });
+        return { modelId, elementId: moving.id, presentation };
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15000 });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
+        throw new ApiError(409, 'The project changed during this fix. Preview the fix again.');
+      }
+      throw error;
+    }
   }
 
   /**

@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { body, param, query } from 'express-validator';
-import { validate, authenticate, AuthenticatedRequest, projectResourceParam, projectArgs } from '../middleware';
+import { validate, authenticate, AuthenticatedRequest, projectResourceParam, projectArgs, requireProjectCapability, ApiError } from '../middleware';
 import { diagramService } from '../services';
 import { validatePresentation } from '../../../shared/spatial';
 import { requireNoSpatialErrors, spatialElementErrors } from '../middleware/presentationValidation';
@@ -17,6 +17,43 @@ const asyncHandler = (fn: Function) => (req: AuthenticatedRequest, res: Response
 };
 
 const attachmentSides = ['top', 'right', 'bottom', 'left'];
+
+const spatialQuickFixFields = [
+  param('id').isUUID().withMessage('Invalid view ID format'),
+  ...['ruleId', 'elementId', 'relatedElementId', 'moveElementId'].map(field => (
+    body(field).isString().notEmpty().withMessage(`${field} is required`)
+  )),
+];
+
+router.post(
+  '/:id/quick-fixes/preview',
+  requireProjectCapability('view.update'),
+  requireProjectCapability('model.update'),
+  validate(spatialQuickFixFields),
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    if (!req.projectContext) throw new ApiError(400, 'Spatial quick fixes require a project-scoped view');
+    const { ruleId, elementId, relatedElementId, moveElementId } = req.body;
+    const preview = await diagramService.previewSpatialQuickFix(req.projectContext.projectId, req.params.id, {
+      ruleId, elementId, relatedElementId, moveElementId,
+    });
+    res.json({ success: true, data: preview });
+  })
+);
+
+router.post(
+  '/:id/quick-fixes/apply',
+  requireProjectCapability('view.update'),
+  requireProjectCapability('model.update'),
+  validate([...spatialQuickFixFields, body('expectedPreviewHash').isString().matches(/^sha256:[a-f0-9]{64}$/)]),
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    if (!req.projectContext) throw new ApiError(400, 'Spatial quick fixes require a project-scoped view');
+    const { ruleId, elementId, relatedElementId, moveElementId, expectedPreviewHash } = req.body;
+    const applied = await diagramService.applySpatialQuickFix(req.projectContext.projectId, req.params.id, {
+      ruleId, elementId, relatedElementId, moveElementId,
+    }, expectedPreviewHash);
+    res.json({ success: true, data: applied });
+  })
+);
 
 /**
  * @route   GET /api/diagrams

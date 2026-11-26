@@ -23,6 +23,7 @@ import { domainToRenderPosition, normalizePosition3D, renderToDomainPosition } f
 interface Diagram3DEditorProps {
   diagramId: string;
   focusElementId?: string;
+  canApplyQuickFix?: boolean;
 }
 
 const canonicalElementPosition3D = (element: DiagramElement): { x: number; y: number; z: number } => (
@@ -381,7 +382,7 @@ class WebGLErrorBoundary extends React.Component<
 }
 
 // Main 3D diagram editor
-const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId, focusElementId }) => {
+const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId, focusElementId, canApplyQuickFix = false }) => {
   const { project } = useProject();
   const [diagram, setDiagram] = useState<Diagram | null>(null);
   const [metamodel, setMetamodel] = useState<Metamodel | null>(null);
@@ -1278,6 +1279,7 @@ const Diagram3DEditor: React.FC<Diagram3DEditorProps> = ({ diagramId, focusEleme
             issues={validationIssues}
             onRefresh={validateView}
             onSelectIssue={handleValidationIssueSelect}
+            quickFix={canApplyQuickFix && diagram ? { diagram, onApplied: () => { saveChanges(); validateView(); } } : undefined}
           />
         </Box>
 

@@ -946,6 +946,28 @@ export interface ValidationResult {
   issues: ValidationIssue[];
 }
 
+export interface SpatialQuickFixRequest {
+  ruleId: string;
+  elementId: string;
+  relatedElementId: string;
+  moveElementId: string;
+}
+
+export interface SpatialQuickFixPreview {
+  previewHash: string;
+  ruleName: string;
+  elementName: string;
+  before: Required<Position3D>;
+  after: Required<Position3D>;
+  clearedIssues: number;
+}
+
+export interface SpatialQuickFixApplied {
+  modelId: string;
+  elementId: string;
+  presentation: ModelElementPresentation;
+}
+
 export interface OCLValidationIssue extends ValidationIssue {
   constraintId: string;
   expression: string;
