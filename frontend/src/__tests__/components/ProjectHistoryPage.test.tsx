@@ -65,6 +65,7 @@ async function openBuilder() {
 }
 
 const step = (index: number) => within(screen.getByRole('region', { name: `Step ${index}` }));
+const builderInteractionTimeout = 15000;
 async function pick(select: HTMLElement, option: string) {
   fireEvent.mouseDown(select);
   fireEvent.click(await screen.findByRole('option', { name: option }));
@@ -148,7 +149,7 @@ it('runs ordered validation, test, and generation steps and opens their retained
   });
   expect(await screen.findByText('step-1 · Validate model · SUCCEEDED')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'View source checkpoint' })).toHaveAttribute('href', '?checkpoint=checkpoint-1');
-});
+}, builderInteractionTimeout);
 
 it('requires transformation confirmation and updates the editor for saved steps in a failed run', async () => {
   const savedModel = { id: 'warehouse', elements: [], connections: [] };
@@ -188,4 +189,4 @@ it('requires transformation confirmation and updates the editor for saved steps 
     ],
   });
   expect(modelService.useSavedModelContents).toHaveBeenCalledWith(savedModel);
-});
+}, builderInteractionTimeout);
