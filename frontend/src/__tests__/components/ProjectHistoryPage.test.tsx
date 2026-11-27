@@ -19,6 +19,7 @@ jest.mock('../../services/lifecycle.service', () => ({
   lifecycleService: {
     listCheckpoints: jest.fn(), createCheckpoint: jest.fn(), diffCheckpoint: jest.fn(), listPipelineRuns: jest.fn(),
     listPipelineInputs: jest.fn(), runPipeline: jest.fn(),
+    previewCheckpointRestore: jest.fn(), restoreCheckpointWithRecovery: jest.fn(),
   },
 }));
 jest.mock('../../services/model', () => ({
@@ -99,6 +100,7 @@ it('lets a viewer review the recorded pipeline failure without a checkpoint writ
   render(<ProjectHistoryPage />);
   await waitFor(() => expect(lifecycleService.listCheckpoints).toHaveBeenCalledWith(projectId));
   expect(screen.queryByRole('button', { name: 'Create checkpoint' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Review restore' })).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('tab', { name: 'Pipeline runs' }));
   fireEvent.click(await screen.findByRole('button', { name: /Validate warehouse/ }));
@@ -150,6 +152,68 @@ it('runs ordered validation, test, and generation steps and opens their retained
   expect(await screen.findByText('step-1 · Validate model · SUCCEEDED')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'View source checkpoint' })).toHaveAttribute('href', '?checkpoint=checkpoint-1');
 }, builderInteractionTimeout);
+
+it('reviews the restore impact and requires confirmation before using both reviewed hashes', async () => {
+  jest.mocked(lifecycleService.previewCheckpointRestore).mockResolvedValue({
+    currentProject: { name: 'Warehouse draft' },
+    targetProject: { name: 'Warehouse approved' },
+    diff: {
+      fromHash: 'current-hash', toHash: checkpoint.contentHash, unchanged: 3, added: [], changed: [],
+      removed: [{ type: 'model', id: 'scratch', name: 'Scratch model' }],
+    },
+  });
+  jest.mocked(lifecycleService.restoreCheckpointWithRecovery).mockResolvedValue({
+    contentHash: checkpoint.contentHash,
+    recoveryCheckpoint: { ...checkpoint, id: 'recovery-2', sequence: 2, contentHash: 'current-hash' },
+  });
+
+  render(<ProjectHistoryPage />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Review restore' }));
+  const dialog = within(screen.getByRole('dialog', { name: 'Restore Checkpoint #1' }));
+  expect(await dialog.findByText('Warehouse approved')).toBeInTheDocument();
+  expect(dialog.getByText('Warehouse draft')).toBeInTheDocument();
+  fireEvent.click(dialog.getByRole('button', { name: '1 will be removed' }));
+  expect(dialog.getByText('Scratch model · model')).toBeInTheDocument();
+  const restore = dialog.getByRole('button', { name: 'Restore checkpoint' });
+  expect(restore).toBeDisabled();
+  expect(lifecycleService.restoreCheckpointWithRecovery).not.toHaveBeenCalled();
+  fireEvent.click(dialog.getByRole('checkbox', { name: 'Replace the current project with this checkpoint' }));
+  fireEvent.click(restore);
+
+  await waitFor(() => expect(context.openProject).toHaveBeenCalledWith(
+    projectId, 'history?checkpoint=checkpoint-1&recovery=recovery-2'
+  ));
+  expect(lifecycleService.previewCheckpointRestore).toHaveBeenCalledWith(projectId, checkpoint.id);
+  expect(lifecycleService.restoreCheckpointWithRecovery).toHaveBeenCalledWith(
+    projectId, checkpoint.id, checkpoint.contentHash, 'current-hash'
+  );
+});
+
+it('requires a fresh review after a stale restore and prevents a restore when the hashes match', async () => {
+  const preview = {
+    currentProject: { name: 'Warehouse' },
+    targetProject: { name: 'Warehouse' },
+    diff: { fromHash: 'old-live', toHash: checkpoint.contentHash, unchanged: 3, added: [], changed: [], removed: [] },
+  };
+  jest.mocked(lifecycleService.previewCheckpointRestore).mockResolvedValueOnce(preview).mockResolvedValueOnce({
+    ...preview, diff: { ...preview.diff, fromHash: checkpoint.contentHash },
+  });
+  jest.mocked(lifecycleService.restoreCheckpointWithRecovery).mockRejectedValueOnce(new Error('The project changed after the preview.'));
+
+  render(<ProjectHistoryPage />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Review restore' }));
+  const dialog = within(screen.getByRole('dialog'));
+  fireEvent.click(await dialog.findByRole('checkbox'));
+  fireEvent.click(dialog.getByRole('button', { name: 'Restore checkpoint' }));
+  expect(await dialog.findByText('The project changed after the preview.')).toBeInTheDocument();
+  expect(dialog.getByRole('button', { name: 'Restore checkpoint' })).toBeDisabled();
+  fireEvent.click(dialog.getByRole('button', { name: 'Refresh preview' }));
+  expect(await dialog.findByText('The current project already matches this checkpoint.')).toBeInTheDocument();
+  expect(dialog.queryByRole('checkbox')).not.toBeInTheDocument();
+  expect(dialog.getByRole('button', { name: 'Restore checkpoint' })).toBeDisabled();
+  expect(lifecycleService.restoreCheckpointWithRecovery).toHaveBeenCalledTimes(1);
+  expect(context.openProject).not.toHaveBeenCalled();
+});
 
 it('requires transformation confirmation and updates the editor for saved steps in a failed run', async () => {
   const savedModel = { id: 'warehouse', elements: [], connections: [] };

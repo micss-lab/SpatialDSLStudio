@@ -8,6 +8,8 @@ import {
   ProjectArtifactType,
   ProjectCheckpoint,
   ProjectCheckpointDiff,
+  ProjectCheckpointRestorePreview,
+  ProjectCheckpointRestoreResult,
 } from '../../../../shared/types';
 import { contentHash } from './canonical';
 
@@ -75,7 +77,7 @@ const checkpointFromRow = (row: any, includeManifest = false): ProjectCheckpoint
 type SnapshotInput = Omit<ProjectArtifactSnapshot, 'contentHash'>;
 
 class ProjectCheckpointService {
-  async buildManifest(projectId: string): Promise<ProjectArtifactManifest> {
+  async buildManifest(projectId: string, client: Prisma.TransactionClient = prisma): Promise<ProjectArtifactManifest> {
     const [
       project,
       ePackages,
@@ -88,19 +90,19 @@ class ProjectCheckpointService {
       tests,
       files,
     ] = await Promise.all([
-      prisma.studioProject.findUnique({
+      client.studioProject.findUnique({
         where: { id: projectId },
         select: { id: true, name: true, description: true },
       }),
-      prisma.ePackage.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
-      prisma.metamodel.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
-      prisma.viewpoint.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
-      prisma.model.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
-      prisma.diagram.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
-      prisma.transformationRule.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
-      prisma.codeGenerationProject.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
-      prisma.testCase.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
-      prisma.storedFile.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
+      client.ePackage.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
+      client.metamodel.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
+      client.viewpoint.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
+      client.model.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
+      client.diagram.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
+      client.transformationRule.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
+      client.codeGenerationProject.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
+      client.testCase.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
+      client.storedFile.findMany({ where: { projectId }, orderBy: { id: 'asc' } }),
     ]);
 
     if (!project) throw new ApiError(404, 'Project not found');
@@ -314,12 +316,23 @@ class ProjectCheckpointService {
     input: { tag?: string; message?: string } = {}
   ): Promise<ProjectCheckpoint> {
     const manifest = await this.buildManifest(projectId);
-    const latest = await prisma.projectCheckpoint.findFirst({
+    const row = await this.saveCheckpoint(prisma, manifest, createdById, input);
+    return checkpointFromRow(row, true);
+  }
+
+  private async saveCheckpoint(
+    client: Prisma.TransactionClient,
+    manifest: ProjectArtifactManifest,
+    createdById: string,
+    input: { tag?: string; message?: string }
+  ) {
+    const { projectId } = manifest;
+    const latest = await client.projectCheckpoint.findFirst({
       where: { projectId },
       orderBy: { sequence: 'desc' },
       select: { sequence: true },
     });
-    const row = await prisma.projectCheckpoint.create({
+    return client.projectCheckpoint.create({
       data: {
         projectId,
         sequence: (latest?.sequence || 0) + 1,
@@ -330,13 +343,16 @@ class ProjectCheckpointService {
         createdById,
       },
     });
-    return checkpointFromRow(row, true);
   }
 
   async list(projectId: string): Promise<ProjectCheckpoint[]> {
     const rows = await prisma.projectCheckpoint.findMany({
       where: { projectId },
       orderBy: { sequence: 'desc' },
+      select: {
+        id: true, projectId: true, sequence: true, tag: true, message: true,
+        contentHash: true, createdById: true, createdAt: true,
+      },
     });
     return rows.map(row => checkpointFromRow(row));
   }
@@ -406,17 +422,99 @@ class ProjectCheckpointService {
     }
   }
 
+  private async getVerifiedCheckpoint(projectId: string, checkpointId: string, confirmContentHash?: string) {
+    const checkpoint = await this.get(projectId, checkpointId);
+    if (confirmContentHash !== undefined && confirmContentHash !== checkpoint.contentHash) {
+      throw new ApiError(400, 'confirmContentHash must match the checkpoint content hash');
+    }
+    const manifest = checkpoint.manifest!;
+    if (manifest.projectId !== projectId) throw new ApiError(409, 'Checkpoint belongs to a different project');
+    this.verifyManifest(manifest, checkpoint.contentHash);
+    return { checkpoint, manifest };
+  }
+
+  async previewRestore(projectId: string, checkpointId: string): Promise<ProjectCheckpointRestorePreview> {
+    const { manifest } = await this.getVerifiedCheckpoint(projectId, checkpointId);
+    const current = await prisma.$transaction(
+      tx => this.buildManifest(projectId, tx),
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 30000 }
+    );
+    return {
+      diff: this.diffManifests(current, manifest),
+      currentProject: current.project,
+      targetProject: manifest.project,
+    };
+  }
+
   async restore(
     projectId: string,
     checkpointId: string,
     confirmContentHash: string
   ): Promise<ProjectArtifactManifest> {
-    const checkpoint = await this.get(projectId, checkpointId);
-    if (confirmContentHash !== checkpoint.contentHash) {
-      throw new ApiError(400, 'confirmContentHash must match the checkpoint content hash');
+    const { manifest } = await this.applyRestore(projectId, checkpointId, confirmContentHash);
+    return manifest;
+  }
+
+  async restoreWithRecovery(
+    projectId: string,
+    checkpointId: string,
+    confirmContentHash: string,
+    expectedCurrentHash: string,
+    userId: string
+  ): Promise<ProjectCheckpointRestoreResult> {
+    const { manifest, recoveryCheckpoint } = await this.applyRestore(
+      projectId, checkpointId, confirmContentHash, { expectedCurrentHash, userId }
+    );
+    return { contentHash: manifest.contentHash, recoveryCheckpoint: recoveryCheckpoint! };
+  }
+
+  private async applyRestore(
+    projectId: string,
+    checkpointId: string,
+    confirmContentHash: string,
+    recovery?: { expectedCurrentHash: string; userId: string }
+  ): Promise<{ manifest: ProjectArtifactManifest; recoveryCheckpoint?: ProjectCheckpoint }> {
+    const { checkpoint, manifest } = await this.getVerifiedCheckpoint(projectId, checkpointId, confirmContentHash);
+
+    try {
+      return await prisma.$transaction(async tx => {
+        let recoveryCheckpoint: ProjectCheckpoint | undefined;
+        if (recovery) {
+          const current = await this.buildManifest(projectId, tx);
+          if (current.contentHash !== recovery.expectedCurrentHash) {
+            throw new ApiError(409, 'The project changed after the preview. Review the restore again.');
+          }
+          if (current.contentHash === manifest.contentHash) {
+            throw new ApiError(409, 'The project already matches this checkpoint.');
+          }
+          const saved = await this.saveCheckpoint(tx, current, recovery.userId, {
+            message: `Recovery before restoring checkpoint #${checkpoint.sequence}`,
+          });
+          recoveryCheckpoint = checkpointFromRow(saved);
+        }
+
+        await this.writeRestoredGraph(tx, manifest);
+        const restored = await this.buildManifest(projectId, tx);
+        if (restored.contentHash !== checkpoint.contentHash) {
+          throw new ApiError(409, 'The restored graph did not match the checkpoint. The restore was rolled back.');
+        }
+        return { manifest: restored, recoveryCheckpoint };
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 45000 });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2034') {
+          throw new ApiError(409, 'A concurrent change interrupted the restore. Review the restore again.');
+        }
+        if (error.code === 'P2002' || error.code === 'P2025') {
+          throw new ApiError(409, 'An existing record conflicts with this restore. The restore was rolled back.');
+        }
+      }
+      throw error;
     }
-    const manifest = checkpoint.manifest!;
-    this.verifyManifest(manifest, checkpoint.contentHash);
+  }
+
+  private async writeRestoredGraph(tx: Prisma.TransactionClient, manifest: ProjectArtifactManifest): Promise<void> {
+    const { projectId } = manifest;
 
     const byType = new Map<ProjectArtifactType, ProjectArtifactSnapshot[]>();
     ARTIFACT_ORDER.forEach(type => byType.set(type, []));
@@ -427,179 +525,171 @@ class ProjectCheckpointService {
       return ids.length > 0 ? { projectId, id: { notIn: ids } } : { projectId };
     };
 
-    await prisma.$transaction(async tx => {
-      await tx.diagram.deleteMany({ where: missingFilter('view') });
-      await tx.testCase.deleteMany({ where: missingFilter('test') });
-      await tx.transformationRule.deleteMany({ where: missingFilter('transformation') });
-      await tx.codeGenerationProject.deleteMany({ where: missingFilter('generator') });
-      await tx.viewpoint.deleteMany({ where: missingFilter('viewpoint') });
-      await tx.model.deleteMany({ where: missingFilter('model') });
-      await tx.metamodel.deleteMany({ where: missingFilter('metamodel') });
-      await tx.ePackage.deleteMany({ where: missingFilter('epackage') });
-      await tx.storedFile.deleteMany({ where: missingFilter('file') });
-
-      await tx.studioProject.update({
-        where: { id: projectId },
-        data: {
-          name: manifest.project.name,
-          description: manifest.project.description || null,
-        },
-      });
-
-      for (const artifact of byType.get('epackage') || []) {
-        const data = artifact.data;
-        const write = {
-          name: data.name,
-          nsURI: data.nsURI,
-          nsPrefix: data.nsPrefix,
-          classes: data.classes as any,
-          userId: data.userId,
-          projectId,
-        };
-        await tx.ePackage.upsert({
-          where: { id: artifact.id },
-          create: { id: artifact.id, ...write },
-          update: write,
-        });
-      }
-      for (const artifact of byType.get('metamodel') || []) {
-        const data = artifact.data;
-        const write = {
-          name: data.name,
-          description: data.description || null,
-          uri: data.uri,
-          prefix: data.prefix,
-          eClass: data.eClass || null,
-          classes: data.classes as any,
-          enums: data.enums as any,
-          constraints: data.constraints as any,
-          spatialRules: (data.spatialRules ?? []) as any,
-          conformsToId: data.conformsToId,
-          userId: data.userId,
-          projectId,
-        };
-        await tx.metamodel.upsert({ where: { id: artifact.id }, create: { id: artifact.id, ...write }, update: write });
-      }
-      for (const artifact of byType.get('viewpoint') || []) {
-        const data = artifact.data;
-        const write = {
-          name: data.name,
-          description: data.description || null,
-          metamodelId: data.metamodelId,
-          representationDescriptions: data.representationDescriptions as any,
-          sharedConcreteSyntax: data.sharedConcreteSyntax as any,
-          isDefault: data.isDefault,
-          userId: data.userId,
-          projectId,
-        };
-        await tx.viewpoint.upsert({ where: { id: artifact.id }, create: { id: artifact.id, ...write }, update: write });
-      }
-      for (const artifact of byType.get('model') || []) {
-        const data = artifact.data;
-        const write = {
-          name: data.name,
-          description: data.description || null,
-          metamodelId: data.metamodelId,
-          elements: data.elements as any,
-          connections: data.connections as any,
-          conformsToId: data.conformsToId,
-          userId: data.userId,
-          projectId,
-        };
-        await tx.model.upsert({ where: { id: artifact.id }, create: { id: artifact.id, ...write }, update: write });
-      }
-      for (const artifact of byType.get('view') || []) {
-        const data = artifact.data;
-        const write = {
-          name: data.name,
-          description: data.description || null,
-          modelId: data.modelId,
-          elements: data.elements as any,
-          viewpointId: data.viewpointId || null,
-          representationDescriptionId: data.representationDescriptionId || null,
-          includedElementIds: data.includedElementIds as any,
-          schemaVersion: data.schemaVersion,
-          migrationWarnings: data.migrationWarnings as any,
-          gridSettings: data.gridSettings as any,
-          userId: data.userId,
-          projectId,
-        };
-        await tx.diagram.upsert({ where: { id: artifact.id }, create: { id: artifact.id, ...write }, update: write });
-      }
-      for (const artifact of byType.get('transformation') || []) {
-        const data = artifact.data;
-        const write = {
-          name: data.name,
-          description: data.description || null,
-          priority: data.priority,
-          enabled: data.enabled,
-          lhs: data.lhs as any,
-          rhs: data.rhs as any,
-          nacs: data.nacs as any,
-          conditions: data.conditions as any,
-          diagramId: data.diagramId || null,
-          userId: data.userId,
-          projectId,
-        };
-        await tx.transformationRule.upsert({ where: { id: artifact.id }, create: { id: artifact.id, ...write }, update: write });
-      }
-      for (const artifact of byType.get('generator') || []) {
-        const data = artifact.data;
-        const write = {
-          name: data.name,
-          description: data.description || null,
-          isExample: data.isExample,
-          targetMetamodelId: data.targetMetamodelId || null,
-          templates: data.templates as any,
-          userId: data.userId,
-          projectId,
-        };
-        await tx.codeGenerationProject.upsert({ where: { id: artifact.id }, create: { id: artifact.id, ...write }, update: write });
-      }
-      for (const artifact of byType.get('test') || []) {
-        const data = artifact.data;
-        const write = {
-          name: data.name,
-          description: data.description || null,
-          type: data.type,
-          targetMetaClassId: data.targetMetaClassId,
-          targetMetaClassName: data.targetMetaClassName,
-          targetProperty: data.targetProperty || null,
-          status: data.status,
-          errorMessage: data.errorMessage || null,
-          constraintId: data.constraintId || null,
-          constraintType: data.constraintType || null,
-          originalInput: nullableJson(data.originalInput),
-          expectedOutput: nullableJson(data.expectedOutput),
-          actualOutput: nullableJson(data.actualOutput),
-          testValues: data.testValues as any,
-          modelId: data.modelId || null,
-          userId: data.userId,
-          projectId,
-        };
-        await tx.testCase.upsert({ where: { id: artifact.id }, create: { id: artifact.id, ...write }, update: write });
-      }
-      for (const artifact of byType.get('file') || []) {
-        const data = artifact.data;
-        const write = {
-          filename: data.filename,
-          mimetype: data.mimetype,
-          size: data.size,
-          type: data.type,
-          data: Buffer.from(data.dataBase64, 'base64'),
-          metadata: data.metadata as any,
-          userId: data.userId,
-          projectId,
-        };
-        await tx.storedFile.upsert({ where: { id: artifact.id }, create: { id: artifact.id, ...write }, update: write });
-      }
+    await tx.studioProject.update({
+      where: { id: projectId, status: 'ACTIVE' },
+      data: {
+        name: manifest.project.name,
+        description: manifest.project.description ?? null,
+      },
     });
 
-    const restored = await this.buildManifest(projectId);
-    if (restored.contentHash !== checkpoint.contentHash) {
-      throw new ApiError(500, 'Checkpoint restore completed but graph integrity verification failed');
+    await tx.diagram.deleteMany({ where: missingFilter('view') });
+    await tx.testCase.deleteMany({ where: missingFilter('test') });
+    await tx.transformationRule.deleteMany({ where: missingFilter('transformation') });
+    await tx.codeGenerationProject.deleteMany({ where: missingFilter('generator') });
+    await tx.viewpoint.deleteMany({ where: missingFilter('viewpoint') });
+    await tx.model.deleteMany({ where: missingFilter('model') });
+    await tx.metamodel.deleteMany({ where: missingFilter('metamodel') });
+    await tx.ePackage.deleteMany({ where: missingFilter('epackage') });
+    await tx.storedFile.deleteMany({ where: missingFilter('file') });
+
+    for (const artifact of byType.get('epackage') || []) {
+      const data = artifact.data;
+      const write = {
+        name: data.name,
+        nsURI: data.nsURI,
+        nsPrefix: data.nsPrefix,
+        classes: data.classes as any,
+        userId: data.userId,
+        projectId,
+      };
+      await tx.ePackage.upsert({
+        where: { id: artifact.id, projectId },
+        create: { id: artifact.id, ...write },
+        update: write,
+      });
     }
-    return restored;
+    for (const artifact of byType.get('metamodel') || []) {
+      const data = artifact.data;
+      const write = {
+        name: data.name,
+        description: data.description ?? null,
+        uri: data.uri,
+        prefix: data.prefix,
+        eClass: data.eClass ?? null,
+        classes: data.classes as any,
+        enums: data.enums as any,
+        constraints: data.constraints as any,
+        spatialRules: (data.spatialRules ?? []) as any,
+        conformsToId: data.conformsToId,
+        userId: data.userId,
+        projectId,
+      };
+      await tx.metamodel.upsert({ where: { id: artifact.id, projectId }, create: { id: artifact.id, ...write }, update: write });
+    }
+    for (const artifact of byType.get('viewpoint') || []) {
+      const data = artifact.data;
+      const write = {
+        name: data.name,
+        description: data.description ?? null,
+        metamodelId: data.metamodelId,
+        representationDescriptions: data.representationDescriptions as any,
+        sharedConcreteSyntax: data.sharedConcreteSyntax as any,
+        isDefault: data.isDefault,
+        userId: data.userId,
+        projectId,
+      };
+      await tx.viewpoint.upsert({ where: { id: artifact.id, projectId }, create: { id: artifact.id, ...write }, update: write });
+    }
+    for (const artifact of byType.get('model') || []) {
+      const data = artifact.data;
+      const write = {
+        name: data.name,
+        description: data.description ?? null,
+        metamodelId: data.metamodelId,
+        elements: data.elements as any,
+        connections: data.connections as any,
+        conformsToId: data.conformsToId,
+        userId: data.userId,
+        projectId,
+      };
+      await tx.model.upsert({ where: { id: artifact.id, projectId }, create: { id: artifact.id, ...write }, update: write });
+    }
+    for (const artifact of byType.get('view') || []) {
+      const data = artifact.data;
+      const write = {
+        name: data.name,
+        description: data.description ?? null,
+        modelId: data.modelId,
+        elements: data.elements as any,
+        viewpointId: data.viewpointId ?? null,
+        representationDescriptionId: data.representationDescriptionId ?? null,
+        includedElementIds: data.includedElementIds as any,
+        schemaVersion: data.schemaVersion,
+        migrationWarnings: data.migrationWarnings as any,
+        gridSettings: data.gridSettings as any,
+        userId: data.userId,
+        projectId,
+      };
+      await tx.diagram.upsert({ where: { id: artifact.id, projectId }, create: { id: artifact.id, ...write }, update: write });
+    }
+    for (const artifact of byType.get('transformation') || []) {
+      const data = artifact.data;
+      const write = {
+        name: data.name,
+        description: data.description ?? null,
+        priority: data.priority,
+        enabled: data.enabled,
+        lhs: data.lhs as any,
+        rhs: data.rhs as any,
+        nacs: data.nacs as any,
+        conditions: data.conditions as any,
+        diagramId: data.diagramId ?? null,
+        userId: data.userId,
+        projectId,
+      };
+      await tx.transformationRule.upsert({ where: { id: artifact.id, projectId }, create: { id: artifact.id, ...write }, update: write });
+    }
+    for (const artifact of byType.get('generator') || []) {
+      const data = artifact.data;
+      const write = {
+        name: data.name,
+        description: data.description ?? null,
+        isExample: data.isExample,
+        targetMetamodelId: data.targetMetamodelId ?? null,
+        templates: data.templates as any,
+        userId: data.userId,
+        projectId,
+      };
+      await tx.codeGenerationProject.upsert({ where: { id: artifact.id, projectId }, create: { id: artifact.id, ...write }, update: write });
+    }
+    for (const artifact of byType.get('test') || []) {
+      const data = artifact.data;
+      const write = {
+        name: data.name,
+        description: data.description ?? null,
+        type: data.type,
+        targetMetaClassId: data.targetMetaClassId,
+        targetMetaClassName: data.targetMetaClassName,
+        targetProperty: data.targetProperty ?? null,
+        status: data.status,
+        errorMessage: data.errorMessage ?? null,
+        constraintId: data.constraintId ?? null,
+        constraintType: data.constraintType ?? null,
+        originalInput: nullableJson(data.originalInput),
+        expectedOutput: nullableJson(data.expectedOutput),
+        actualOutput: nullableJson(data.actualOutput),
+        testValues: data.testValues as any,
+        modelId: data.modelId ?? null,
+        userId: data.userId,
+        projectId,
+      };
+      await tx.testCase.upsert({ where: { id: artifact.id, projectId }, create: { id: artifact.id, ...write }, update: write });
+    }
+    for (const artifact of byType.get('file') || []) {
+      const data = artifact.data;
+      const write = {
+        filename: data.filename,
+        mimetype: data.mimetype,
+        size: data.size,
+        type: data.type,
+        data: Buffer.from(data.dataBase64, 'base64'),
+        metadata: data.metadata as any,
+        userId: data.userId,
+        projectId,
+      };
+      await tx.storedFile.upsert({ where: { id: artifact.id, projectId }, create: { id: artifact.id, ...write }, update: write });
+    }
   }
 }
 

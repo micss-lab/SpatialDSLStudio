@@ -410,6 +410,11 @@ Base: `/api/projects/:projectId/lifecycle`
 - `POST /checkpoints` (body: optional `tag`, optional `message`)
 - `GET /checkpoints/:checkpointId`: one checkpoint including its manifest
 - `GET /checkpoints/:checkpointId/diff` (optional query: `against`)
+- `GET /checkpoints/:checkpointId/restore-preview` returns the diff from the
+  current project to the checkpoint, plus the current and target project settings.
+- `POST /checkpoints/:checkpointId/restore-with-recovery` accepts
+  `confirmContentHash` and `expectedCurrentHash` from the preview. It returns
+  `contentHash` and the recovery checkpoint metadata.
 - `POST /checkpoints/:checkpointId/restore` (body: `confirmContentHash`)
 
 A manifest is deterministic: artifacts are emitted in dependency order and
@@ -430,8 +435,11 @@ Restore semantics:
 - The stored manifest is re-hashed before anything is written. A per-artifact or
   root hash that no longer matches fails with `409` and writes nothing, so a
   tampered or corrupted checkpoint cannot be applied.
-- The restore runs in a single transaction. It rewrites project artifacts and
-  the project name/description only.
+- The restore rewrites project artifacts and the project name and description.
+  It verifies the resulting hash before committing.
+- The guided route rejects a changed or already matching live project with
+  `409`. It captures the pre-restore graph as a recovery checkpoint in the
+  same transaction.
 - Membership, project roles, and sharing are **not** restored. Recovering an
   old graph must never resurrect a removed collaborator's access.
 - Checkpoints are immutable and are not deleted by a restore, so restoring to an

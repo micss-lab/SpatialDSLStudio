@@ -42,6 +42,7 @@ inside the phase plans until run on the required software/hardware.
 | 12 | [Metamodel evolution and co-evolution](phase-12-metamodel-coevolution.md) | [x] |
 | 13 | [Reproducible headless MDE pipelines](phase-13-headless-mde-pipelines.md) | [x] |
 | 19 | [Browser pipeline execution](phase-19-browser-pipeline-execution.md) | [x] |
+| 20 | [Guided checkpoint restore](phase-20-guided-checkpoint-restore.md) | [x] |
 
 ### Project scoping track
 

@@ -10,6 +10,8 @@ import {
   ProjectArtifactManifest,
   ProjectCheckpoint,
   ProjectCheckpointDiff,
+  ProjectCheckpointRestorePreview,
+  ProjectCheckpointRestoreResult,
 } from '../models/lifecycle.types';
 import { apiClient } from './core';
 
@@ -54,6 +56,22 @@ export const lifecycleService = {
     return apiClient.post(
       `${projectEndpoint(projectId)}/lifecycle/checkpoints/${checkpointId}/restore`,
       { confirmContentHash }
+    );
+  },
+
+  previewCheckpointRestore(projectId: string, checkpointId: string): Promise<ProjectCheckpointRestorePreview> {
+    return apiClient.get(`${projectEndpoint(projectId)}/lifecycle/checkpoints/${checkpointId}/restore-preview`);
+  },
+
+  restoreCheckpointWithRecovery(
+    projectId: string,
+    checkpointId: string,
+    confirmContentHash: string,
+    expectedCurrentHash: string
+  ): Promise<ProjectCheckpointRestoreResult> {
+    return apiClient.post(
+      `${projectEndpoint(projectId)}/lifecycle/checkpoints/${checkpointId}/restore-with-recovery`,
+      { confirmContentHash, expectedCurrentHash }
     );
   },
 
