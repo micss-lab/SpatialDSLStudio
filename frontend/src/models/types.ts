@@ -687,7 +687,7 @@ export interface ValidationResult {
 export interface SpatialQuickFixRequest {
   ruleId: string;
   elementId: string;
-  relatedElementId: string;
+  relatedElementId?: string;
   moveElementId: string;
 }
 
@@ -695,6 +695,7 @@ export interface SpatialQuickFixPreview {
   previewHash: string;
   ruleName: string;
   elementName: string;
+  targetElementName?: string;
   before: Position3D;
   after: Position3D;
   clearedIssues: number;

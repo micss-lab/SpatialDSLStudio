@@ -36,12 +36,12 @@ export function SpatialQuickFixDialog({ viewId, modelId, issue, options, onClose
   const activeReview = review?.request.moveElementId === moveElementId ? review : null;
 
   useEffect(() => {
-    if (!constraintId || !elementId || !relatedElementId) return;
+    if (!constraintId || !elementId) return;
     let active = true;
     setReview(null);
     setError('');
     setLoading(true);
-    const request = { ruleId: constraintId, elementId, relatedElementId, moveElementId };
+    const request = { ruleId: constraintId, elementId, ...(relatedElementId && { relatedElementId }), moveElementId };
     spatialQuickFixService.preview(viewId, modelId, request)
       .then(preview => { if (active) setReview({ request, preview }); })
       .catch(error => { if (active) setError(error instanceof Error ? error.message : 'Could not preview the fix.'); })
@@ -71,14 +71,19 @@ export function SpatialQuickFixDialog({ viewId, modelId, issue, options, onClose
       <DialogContent>
         <Stack spacing={2}>
           <Typography variant="body2">{issue.message}</Typography>
-          <TextField select size="small" label="Element to move" value={moveElementId} disabled={applying}
-            onChange={event => setMoveElementId(event.target.value)}>
-            {options.map(option => <MenuItem key={option.id} value={option.id}>{option.name}</MenuItem>)}
-          </TextField>
+          {options.length > 1 ? (
+            <TextField select size="small" label="Element to move" value={moveElementId} disabled={applying}
+              onChange={event => setMoveElementId(event.target.value)}>
+              {options.map(option => <MenuItem key={option.id} value={option.id}>{option.name}</MenuItem>)}
+            </TextField>
+          ) : <Typography variant="subtitle2">Element to move · {options[0].name}</Typography>}
           {loading && <CircularProgress size={24} aria-label="Checking the proposed placement" />}
           {error && <Alert severity="warning" action={<Button onClick={() => setAttempt(value => value + 1)}>Preview again</Button>}>{error}</Alert>}
           {activeReview && (
             <>
+              {activeReview.preview.targetElementName && (
+                <Typography variant="subtitle2">Target element · {activeReview.preview.targetElementName}</Typography>
+              )}
               <Stack direction={{ xs: 'column', sm: 'row' }} gap={1}>
                 {[{ label: 'Current position', position: activeReview.preview.before }, {
                   label: 'Proposed position', position: activeReview.preview.after,

@@ -90,4 +90,22 @@ describe('ViewValidationPanel', () => {
     expect(screen.getByText(overlap.message)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Preview fix/ })).not.toBeInTheDocument();
   });
+
+  it('shows the target selected by the server for an adjacency finding', async () => {
+    const issue: ValidationIssue = {
+      severity: 'warning', message: 'Rack A is outside the pathway range', constraintId: 'adjacent',
+      elementId: 'rack-a', location: 'spatialRules.adjacentTo',
+    };
+    const preview = jest.mocked(spatialQuickFixService.preview);
+    preview.mockResolvedValue({
+      previewHash: 'adjacent-hash', elementName: 'Rack A', ruleName: 'Adjacent to a pathway',
+      targetElementName: 'Pathway 2', before: { x: 0, y: 0, z: 0 }, after: { x: 600, y: 0, z: 0 }, clearedIssues: 1,
+    });
+    render(<ViewValidationPanel issues={[issue]} onRefresh={jest.fn()} onSelectIssue={jest.fn()}
+      quickFix={{ diagram, onApplied: jest.fn() }} />);
+    fireEvent.click(screen.getByRole('button', { name: /Preview fix for Rack A/ }));
+    expect(await screen.findByText('Target element · Pathway 2')).toBeInTheDocument();
+    expect(screen.getByText('Element to move · Rack A')).toBeInTheDocument();
+    expect(preview).toHaveBeenCalledWith('view-1', 'model-1', { ruleId: 'adjacent', elementId: 'rack-a', moveElementId: 'rack-a' });
+  });
 });

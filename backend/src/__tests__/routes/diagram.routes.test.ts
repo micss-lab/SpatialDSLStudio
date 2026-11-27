@@ -117,6 +117,20 @@ describe('project-scoped spatial quick fixes', () => {
     expect(diagramServiceMock.previewSpatialQuickFix).toHaveBeenCalledWith(projectId, mockDiagram.id, payload);
     expect(diagramServiceMock.applySpatialQuickFix).toHaveBeenCalledWith(projectId, mockDiagram.id, payload, previewHash);
   });
+
+  it('previews and applies a source-only finding without a supplied target', async () => {
+    diagramServiceMock.previewSpatialQuickFix.mockResolvedValue({ previewHash, targetElementName: 'Pathway' });
+    diagramServiceMock.applySpatialQuickFix.mockResolvedValue({ elementId: 'rack-a' });
+    const app = buildApp(['view.update', 'model.update']);
+    const auth = `Bearer ${makeToken()}`;
+    const finding = { ruleId: 'adjacent', elementId: 'rack-a', moveElementId: 'rack-a' };
+    const preview = await request(app).post(`${path}/preview`).set('Authorization', auth).send(finding);
+    const apply = await request(app).post(`${path}/apply`).set('Authorization', auth).send({ ...finding, expectedPreviewHash: previewHash });
+    expect(preview.status).toBe(200);
+    expect(preview.body.data.targetElementName).toBe('Pathway');
+    expect(apply.status).toBe(200);
+    expect(diagramServiceMock.applySpatialQuickFix).toHaveBeenCalledWith(projectId, mockDiagram.id, finding, previewHash);
+  });
 });
 
 describe('GET /api/diagrams', () => {
