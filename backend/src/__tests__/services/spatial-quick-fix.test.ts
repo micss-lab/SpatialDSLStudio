@@ -29,6 +29,16 @@ const movedModel = (model: Model, id: string, position3D: NonNullable<ModelEleme
   ...model, elements: model.elements.map(item => item.id === id ? { ...item, presentation: { ...item.presentation, position3D } } : item),
 });
 
+const relationship = (kind: 'within' | 'maxDistance' | 'adjacentTo', distanceMm: number, mode: 'plan' | 'volume' = 'plan'): SpatialRule => ({
+  ...rule, id: kind, name: kind, kind, distanceMm, mode, targetClassId: 'zone',
+});
+const sourceRequest = (spatialRule: SpatialRule): SpatialQuickFixRequest => ({
+  ruleId: spatialRule.id, elementId: 'Rack A', moveElementId: 'Rack A',
+});
+const zone = (id: string, x: number, y: number, z = 0, yaw = 0): ModelElement => ({
+  ...element(id, x, y, z, yaw), modelElementId: 'zone',
+});
+
 it('clears volumetric clearance at a fixed elevation and chooses the same move on retry', () => {
   const result = planSpatialQuickFix(metamodel, model, request);
   expect(result.status).toBe('ready');
@@ -74,6 +84,77 @@ it('clears a rack aisle violation in the Smart Warehouse starter', () => {
   expect(result.status).toBe('ready');
   if (result.status !== 'ready') return;
   expect(evaluateSpatialRules(language, movedModel(disturbed, rack.id, result.plan.after))).toEqual([]);
+});
+
+it('moves a rotated source inside an oriented target while keeping the required margin', () => {
+  const within = relationship('within', 150);
+  const language = { ...metamodel, spatialRules: [within] };
+  const target = zone('Receiving zone', 1500, 1000, 0, 30);
+  target.presentation!.size3D = { widthMm: 1800, heightMm: 1400, depthMm: 300 };
+  const placed = { ...model, elements: [element('Rack A', 0, 0, 25, -30), target] };
+  const planned = planSpatialQuickFix(language, placed, sourceRequest(within));
+  expect(planned.status).toBe('ready');
+  if (planned.status !== 'ready') return;
+  const updated = movedModel(placed, 'Rack A', planned.plan.after);
+  expect(planned.plan.targetElementName).toBe('Receiving zone');
+  expect(planned.plan.after.z).toBe(25);
+  expect(updated.elements[0].presentation?.rotationZ).toBe(-30);
+  expect(evaluateSpatialRules(language, updated)).toEqual([]);
+});
+
+it('uses volume center distance when closing a maximum-distance violation', () => {
+  const reach = relationship('maxDistance', 500, 'volume');
+  const language = { ...metamodel, spatialRules: [reach] };
+  const placed = { ...model, elements: [element('Rack A', 0, 0, 300), zone('Beacon', 1500, 0)] };
+  const planned = planSpatialQuickFix(language, placed, sourceRequest(reach));
+  expect(planned.status).toBe('ready');
+  if (planned.status !== 'ready') return;
+  expect(planned.plan.after).toEqual({ x: 1100, y: 0, z: 300 });
+  expect(evaluateSpatialRules(language, movedModel(placed, 'Rack A', planned.plan.after))).toEqual([]);
+});
+
+it('brings rotated elements into zero-gap adjacency without introducing overlap', () => {
+  const adjacent = relationship('adjacentTo', 0);
+  const noOverlap: SpatialRule = { ...adjacent, id: 'overlap', kind: 'noOverlap' };
+  const language = { ...metamodel, spatialRules: [adjacent, noOverlap] };
+  const placed = { ...model, elements: [element('Rack A', 0, 0, 0, 13), zone('Zone B', 1550, 360, 0, -33)] };
+  const planned = planSpatialQuickFix(language, placed, sourceRequest(adjacent));
+  expect(planned.status).toBe('ready');
+  if (planned.status !== 'ready') return;
+  expect(evaluateSpatialRules(language, movedModel(placed, 'Rack A', planned.plan.after))).toEqual([]);
+});
+
+it('chooses a farther containment target if the closer fit would introduce a collision', () => {
+  const within = relationship('within', 0);
+  const separation: SpatialRule = { ...rule, kind: 'noOverlap', targetClassId: 'block', mode: 'plan' };
+  const language = { ...metamodel, classes: [...metamodel.classes, classDef('block')], spatialRules: [within, separation] };
+  const placed = { ...model, elements: [
+    element('Rack A', 0, 0), zone('Blocked zone', 1000, 0), zone('Open zone', 2000, 0),
+    { ...element('Obstacle', 1000, 0), modelElementId: 'block' },
+  ] };
+  const planned = planSpatialQuickFix(language, placed, sourceRequest(within));
+  expect(planned.status).toBe('ready');
+  if (planned.status !== 'ready') return;
+  expect(planned.plan.targetElementName).toBe('Open zone');
+  expect(evaluateSpatialRules(language, movedModel(placed, 'Rack A', planned.plan.after))).toEqual([]);
+});
+
+it('rejects a move that would strand another source relying on the moved element', () => {
+  const reach = { ...relationship('maxDistance', 500), targetClassId: 'hub' };
+  const stayNearRack = { ...relationship('maxDistance', 75), id: 'near-rack', sourceClassId: 'zone', targetClassId: 'rack' };
+  const language = { ...metamodel, classes: [...metamodel.classes, classDef('hub')], spatialRules: [reach, stayNearRack] };
+  const placed = { ...model, elements: [
+    element('Rack A', 0, 0), zone('Receiving zone', 0, 0), { ...zone('Hub', 2000, 0), modelElementId: 'hub' },
+  ] };
+  expect(evaluateSpatialRules(language, placed).map(issue => issue.constraintId)).toEqual([reach.id]);
+  expect(planSpatialQuickFix(language, placed, sourceRequest(reach))).toEqual({ status: 'unavailable' });
+});
+
+it('keeps elevation fixed when a volumetric relationship cannot be repaired horizontally', () => {
+  const reach = relationship('maxDistance', 500, 'volume');
+  const language = { ...metamodel, spatialRules: [reach] };
+  const placed = { ...model, elements: [element('Rack A', 0, 0, 800), zone('Beacon', 900, 0)] };
+  expect(planSpatialQuickFix(language, placed, sourceRequest(reach))).toEqual({ status: 'unavailable' });
 });
 
 describe('applying a scoped placement fix', () => {

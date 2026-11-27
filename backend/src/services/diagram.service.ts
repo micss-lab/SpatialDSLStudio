@@ -1058,7 +1058,10 @@ class DiagramService {
     };
     const result = planSpatialQuickFix(metamodel, model, request);
     if (result.status === 'stale') throw new ApiError(409, 'This spatial issue has changed. Refresh validation and try again.');
-    if (result.status !== 'ready') throw new ApiError(422, 'Studio found no verified move for this element. Try the other element or adjust placement manually.');
+    if (result.status !== 'ready') {
+      const guidance = request.relatedElementId ? 'Try the other element or adjust placement manually.' : 'Check the target placements or adjust the element manually.';
+      throw new ApiError(422, `Studio found no verified move for this element. ${guidance}`);
+    }
 
     const preview: SpatialQuickFixPreview = {
       ...result.plan,

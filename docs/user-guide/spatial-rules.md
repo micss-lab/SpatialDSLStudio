@@ -27,11 +27,12 @@ after you finish a placement edit. Filter the panel by severity or click
 
 ## Preview a placement fix
 
-For a **No overlap** or **Minimum clearance** issue, select **Preview fix** in
-the 2D or 3D validation panel. Choose which visible element to move and compare
-its current and proposed coordinates. A preview preserves the element's
-elevation and yaw. Studio checks the proposed move against the model's spatial
-rules before offering **Apply fix**.
+Select **Preview fix** next to a spatial issue in the 2D or 3D validation panel.
+For overlap and clearance, choose which visible element to move. For containment,
+maximum distance, and adjacency, Studio proposes a move for the source element
+and names the target. Compare the current and proposed coordinates before
+applying. Studio keeps the element's elevation and yaw and checks the proposed
+move against the model's spatial rules.
 
 Applying the fix saves the placement to the shared model and refreshes validation.
 If someone changes the model, view, or rules while you review the fix, preview it

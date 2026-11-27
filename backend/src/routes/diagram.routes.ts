@@ -20,9 +20,10 @@ const attachmentSides = ['top', 'right', 'bottom', 'left'];
 
 const spatialQuickFixFields = [
   param('id').isUUID().withMessage('Invalid view ID format'),
-  ...['ruleId', 'elementId', 'relatedElementId', 'moveElementId'].map(field => (
+  ...['ruleId', 'elementId', 'moveElementId'].map(field => (
     body(field).isString().notEmpty().withMessage(`${field} is required`)
   )),
+  body('relatedElementId').optional().isString().notEmpty(),
 ];
 
 router.post(

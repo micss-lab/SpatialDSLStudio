@@ -184,8 +184,10 @@ const fillMessage = (template: string, values: Record<string, string>): string =
 /**
  * Evaluate every enabled spatial rule of the metamodel against the model.
  * Pure and deterministic: issues follow rule order, then model element order.
+ * When comparing two placements, pass the moved element's ID to evaluate the
+ * checks whose verdict could change. The element must be placed in both models.
  */
-export function evaluateSpatialRules(metamodel: Metamodel, model: Model): ValidationIssue[] {
+export function evaluateSpatialRules(metamodel: Metamodel, model: Model, movedElementId?: string): ValidationIssue[] {
   const rules = (metamodel.spatialRules || []).filter(rule => rule && rule.enabled !== false);
   if (rules.length === 0) return [];
 
@@ -199,6 +201,8 @@ export function evaluateSpatialRules(metamodel: Metamodel, model: Model): Valida
     if (box) placed.push({ index: placed.length, element, box, envelope: planEnvelope(box) });
   });
 
+  const moved = movedElementId === undefined ? undefined : placed.find(item => item.element.id === movedElementId);
+  if (movedElementId !== undefined && !moved) return [];
   const issues: ValidationIssue[] = [];
   rules.forEach(rule => {
     const location = `spatialRules.${SPATIAL_RULE_KINDS.indexOf(rule.kind) >= 0 ? rule.kind : 'invalid'}`;
@@ -225,6 +229,9 @@ export function evaluateSpatialRules(metamodel: Metamodel, model: Model): Valida
     const inTarget = membership(rule.targetClassId);
     const sources = placed.filter(item => inSource[item.index]);
     const targets = placed.filter(item => inTarget[item.index]);
+    const movedSource = moved && inSource[moved.index] ? moved : undefined;
+    const movedTarget = moved && inTarget[moved.index] ? moved : undefined;
+    const comparedSources = !moved || movedTarget ? sources : movedSource ? [movedSource] : [];
     const volume = rule.mode !== 'plan';
     const distance = rule.distanceMm ?? 0;
     const targetClassName = metamodel.classes.find(metaClass => metaClass.id === rule.targetClassId)?.name
@@ -249,8 +256,10 @@ export function evaluateSpatialRules(metamodel: Metamodel, model: Model): Valida
     };
 
     if (rule.kind === 'noOverlap' || rule.kind === 'minClearance') {
-      sources.forEach(a => {
-        targets.forEach(b => {
+      const changedTargets = movedTarget ? [movedTarget] : [];
+      comparedSources.forEach(a => {
+        const comparedTargets = !moved || a === moved ? targets : changedTargets;
+        comparedTargets.forEach(b => {
           if (a.index === b.index) return;
           // Each unordered pair once: skip (a, b) when it was already visited as (b, a).
           if (inSource[b.index] && inTarget[a.index] && b.index < a.index) return;
@@ -275,7 +284,7 @@ export function evaluateSpatialRules(metamodel: Metamodel, model: Model): Valida
       return;
     }
 
-    sources.forEach(a => {
+    comparedSources.forEach(a => {
       if (rule.kind === 'maxDistance') {
         let nearest = Infinity;
         for (let index = 0; index < targets.length; index += 1) {

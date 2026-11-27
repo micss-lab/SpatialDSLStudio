@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { Diagram, ValidationIssue } from '../../models/types';
+import { SPATIAL_RULE_KINDS } from '../../services/spatial';
 import { SpatialQuickFixDialog, SpatialQuickFixOption } from './SpatialQuickFixDialog';
 
 interface ViewValidationPanelProps {
@@ -23,6 +24,7 @@ interface ViewValidationPanelProps {
 }
 
 const severityColor = (severity: ValidationIssue['severity']): 'error' | 'warning' | 'info' => severity;
+const spatialRuleLocations = new Set(SPATIAL_RULE_KINDS.map(kind => `spatialRules.${kind}`));
 
 const ViewValidationPanel: React.FC<ViewValidationPanelProps> = ({
   issues,
@@ -40,9 +42,11 @@ const ViewValidationPanel: React.FC<ViewValidationPanelProps> = ({
   })), [diagram]);
 
   const fixOptions = (issue: ValidationIssue): SpatialQuickFixOption[] => {
-    if (!issue.constraintId || !issue.elementId || issue.relatedElementIds?.length !== 1
-        || (issue.location !== 'spatialRules.noOverlap' && issue.location !== 'spatialRules.minClearance')) return [];
-    return [issue.elementId, issue.relatedElementIds[0]].flatMap(id => {
+    if (!issue.constraintId || !issue.elementId || !issue.location || !spatialRuleLocations.has(issue.location)) return [];
+    const pair = issue.location === 'spatialRules.noOverlap' || issue.location === 'spatialRules.minClearance';
+    if (pair && issue.relatedElementIds?.length !== 1) return [];
+    const ids = pair ? [issue.elementId, issue.relatedElementIds![0]] : [issue.elementId];
+    return ids.flatMap(id => {
       const name = visibleNodes.get(id);
       return name ? [{ id, name }] : [];
     });

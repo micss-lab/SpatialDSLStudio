@@ -135,8 +135,9 @@ and a runnable simulation, from one web tool.
     placement edits in 2D and 3D.
 17. **Metamodel Evolution.** Stage a proposal, preview its impact, review and
     apply migration rules, and open the recovery checkpoint from migration history.
-18. **Spatial validation fixes.** Preview and apply a verified placement change for
-    an overlap or minimum-clearance issue from either diagram editor.
+18. **Spatial validation fixes.** Preview and apply a verified placement change
+    for overlap, minimum clearance, containment, maximum distance, or adjacency
+    from either diagram editor.
 
 ## Suggested sequencing
 
