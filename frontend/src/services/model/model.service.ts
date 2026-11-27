@@ -78,6 +78,16 @@ class ModelService {
     this.notifyModelChanged(modelId);
   }
 
+  useSavedModelContents(savedModel: Pick<Model, 'id' | 'elements' | 'connections'>): void {
+    const model = this.getModelById(savedModel.id);
+    if (!model) return;
+    model.elements = JSON.parse(JSON.stringify(savedModel.elements));
+    model.connections = JSON.parse(JSON.stringify(savedModel.connections));
+    modelMigrationService.migrateModels([model]);
+    modelMigrationService.migrateNewAttributesOnLoad([model]);
+    this.notifyModelChanged(model.id);
+  }
+
   private normalizeImportedElement(element: any, index: number): ModelElement {
     const style = {
       ...(element.properties || {}),

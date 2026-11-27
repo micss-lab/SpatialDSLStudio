@@ -65,6 +65,27 @@ beforeEach(() => {
 });
 
 describe('HeadlessPipelineService', () => {
+  it('queries only the project’s input summaries and enabled transformation rules', async () => {
+    const models = [{ id: validModelRow.id, name: validModelRow.name, conformsToId: metamodelRow.id }];
+    const generators = [{ id: 'generator-1', name: 'Fleet JSON', targetMetamodelId: metamodelRow.id }];
+    const transformationRules = [{ id: 'rule-1', name: 'Assign dock' }];
+    prismaMock.model.findMany.mockResolvedValue(models as any);
+    prismaMock.codeGenerationProject.findMany.mockResolvedValue(generators as any);
+    prismaMock.transformationRule.findMany.mockResolvedValue(transformationRules as any);
+
+    await expect(headlessPipelineService.listInputs(projectId)).resolves.toEqual({ models, generators, transformationRules });
+    const orderBy = [{ name: 'asc' }, { id: 'asc' }];
+    expect(prismaMock.model.findMany).toHaveBeenCalledWith({
+      where: { projectId }, select: { id: true, name: true, conformsToId: true }, orderBy,
+    });
+    expect(prismaMock.codeGenerationProject.findMany).toHaveBeenCalledWith({
+      where: { projectId }, select: { id: true, name: true, targetMetamodelId: true }, orderBy,
+    });
+    expect(prismaMock.transformationRule.findMany).toHaveBeenCalledWith({
+      where: { projectId, enabled: true }, select: { id: true, name: true }, orderBy,
+    });
+  });
+
   it('retains a source checkpoint and produces a reproducible result hash', async () => {
     const definition = {
       name: 'Validate fleet',

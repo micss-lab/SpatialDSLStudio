@@ -138,6 +138,9 @@ and a runnable simulation, from one web tool.
 18. **Spatial validation fixes.** Preview and apply a verified placement change
     for overlap, minimum clearance, containment, maximum distance, or adjacency
     from either diagram editor.
+19. **[Browser pipeline execution](plans/phase-19-browser-pipeline-execution.md).**
+    Build and run an ordered pipeline in Project History, review the retained
+    step evidence, and open the source checkpoint.
 
 ## Suggested sequencing
 
@@ -251,9 +254,9 @@ incomplete code.
 - Phases 1 to 13 are implemented and pass the repository verification matrix.
 - External release gates still require machines with Eclipse Sirius Desktop,
   NVIDIA Isaac Sim, and Visual Components/WarehouseMAS.
-- The lifecycle capabilities have no web UI yet. A checkpoint/evolution/pipeline
-  panel over the existing contracts is the cheapest next increment; branching
-  and cross-project reuse are the larger open questions.
+- The project workspace supports checkpoint creation and comparison, metamodel
+  evolution, and pipeline execution. Checkpoint restoration uses the REST API.
+  Branching and cross-project reuse are larger open questions.
 - The interop guide (`docs/reference/sirius-desktop-interop.md`) is the way to
   smoke-test the bundle against real Eclipse Sirius Desktop; the Brev walkthrough
   validates the spatial output against real Isaac Sim.

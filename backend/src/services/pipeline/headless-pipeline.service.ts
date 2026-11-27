@@ -4,6 +4,7 @@ import { ApiError } from '../../middleware';
 import {
   CodeGenerationTemplate,
   HeadlessPipelineDefinition,
+  HeadlessPipelineInputs,
   HeadlessPipelineRun,
   HeadlessPipelineStep,
   HeadlessPipelineStepResult,
@@ -69,6 +70,28 @@ const mapRun = (row: any): HeadlessPipelineRun => {
 };
 
 export class HeadlessPipelineService {
+  async listInputs(projectId: string): Promise<HeadlessPipelineInputs> {
+    const orderBy = [{ name: 'asc' }, { id: 'asc' }] as const;
+    const [models, generators, transformationRules] = await Promise.all([
+      prisma.model.findMany({
+        where: { projectId },
+        select: { id: true, name: true, conformsToId: true },
+        orderBy: [...orderBy],
+      }),
+      prisma.codeGenerationProject.findMany({
+        where: { projectId },
+        select: { id: true, name: true, targetMetamodelId: true },
+        orderBy: [...orderBy],
+      }),
+      prisma.transformationRule.findMany({
+        where: { projectId, enabled: true },
+        select: { id: true, name: true },
+        orderBy: [...orderBy],
+      }),
+    ]);
+    return { models, generators, transformationRules };
+  }
+
   private assertDefinition(definition: HeadlessPipelineDefinition): void {
     if (!definition || typeof definition !== 'object' || !definition.name?.trim()) {
       throw new ApiError(400, 'Pipeline name is required');

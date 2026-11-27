@@ -8,9 +8,9 @@ Open **Project History** in the project sidebar to browse checkpoints and review
 pipeline runs. The **Checkpoints** tab compares a saved checkpoint with the
 current project or an earlier checkpoint. Project roles with checkpoint creation
 access can also capture a checkpoint from that tab. The **Pipeline runs** tab
-shows run status, step results, and recorded output. Open **Metamodel Evolution**
-from a metamodel's actions menu to review or apply a migration. Use the REST
-API to restore a checkpoint. The pipeline CLI can start a run.
+lets you start runs and shows their status, step results, and recorded output.
+Open **Metamodel Evolution** from a metamodel's actions menu to review or apply
+a migration. Use the REST API to restore a checkpoint.
 
 ## Studio Projects
 
@@ -173,6 +173,20 @@ A pipeline runs validation, transformations, model tests, and code generation on
 the server, with retained evidence and a deterministic hash. This is what makes
 model quality checkable in CI rather than only in a browser tab.
 
+### Running in Studio
+
+1. Open **Project History → Pipeline runs** and choose **New pipeline run**.
+2. Name the run and optionally tag its source checkpoint.
+3. Add and order the steps. Select a model for each step, a compatible code
+   generation project for generation, and an enabled rule for transformations.
+4. Confirm model writes if the pipeline includes a transformation. Completed
+   transformations save their changes even if a later step fails.
+5. Choose **Run pipeline**. The run opens in history with its result, recorded step
+   output, and a link to the source checkpoint.
+
+Viewers can review the history. Modelers, DSL designers, and owners can start
+runs in active projects.
+
 ### Defining a run
 
 A definition is a name plus an ordered list of steps:
@@ -199,14 +213,14 @@ optional `maxIterations`.
 
 ### Execution and evidence
 
-- A source checkpoint is captured before the first step, so a run always records
-  the exact project state it executed against.
+- The server captures a source checkpoint before the first step. Steps read
+  saved project artifacts, and later steps see any changes saved by earlier
+  transformations.
 - Steps run in order and stop at the first failure. The results of the steps that
   already completed are still retained, so a failure tells you how far the run
   got.
-- Each run gets a content hash over its source checkpoint hash, its normalized
-  definition, and its step results. Running the same definition against the same
-  checkpoint reproduces the same hash.
+- Each run gets a content hash. Identical source checkpoint hashes, normalized
+  definitions, and step results produce the same run hash.
 - Retained runs are listable and individually readable, including step output.
 
 ### Running from CI
