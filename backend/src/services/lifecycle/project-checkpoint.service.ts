@@ -501,11 +501,13 @@ class ProjectCheckpointService {
         return { manifest: restored, recoveryCheckpoint };
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 45000 });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
-        throw new ApiError(409, 'A concurrent change interrupted the restore. Review the restore again.');
-      }
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new ApiError(409, 'An existing record conflicts with this restore. The project was left unchanged.');
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2034') {
+          throw new ApiError(409, 'A concurrent change interrupted the restore. Review the restore again.');
+        }
+        if (error.code === 'P2002' || error.code === 'P2025') {
+          throw new ApiError(409, 'An existing record conflicts with this restore. The restore was rolled back.');
+        }
       }
       throw error;
     }
