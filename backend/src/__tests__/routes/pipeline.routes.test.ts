@@ -6,6 +6,7 @@ import { mockReset } from 'jest-mock-extended';
 import { projectService } from '../../services/project.service';
 
 const headlessPipelineServiceMock = {
+  listInputs: jest.fn(),
   list: jest.fn(),
   get: jest.fn(),
   run: jest.fn(),
@@ -61,6 +62,34 @@ const definition = {
 beforeEach(() => {
   mockReset(prismaMock);
   jest.clearAllMocks();
+});
+
+describe('GET /api/projects/:projectId/pipelines/inputs', () => {
+  it('lists the available inputs for the current project', async () => {
+    const inputs = {
+      models: [{ id: 'model-uuid-1', name: 'Fleet', conformsToId: 'robot-dsl' }],
+      generators: [{ id: 'generator-1', name: 'Fleet JSON', targetMetamodelId: null }],
+      transformationRules: [{ id: 'rule-1', name: 'Assign dock' }],
+    };
+    headlessPipelineServiceMock.listInputs.mockResolvedValue(inputs);
+
+    const res = await request(buildApp())
+      .get(`/api/projects/${projectId}/pipelines/inputs`)
+      .set('Authorization', `Bearer ${makeToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual(inputs);
+    expect(headlessPipelineServiceMock.listInputs).toHaveBeenCalledWith(projectId);
+  });
+
+  it('requires the pipeline.execute capability to load inputs', async () => {
+    const res = await request(buildApp('VIEWER'))
+      .get(`/api/projects/${projectId}/pipelines/inputs`)
+      .set('Authorization', `Bearer ${makeToken()}`);
+
+    expect(res.status).toBe(403);
+    expect(headlessPipelineServiceMock.listInputs).not.toHaveBeenCalled();
+  });
 });
 
 describe('POST /api/projects/:projectId/pipelines/runs', () => {

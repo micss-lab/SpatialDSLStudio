@@ -41,6 +41,7 @@ inside the phase plans until run on the required software/hardware.
 | 11 | [Versioned artifact graph](phase-11-versioned-artifact-graph.md) | [x] |
 | 12 | [Metamodel evolution and co-evolution](phase-12-metamodel-coevolution.md) | [x] |
 | 13 | [Reproducible headless MDE pipelines](phase-13-headless-mde-pipelines.md) | [x] |
+| 19 | [Browser pipeline execution](phase-19-browser-pipeline-execution.md) | [x] |
 
 ### Project scoping track
 

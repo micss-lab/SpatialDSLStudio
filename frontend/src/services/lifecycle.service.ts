@@ -2,6 +2,7 @@ import { Metamodel, Model } from '../models/types';
 import {
   ApplyMetamodelEvolutionRequest,
   HeadlessPipelineDefinition,
+  HeadlessPipelineInputs,
   HeadlessPipelineRun,
   MetamodelEvolutionReport,
   MetamodelMigrationResult,
@@ -99,6 +100,10 @@ export const lifecycleService = {
 
   listPipelineRuns(projectId: string): Promise<HeadlessPipelineRun[]> {
     return apiClient.get(`${projectEndpoint(projectId)}/pipelines/runs`);
+  },
+
+  listPipelineInputs(projectId: string): Promise<HeadlessPipelineInputs> {
+    return apiClient.get(`${projectEndpoint(projectId)}/pipelines/inputs`);
   },
 
   getPipelineRun(projectId: string, runId: string): Promise<HeadlessPipelineRun> {

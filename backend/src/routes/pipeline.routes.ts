@@ -10,6 +10,14 @@ const asyncHandler = (fn: Function) => (
   next: NextFunction
 ) => Promise.resolve(fn(req, res, next)).catch(next);
 
+router.get('/inputs', requireProjectCapability('pipeline.execute'), asyncHandler(async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const inputs = await headlessPipelineService.listInputs(req.projectContext!.projectId);
+  res.json({ success: true, data: inputs });
+}));
+
 router.get('/runs', requireProjectCapability('project.read'), asyncHandler(async (
   req: AuthenticatedRequest,
   res: Response

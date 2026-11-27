@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Chip,
   CircularProgress, Container, MenuItem, Paper, Stack, Tab, Tabs, TextField, Typography,
@@ -8,6 +8,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useProject } from '../../contexts/ProjectContext';
 import { HeadlessPipelineRun, ProjectCheckpoint, ProjectCheckpointDiff } from '../../models/lifecycle.types';
 import { lifecycleService } from '../../services/lifecycle.service';
+import { PipelineRunDialog, pipelineStepLabels } from './PipelineRunDialog';
 
 const dateLabel = (value: string) => new Date(value).toLocaleString();
 const checkpointLabel = (checkpoint: ProjectCheckpoint) => (
@@ -156,11 +157,14 @@ function Checkpoints({ projectId, canCreate, initialCheckpointId }: { projectId:
   );
 }
 
-function PipelineRuns({ projectId }: { projectId: string }) {
+function PipelineRuns({ projectId, canRun }: { projectId: string; canRun: boolean }) {
   const [runs, setRuns] = useState<HeadlessPipelineRun[] | null>(null);
   const [error, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
   const [expandedId, setExpandedId] = useState('');
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [refreshFailed, setRefreshFailed] = useState(false);
+  const loading = runs === null && !error;
 
   useEffect(() => {
     let active = true;
@@ -174,13 +178,21 @@ function PipelineRuns({ projectId }: { projectId: string }) {
 
   return (
     <Stack spacing={2}>
-      <Button variant="outlined" sx={{ alignSelf: 'flex-start' }} onClick={() => {
-        setError('');
-        setRuns(null);
-        setRefresh(value => value + 1);
-      }}>Refresh runs</Button>
+      <Stack direction="row" gap={1} flexWrap="wrap">
+        {canRun && <Button variant="contained" disabled={loading} onClick={() => setShowBuilder(true)}>New pipeline run</Button>}
+        <Button variant="outlined" disabled={loading} onClick={() => {
+          setError('');
+          setRuns(null);
+          setRefresh(value => value + 1);
+        }}>Refresh runs</Button>
+      </Stack>
       {error && <Alert severity="error">{error}</Alert>}
-      {runs === null && !error && <CircularProgress size={24} aria-label="Loading pipeline runs" />}
+      {refreshFailed && (
+        <Alert severity="warning" action={<Button onClick={() => window.location.reload()}>Reload project</Button>}>
+          The run was recorded. Reload Studio to refresh the models in your editors.
+        </Alert>
+      )}
+      {loading && <CircularProgress size={24} aria-label="Loading pipeline runs" />}
       {runs?.length === 0 && <Typography color="text.secondary">No pipeline runs yet.</Typography>}
       {runs?.map(run => (
         <Accordion key={run.id} expanded={expandedId === run.id} onChange={(_, open) => setExpandedId(open ? run.id : '')}>
@@ -195,12 +207,15 @@ function PipelineRuns({ projectId }: { projectId: string }) {
             <AccordionDetails>
               <Stack spacing={1.5}>
                 {run.failureMessage && <Alert severity="error">{run.failureMessage}</Alert>}
-                {run.sourceCheckpointId && <Typography variant="body2">Source checkpoint · {run.sourceCheckpointId}</Typography>}
+                {run.sourceCheckpointId && (
+                  <Button component={Link} to={`?checkpoint=${encodeURIComponent(run.sourceCheckpointId)}`}
+                    size="small" sx={{ alignSelf: 'flex-start' }}>View source checkpoint</Button>
+                )}
                 {run.contentHash && <Typography component="code" variant="caption" sx={{ overflowWrap: 'anywhere' }}>{run.contentHash}</Typography>}
                 {run.results.length === 0 && <Typography variant="body2">No step results recorded yet.</Typography>}
                 {run.results.map(step => (
                   <Paper variant="outlined" key={step.stepId} sx={{ p: 1.5 }}>
-                    <Typography variant="subtitle2">{step.stepId} · {step.kind} · {step.status}</Typography>
+                    <Typography variant="subtitle2">{step.stepId} · {pipelineStepLabels[step.kind] ?? step.kind} · {step.status}</Typography>
                     {step.error && <Typography color="error" variant="body2">{step.error}</Typography>}
                     {step.output && (
                       <details>
@@ -217,27 +232,35 @@ function PipelineRuns({ projectId }: { projectId: string }) {
           )}
         </Accordion>
       ))}
+      {showBuilder && canRun && (
+        <PipelineRunDialog projectId={projectId} onClose={() => setShowBuilder(false)} onComplete={(run, editorRefreshFailed) => {
+          setRuns(previous => [run, ...(previous ?? []).filter(item => item.id !== run.id)]);
+          setExpandedId(run.id);
+          setShowBuilder(false);
+          setRefreshFailed(previous => previous || editorRefreshFailed);
+        }} />
+      )}
     </Stack>
   );
 }
 
 export function ProjectHistoryPage() {
   const { project, can } = useProject();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const checkpointId = params.get('checkpoint') || '';
-  const [tab, setTab] = useState<'checkpoints' | 'runs'>('checkpoints');
+  const tab = params.get('tab') === 'runs' ? 'runs' : 'checkpoints';
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Typography component="h1" variant="h4" gutterBottom>Project History</Typography>
-      <Tabs value={tab} onChange={(_, value) => setTab(value)} aria-label="Project history" sx={{ mb: 2 }}>
+      <Tabs value={tab} onChange={(_, value) => setParams(value === 'runs' ? 'tab=runs' : '')} aria-label="Project history" sx={{ mb: 2 }}>
         <Tab value="checkpoints" label="Checkpoints" id="checkpoints-tab" aria-controls="checkpoints-panel" />
         <Tab value="runs" label="Pipeline runs" id="runs-tab" aria-controls="runs-panel" />
       </Tabs>
       <Box role="tabpanel" id={`${tab}-panel`} aria-labelledby={`${tab}-tab`}>
         {tab === 'checkpoints'
           ? <Checkpoints key={`${project.id}:${checkpointId}`} projectId={project.id} canCreate={can('checkpoint.create')} initialCheckpointId={checkpointId} />
-          : <PipelineRuns key={project.id} projectId={project.id} />}
+          : <PipelineRuns key={project.id} projectId={project.id} canRun={can('pipeline.execute')} />}
       </Box>
     </Container>
   );

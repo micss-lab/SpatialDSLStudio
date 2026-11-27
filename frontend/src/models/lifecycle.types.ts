@@ -136,6 +136,12 @@ export interface HeadlessPipelineDefinition {
   steps: HeadlessPipelineStep[];
 }
 
+export interface HeadlessPipelineInputs {
+  models: Array<{ id: string; name: string; conformsToId: string }>;
+  generators: Array<{ id: string; name: string; targetMetamodelId: string | null }>;
+  transformationRules: Array<{ id: string; name: string }>;
+}
+
 export interface HeadlessPipelineStepResult {
   stepId: string;
   kind: HeadlessPipelineStep['kind'];
