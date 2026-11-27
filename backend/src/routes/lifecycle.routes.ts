@@ -74,6 +74,38 @@ router.get(
   })
 );
 
+router.get(
+  '/checkpoints/:checkpointId/restore-preview',
+  requireProjectCapability('checkpoint.restore'),
+  validate([param('checkpointId').isUUID()]),
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const preview = await projectCheckpointService.previewRestore(
+      req.projectContext!.projectId, req.params.checkpointId
+    );
+    res.json({ success: true, data: preview });
+  })
+);
+
+router.post(
+  '/checkpoints/:checkpointId/restore-with-recovery',
+  requireProjectCapability('checkpoint.restore'),
+  validate([
+    param('checkpointId').isUUID(),
+    body('confirmContentHash').isString().matches(/^sha256:[a-f0-9]{64}$/),
+    body('expectedCurrentHash').isString().matches(/^sha256:[a-f0-9]{64}$/),
+  ]),
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const result = await projectCheckpointService.restoreWithRecovery(
+      req.projectContext!.projectId,
+      req.params.checkpointId,
+      req.body.confirmContentHash,
+      req.body.expectedCurrentHash,
+      req.user!.userId
+    );
+    res.json({ success: true, data: result });
+  })
+);
+
 router.post(
   '/checkpoints/:checkpointId/restore',
   requireProjectCapability('checkpoint.restore'),

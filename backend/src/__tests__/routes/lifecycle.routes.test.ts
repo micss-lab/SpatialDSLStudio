@@ -11,6 +11,8 @@ const projectCheckpointServiceMock = {
   create: jest.fn(),
   get: jest.fn(),
   diff: jest.fn(),
+  previewRestore: jest.fn(),
+  restoreWithRecovery: jest.fn(),
   restore: jest.fn(),
 };
 jest.mock('../../services', () => ({
@@ -244,5 +246,53 @@ describe('POST /api/projects/:projectId/lifecycle/checkpoints/:checkpointId/rest
 
     expect(res.status).toBe(409);
     expect(res.body.success).toBe(false);
+  });
+});
+
+describe('guided checkpoint restore', () => {
+  const expectedCurrentHash = 'sha256:' + 'a'.repeat(64);
+  const confirmContentHash = 'sha256:' + 'b'.repeat(64);
+  const base = `/api/projects/${projectId}/lifecycle/checkpoints/${checkpointId}`;
+
+  it('previews the restore for an owner and refuses it for a modeler', async () => {
+    const preview = {
+      diff: { fromHash: expectedCurrentHash, toHash: confirmContentHash, added: [], changed: [], removed: [], unchanged: 0 },
+      currentProject: { name: 'Draft warehouse' },
+      targetProject: { name: 'Warehouse baseline' },
+    };
+    projectCheckpointServiceMock.previewRestore.mockResolvedValue(preview);
+
+    const unauthorized = await request(buildApp('MODELER'))
+      .get(`${base}/restore-preview`).set('Authorization', `Bearer ${makeToken()}`);
+    expect(unauthorized.status).toBe(403);
+    expect(projectCheckpointServiceMock.previewRestore).not.toHaveBeenCalled();
+
+    const response = await request(buildApp())
+      .get(`${base}/restore-preview`).set('Authorization', `Bearer ${makeToken()}`);
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual(preview);
+    expect(projectCheckpointServiceMock.previewRestore).toHaveBeenCalledWith(projectId, checkpointId);
+  });
+
+  it('requires the reviewed live hash and owner access before restoring with recovery', async () => {
+    const result = { contentHash: confirmContentHash, recoveryCheckpoint: { id: 'recovery-1' } };
+    projectCheckpointServiceMock.restoreWithRecovery.mockResolvedValue(result);
+
+    const missing = await request(buildApp()).post(`${base}/restore-with-recovery`)
+      .set('Authorization', `Bearer ${makeToken()}`).send({ confirmContentHash });
+    expect(missing.status).toBe(400);
+
+    const unauthorized = await request(buildApp('MODELER')).post(`${base}/restore-with-recovery`)
+      .set('Authorization', `Bearer ${makeToken()}`).send({ confirmContentHash, expectedCurrentHash });
+    expect(unauthorized.status).toBe(403);
+    expect(projectCheckpointServiceMock.restoreWithRecovery).not.toHaveBeenCalled();
+
+    const response = await request(buildApp()).post(`${base}/restore-with-recovery`)
+      .set('Authorization', `Bearer ${makeToken()}`).send({ confirmContentHash, expectedCurrentHash });
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual(result);
+    expect(projectCheckpointServiceMock.restoreWithRecovery).toHaveBeenCalledWith(
+      projectId, checkpointId, confirmContentHash, expectedCurrentHash, 'user-uuid-1'
+    );
   });
 });

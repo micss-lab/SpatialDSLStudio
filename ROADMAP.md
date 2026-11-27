@@ -141,6 +141,9 @@ and a runnable simulation, from one web tool.
 19. **[Browser pipeline execution](plans/phase-19-browser-pipeline-execution.md).**
     Build and run an ordered pipeline in Project History, review the retained
     step evidence, and open the source checkpoint.
+20. **[Guided checkpoint restore](plans/phase-20-guided-checkpoint-restore.md).**
+    Review what a restore will change, confirm it, and open the recovery
+    checkpoint saved from the pre-restore state.
 
 ## Suggested sequencing
 
@@ -254,8 +257,8 @@ incomplete code.
 - Phases 1 to 13 are implemented and pass the repository verification matrix.
 - External release gates still require machines with Eclipse Sirius Desktop,
   NVIDIA Isaac Sim, and Visual Components/WarehouseMAS.
-- The project workspace supports checkpoint creation and comparison, metamodel
-  evolution, and pipeline execution. Checkpoint restoration uses the REST API.
+- The project workspace supports checkpoint creation, comparison, and restore,
+  metamodel evolution, and pipeline execution.
   Branching and cross-project reuse are larger open questions.
 - The interop guide (`docs/reference/sirius-desktop-interop.md`) is the way to
   smoke-test the bundle against real Eclipse Sirius Desktop; the Brev walkthrough

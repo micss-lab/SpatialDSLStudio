@@ -10,7 +10,7 @@ current project or an earlier checkpoint. Project roles with checkpoint creation
 access can also capture a checkpoint from that tab. The **Pipeline runs** tab
 lets you start runs and shows their status, step results, and recorded output.
 Open **Metamodel Evolution** from a metamodel's actions menu to review or apply
-a migration. Use the REST API to restore a checkpoint.
+a migration. Project owners can restore a checkpoint from **Project History**.
 
 ## Studio Projects
 
@@ -81,25 +81,31 @@ plus a count of the unchanged ones.
 
 ### Recovery semantics
 
-Restoring is deliberately awkward, because it overwrites current work.
+1. In **Project History → Checkpoints**, select the checkpoint and choose
+   **Review restore**.
+2. Review which artifacts Studio will restore, replace, or remove, plus any
+   changes to the project name or description.
+3. Confirm and choose **Restore checkpoint**. If the project has changed since
+   the preview, refresh the preview and review the changes again.
+4. Studio reloads the project. Choose **View recovery checkpoint** to open
+   the snapshot captured just before the restore.
 
-- You must pass `confirmContentHash` matching the checkpoint you intend to
-  restore. A mismatch is rejected. This prevents restoring a checkpoint you were
-  not actually looking at.
+- Studio checks the reviewed checkpoint and live project hashes before writing.
 - The stored manifest is re-verified against its own hashes before any write. If
   a per-artifact hash or the root hash no longer matches, nothing is written.
 - The restore is a single transaction. Artifacts absent from the checkpoint are
   deleted, artifacts in it are written back, and the project name and
-  description are reset to their snapshot values.
+  description are reset to their snapshot values. The recovery checkpoint
+  commits with those changes.
 - **Membership, project roles, and sharing are never restored.** Rolling a
   project back to March must not restore access for someone removed in April.
   Authorization state deliberately lives outside the versioned graph.
-- Restoring does not delete checkpoints, so a restore is itself reversible: take
-  a checkpoint first, and you can always come back.
+- Restoring the recovery checkpoint brings back the artifacts from before the
+  restore.
 - After a successful restore, rebuilding the graph produces the same root hash
   as the checkpoint.
 
-Only a project owner (or a platform admin) can restore.
+Only a project owner (or a platform admin) can restore an active project.
 
 ## Metamodel evolution
 

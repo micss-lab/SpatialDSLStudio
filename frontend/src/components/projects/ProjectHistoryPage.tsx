@@ -7,7 +7,9 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useProject } from '../../contexts/ProjectContext';
 import { HeadlessPipelineRun, ProjectCheckpoint, ProjectCheckpointDiff } from '../../models/lifecycle.types';
+import { apiClient } from '../../services/core';
 import { lifecycleService } from '../../services/lifecycle.service';
+import { CheckpointChanges, CheckpointRestoreDialog } from './CheckpointRestoreDialog';
 import { PipelineRunDialog, pipelineStepLabels } from './PipelineRunDialog';
 
 const dateLabel = (value: string) => new Date(value).toLocaleString();
@@ -16,7 +18,16 @@ const checkpointLabel = (checkpoint: ProjectCheckpoint) => (
 );
 const errorMessage = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
 
-function Checkpoints({ projectId, canCreate, initialCheckpointId }: { projectId: string; canCreate: boolean; initialCheckpointId: string }) {
+interface CheckpointsProps {
+  projectId: string;
+  canCreate: boolean;
+  canRestore: boolean;
+  initialCheckpointId: string;
+  recoveryId: string;
+  onRestored: (checkpointId: string, recoveryId: string) => void;
+}
+
+function Checkpoints({ projectId, canCreate, canRestore, initialCheckpointId, recoveryId, onRestored }: CheckpointsProps) {
   const [checkpoints, setCheckpoints] = useState<ProjectCheckpoint[] | null>(null);
   const [error, setError] = useState('');
   const [tag, setTag] = useState('');
@@ -28,6 +39,7 @@ function Checkpoints({ projectId, canCreate, initialCheckpointId }: { projectId:
   const [diffLabel, setDiffLabel] = useState('');
   const [comparing, setComparing] = useState(false);
   const [refresh, setRefresh] = useState(0);
+  const [restoreTarget, setRestoreTarget] = useState<ProjectCheckpoint | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -39,8 +51,9 @@ function Checkpoints({ projectId, canCreate, initialCheckpointId }: { projectId:
     return () => { active = false; };
   }, [projectId, refresh]);
 
-  const source = checkpoints?.find(item => item.id === sourceId) ?? checkpoints?.[0];
+  const source = sourceId ? checkpoints?.find(item => item.id === sourceId) : checkpoints?.[0];
   const target = checkpoints?.find(item => item.id === againstId);
+  const recovery = checkpoints?.find(item => item.id === recoveryId);
 
   const createCheckpoint = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -82,6 +95,12 @@ function Checkpoints({ projectId, canCreate, initialCheckpointId }: { projectId:
       {error && <Alert severity="error">{error}</Alert>}
       {checkpoints === null && !error && <CircularProgress size={24} aria-label="Loading checkpoints" />}
       {checkpoints === null && error && <Button onClick={() => { setError(''); setRefresh(value => value + 1); }}>Retry</Button>}
+      {recovery && (
+        <Alert severity="success" action={<Button component={Link} to={`?checkpoint=${encodeURIComponent(recovery.id)}`}
+          color="inherit">View recovery checkpoint</Button>}>
+          Restore completed. A recovery checkpoint contains the project state from before the restore.
+        </Alert>
+      )}
       {canCreate && checkpoints !== null && (
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Box component="form" onSubmit={createCheckpoint}>
@@ -98,11 +117,14 @@ function Checkpoints({ projectId, canCreate, initialCheckpointId }: { projectId:
         </Paper>
       )}
       {checkpoints?.length === 0 && <Typography color="text.secondary">No checkpoints yet.</Typography>}
-      {source && checkpoints && (
+      {!!checkpoints?.length && sourceId && !source && (
+        <Alert severity="warning">The linked checkpoint is unavailable in this project. Select another checkpoint to continue.</Alert>
+      )}
+      {!!checkpoints?.length && (
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Stack spacing={2}>
             <Stack gap={2} direction={{ xs: 'column', md: 'row' }}>
-              <TextField select size="small" label="From checkpoint" value={source.id} disabled={comparing}
+              <TextField select size="small" label="From checkpoint" value={source?.id ?? ''} disabled={comparing}
                 onChange={event => {
                   setSourceId(event.target.value);
                   if (event.target.value === againstId) setAgainstId('');
@@ -113,33 +135,24 @@ function Checkpoints({ projectId, canCreate, initialCheckpointId }: { projectId:
               <TextField select size="small" label="Compare with" value={againstId} disabled={comparing}
                 onChange={event => { setAgainstId(event.target.value); setDiff(null); }} sx={{ flex: 1 }}>
                 <MenuItem value="">Current project</MenuItem>
-                {checkpoints.filter(item => item.id !== source.id).map(item => (
+                {checkpoints.filter(item => item.id !== source?.id).map(item => (
                   <MenuItem key={item.id} value={item.id}>{checkpointLabel(item)}</MenuItem>
                 ))}
               </TextField>
-              <Button variant="outlined" onClick={compare} disabled={comparing || saving}>
+              <Button variant="outlined" onClick={compare} disabled={!source || comparing || saving}>
                 {comparing ? 'Comparing…' : 'Compare'}
               </Button>
             </Stack>
+            {canRestore && source && (
+              <Button color="error" variant="outlined" sx={{ alignSelf: 'flex-start' }}
+                onClick={() => setRestoreTarget(source)} disabled={comparing || saving}>
+                Review restore
+              </Button>
+            )}
             {diff && (
               <Box aria-label="Checkpoint comparison">
                 <Typography variant="subtitle2" gutterBottom>{diffLabel}</Typography>
-                <Typography variant="body2" gutterBottom>{diff.unchanged} unchanged</Typography>
-                {(['added', 'changed', 'removed'] as const).map(kind => (
-                  <Accordion key={kind} disableGutters>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                      {diff[kind].length} {kind}
-                    </AccordionSummary>
-                    <AccordionDetails>
-                      {diff[kind].map(ref => (
-                        <Typography key={`${ref.type}:${ref.id}`} variant="body2" sx={{ overflowWrap: 'anywhere' }}>
-                          {ref.name || ref.id} · {ref.type}
-                        </Typography>
-                      ))}
-                      {diff[kind].length === 0 && <Typography variant="body2">No {kind} artifacts.</Typography>}
-                    </AccordionDetails>
-                  </Accordion>
-                ))}
+                <CheckpointChanges diff={diff} />
               </Box>
             )}
           </Stack>
@@ -153,6 +166,10 @@ function Checkpoints({ projectId, canCreate, initialCheckpointId }: { projectId:
           <Typography component="code" variant="caption" sx={{ overflowWrap: 'anywhere' }}>{checkpoint.contentHash}</Typography>
         </Paper>
       ))}
+      {canRestore && restoreTarget && (
+        <CheckpointRestoreDialog projectId={projectId} checkpointId={restoreTarget.id} label={checkpointLabel(restoreTarget)}
+          onClose={() => setRestoreTarget(null)} onRestored={id => onRestored(restoreTarget.id, id)} />
+      )}
     </Stack>
   );
 }
@@ -245,10 +262,17 @@ function PipelineRuns({ projectId, canRun }: { projectId: string; canRun: boolea
 }
 
 export function ProjectHistoryPage() {
-  const { project, can } = useProject();
+  const { project, can, openProject } = useProject();
   const [params, setParams] = useSearchParams();
   const checkpointId = params.get('checkpoint') || '';
   const tab = params.get('tab') === 'runs' ? 'runs' : 'checkpoints';
+  const recoveryId = params.get('recovery') || '';
+
+  const finishRestore = (checkpoint: string, recovery: string) => {
+    if (apiClient.getProjectId() === project.id) {
+      openProject(project.id, `history?${new URLSearchParams({ checkpoint, recovery })}`);
+    }
+  };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -259,7 +283,8 @@ export function ProjectHistoryPage() {
       </Tabs>
       <Box role="tabpanel" id={`${tab}-panel`} aria-labelledby={`${tab}-tab`}>
         {tab === 'checkpoints'
-          ? <Checkpoints key={`${project.id}:${checkpointId}`} projectId={project.id} canCreate={can('checkpoint.create')} initialCheckpointId={checkpointId} />
+          ? <Checkpoints key={`${project.id}:${checkpointId}`} projectId={project.id} canCreate={can('checkpoint.create')}
+            canRestore={can('checkpoint.restore')} initialCheckpointId={checkpointId} recoveryId={recoveryId} onRestored={finishRestore} />
           : <PipelineRuns key={project.id} projectId={project.id} canRun={can('pipeline.execute')} />}
       </Box>
     </Container>

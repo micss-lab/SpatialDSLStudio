@@ -160,6 +160,17 @@ export interface ProjectCheckpointDiff {
   unchanged: number;
 }
 
+export interface ProjectCheckpointRestorePreview {
+  diff: ProjectCheckpointDiff;
+  currentProject: ProjectArtifactManifest['project'];
+  targetProject: ProjectArtifactManifest['project'];
+}
+
+export interface ProjectCheckpointRestoreResult {
+  contentHash: string;
+  recoveryCheckpoint: ProjectCheckpoint;
+}
+
 export type MetamodelEvolutionChangeKind =
   | 'class-added'
   | 'class-removed'

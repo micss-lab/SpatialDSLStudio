@@ -222,8 +222,27 @@ describe('ProjectCheckpointService', () => {
 
     expect(restored.contentHash).toBe(manifest.contentHash);
     expect(prismaMock.studioProject.update).toHaveBeenCalledWith({
-      where: { id: projectId },
+      where: { id: projectId, status: 'ACTIVE' },
       data: { name: 'Warehouse', description: 'Versioned workspace' },
     });
+  });
+
+  it('rejects a stale restore preview before saving the recovery checkpoint or writing artifacts', async () => {
+    const manifest = await projectCheckpointService.buildManifest(projectId);
+    prismaMock.projectCheckpoint.findFirst.mockResolvedValue({
+      id: 'checkpoint-1', projectId, sequence: 1, manifest, contentHash: manifest.contentHash,
+      createdById: userId, createdAt: new Date('2026-07-23T12:00:00.000Z'),
+    } as any);
+    (prismaMock.$transaction as any).mockImplementation(async (operation: Function) => operation(prismaMock));
+    prismaMock.studioProject.findUnique.mockResolvedValue({
+      id: projectId, name: 'Edited warehouse', description: null,
+    } as any);
+
+    await expect(projectCheckpointService.restoreWithRecovery(
+      projectId, 'checkpoint-1', manifest.contentHash, manifest.contentHash, userId
+    )).rejects.toMatchObject({ statusCode: 409, message: 'The project changed after the preview. Review the restore again.' });
+    expect(prismaMock.projectCheckpoint.create).not.toHaveBeenCalled();
+    expect(prismaMock.studioProject.update).not.toHaveBeenCalled();
+    expect(prismaMock.model.deleteMany).not.toHaveBeenCalled();
   });
 });
